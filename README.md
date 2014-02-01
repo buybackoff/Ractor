@@ -85,28 +85,29 @@ Typed expressions with serialization hidden behind the scenes (some conventions 
 - **DSL:**
 expressions implemented as custom query expression commands, with native Redis commands on any serializable types
 
-	let conn = .. // new connection
-	let version = // should equal pong
-		fredis conn {
-			PING
-		}
+		let conn = .. // new connection
+		let version = // should equal pong
+			fredis conn {
+				PING
+			}
 	
-	let value:'T = new T()
-	let key = "mykey"
-		fredis conn {
-			SET key value // automatic serialization
-		}	
+		let value:'T = new T()
+		let key = "mykey"
+			fredis conn {
+				SET key value // automatic serialization
+			}	
 
-	let value2:'T = // atomatic deserialization to 'T
-		fredis +conn {
-			GET key
-		}
+		let value2:'T = // atomatic deserialization to 'T
+			fredis +conn {
+				GET key
+			}
 
-	let channel = "mychannel"
-	let value = 
-		fredis %conn {
-			SUBSCRIBE channel
-		}
+		let channel = "mychannel"
+		let value = 
+			fredis %conn {
+				SUBSCRIBE channel
+			}
+
 
 - **Distributed transport and persistence for Actors:**
 Redis is the ideal transport for distributed actors. E.g. in a MailBoxProcessor a Redis list + distributed blocking lock (replicating BlockingCollection behavior)
