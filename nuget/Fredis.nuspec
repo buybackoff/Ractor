@@ -7,7 +7,7 @@
     <owners>@authors@</owners>
     <licenseUrl>http://github.com/buybackoff/Fredis/blob/master/LICENSE.txt</licenseUrl>
     <projectUrl>http://buybackoff.github.com/Fredis</projectUrl>
-    <iconUrl>https://raw.github.com/buybackoff/Fredis/blob/master/docs/files/img/logo.png</iconUrl>
+    <iconUrl>http://buybackoff.github.io/Fredis/img/logo.png</iconUrl>
     <requireLicenseAcceptance>false</requireLicenseAcceptance>
     <summary>@summary@</summary>
     <description>@description@</description>

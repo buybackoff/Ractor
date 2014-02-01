@@ -9,7 +9,7 @@ additional usefull commands, patterns and a DSL implemented as custom query expr
 
 
 Minimum Value Proposition
-======================
+----------------------
 In the current pre-alpha state the library could be already used as a slim wrapper over RedisConnection 
 object from BookSleeve. The type Connection inherits from RedisConnection and adds a connection pool
 accessible via Connection.Use() instance method or a prefix operator `+`.
@@ -37,9 +37,9 @@ Operators:
     
 
 Install & Usage
-=======================
+----------------------
 
-	PM> Install-Package Fredis -Pre
+	PM> Install-Package Fredis
 
 See BookSleeve docs for API. Some examples how to use Fredis operators from Tests.fsx
 
@@ -60,7 +60,7 @@ See BookSleeve docs for API. Some examples how to use Fredis operators from Test
 
 
 Up for grabs!
-=======================
+----------------------
 I started this library to add "correct distributed blocking lock" (not yet implemented) 
 and to add convenience shortcuts for working with Task<'T> from F# Async. Additional useful 
 features could be automatic serialization of generic types using protobuf-net and
@@ -115,7 +115,7 @@ use for continuations.
 
 
 License
-=======================
+----------------------
 
 (c) Victor Baybekov 2014
 

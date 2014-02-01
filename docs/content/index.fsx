@@ -8,8 +8,8 @@
 Fredis
 ===================
 
-Documentation
-
+Install
+------------------
 <div class="row">
   <div class="span1"></div>
   <div class="span6">
@@ -21,7 +21,7 @@ Documentation
   <div class="span1"></div>
 </div>
 
-Example
+Usage Example
 -------
 
 This example demonstrates using a function defined in this sample library.
@@ -47,16 +47,12 @@ let a' =
     } |> Async.StartImmediate
 // !~! shortcut for (Async.AwaitIAsyncResult >> Async.Ignore >> Async.StartImmediate)
 let a = !~!connection.Strings.Set(1,"k1","abc") 
-let r2 = async { return! !!connection.Strings.Append(1,"k1","def") } |> Async.RunSynchronously
+let r2 = 
+    async { return! !!connection.Strings.Append(1,"k1","def") } 
+    |> Async.RunSynchronously
 let r3 = !!!connection.Strings.GetString(1,"k1")
 
 (**
-Some more info
-
-Samples & documentation
------------------------
-
-TDB
  
 Contributing and copyright
 --------------------------
@@ -66,19 +62,9 @@ the project and submit pull requests. If you're adding new public API, please al
 consider adding [samples][content] that can be turned into a documentation. You might
 also want to read [library design notes][readme] to understand how it works.
 
-(c) Victor Baybekov 2014
 
-Licensed under the Apache License, Version 2.0 (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at
-
-    http://www.apache.org/licenses/LICENSE-2.0
-
-This software is distributed under the License is distributed on an "AS IS" BASIS,
-WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-
-BookSleeve is licensed separately; see https://code.google.com/p/booksleeve/.
-Redis is licensed separately; see http://redis.io/.
+(c) Victor Baybekov 2014.
+Licensed under the Apache License, Version 2.0 (the "License")
 
 
   [content]: https://github.com/buybackoff/Fredis/tree/master/docs/content
