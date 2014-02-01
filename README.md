@@ -3,7 +3,7 @@ Fredis
 Fredis is a BookSleeve wrapper for convenient usage from F# (plus planned some extentions, 
 additional usefull commands, patterns and a DSL implemented as custom query expression commands).
 
->Urban Dictionary defines Fredis as:
+>Urban Dictionary [defines](http://www.urbandictionary.com/define.php?term=fredis) Fredis as:
 
 >A Fredis is a man/woman who likes to party hard. He/she is the life of the party even though they would not remember it.
 
@@ -73,15 +73,16 @@ This project is an ideal candidate to be a shared community project. Please fork
 
 I hope to move this to github.com/fsprojects but cannot find the detailed instructons I believe I've seen some time ago.
 
-**Extensions:**
-- correct distributed blocking lock (honors the order of consumers trying to access a locked resource). ETA next release if the idea is feasible 
-TODO anything else
+**TODOs:**
 
-**Build-in serialization:** 
+- **Extensions:**
+  * correct distributed blocking lock (honors the order of consumers trying to access a locked resource). ETA next release if the idea is feasible 
+
+
+- **Build-in serialization:** 
 Typed expressions with serialization hidden behind the scenes (some conventions with overridable params or IoC, by default protobuf-net?)
 
-**DSL:**
-
+- **DSL:**
 expressions implemented as custom query expression commands, with native Redis commands on any serializable types
 
 	let conn = .. // new connection
@@ -107,8 +108,7 @@ expressions implemented as custom query expression commands, with native Redis c
 			SUBSCRIBE channel
 		}
 
-**Distributed transport and persistence for Actors:**
-
+- **Distributed transport and persistence for Actors:**
 Redis is the ideal transport for distributed actors. E.g. in a MailBoxProcessor a Redis list + distributed blocking lock (replicating BlockingCollection behavior)
 could be used for a distributed concurrent queue implementation. Atomic `(B)RPOPLPUSH` commands could be 
 use for continuations.

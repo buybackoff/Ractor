@@ -46,7 +46,7 @@ let a' =
         return! !~connection.Strings.Set(1,"k1","abc")
     } |> Async.StartImmediate
 // !~! shortcut for (Async.AwaitIAsyncResult >> Async.Ignore >> Async.StartImmediate)
-let a = !~!connection.Strings.Set(1,"k1","abc") 
+!~!connection.Strings.Set(1,"k1","abc") 
 let r2 = 
     async { return! !!connection.Strings.Append(1,"k1","def") } 
     |> Async.RunSynchronously
