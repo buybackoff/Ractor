@@ -160,9 +160,9 @@ Target "All" DoNothing
   ==> "All"
 
 "All" 
-  //==> "CleanDocs"
-  //==> "GenerateDocs"
-  //==> "ReleaseDocs"
+  ==> "CleanDocs"
+  ==> "GenerateDocs"
+  ==> "ReleaseDocs"
   ==> "NuGet"
   ==> "Release"
 

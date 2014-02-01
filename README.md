@@ -3,7 +3,7 @@ Fredis
 Fredis is a BookSleeve wrapper for convenient usage from F# (plus planned some extentions, 
 additional usefull commands, patterns and a DSL implemented as custom query expression commands).
 
->Urban dictionary defines Fredis as:
+>Urban Dictionary defines Fredis as:
 
 >A Fredis is a man/woman who likes to party hard. He/she is the life of the party even though they would not remember it.
 
@@ -54,7 +54,7 @@ See BookSleeve docs for API. Some examples how to use Fredis operators from Test
         return! !~conn.Strings.Set(1,"k1","abc")
     } |> Async.StartImmediate
 	// !~! shortcut for (Async.AwaitIAsyncResult >> Async.Ignore >> Async.StartImmediate)
-	let a = !~!conn.Strings.Set(1,"k1","abc") 
+	!~!conn.Strings.Set(1,"k1","abc") 
 	let r2 = async { return! !!conn.Strings.Append(1,"k1","def") } |> Async.RunSynchronously
 	let r3 = !!!conn.Strings.GetString(1,"k1")
 
