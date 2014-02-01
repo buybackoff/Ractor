@@ -38,6 +38,8 @@ Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "Fredis", "src\Fredis\Fredis
 EndProject
 Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "Fredis.Tests", "tests\Fredis.Tests\Fredis.Tests.fsproj", "{E789C72A-5CFD-436B-8EF1-61AA2852A89F}"
 EndProject
+Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "Beehive", "src\Beehive\Beehive.fsproj", "{B14B082B-D563-4E15-8C33-81F32E853995}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -52,6 +54,10 @@ Global
 		{E789C72A-5CFD-436B-8EF1-61AA2852A89F}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{E789C72A-5CFD-436B-8EF1-61AA2852A89F}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{E789C72A-5CFD-436B-8EF1-61AA2852A89F}.Release|Any CPU.Build.0 = Release|Any CPU
+		{B14B082B-D563-4E15-8C33-81F32E853995}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{B14B082B-D563-4E15-8C33-81F32E853995}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{B14B082B-D563-4E15-8C33-81F32E853995}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{B14B082B-D563-4E15-8C33-81F32E853995}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

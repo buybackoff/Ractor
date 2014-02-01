@@ -15,11 +15,11 @@
     <copyright>Copyright 2014</copyright>
     <tags>@tags@</tags>
     <dependencies>
-      <dependency id="BookSleeve" version="1.3.41" />
+      <dependency id="Fredis" version="0.0.2" />
     </dependencies>
   </metadata>
   <files>
-    <file src="..\bin\Fredis.dll" target="lib/net40" />
-    <file src="..\bin\Fredis.pdb" target="lib/net40" />
+    <file src="..\bin\Beehive.dll" target="lib/net40" />
+    <file src="..\bin\Beehive.pdb" target="lib/net40" />
   </files>
 </package>
