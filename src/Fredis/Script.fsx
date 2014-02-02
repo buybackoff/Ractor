@@ -50,9 +50,9 @@ let a' =
     async{
         // Async.AwaitIAsyncResult >> Async.Ignore
         return! !~conn.Strings.Set(1,"k1","abc")
-    } |> Async.StartImmediate
+    } |> Async.RunSynchronously
 
-// !~! shortcut for (Async.AwaitIAsyncResult >> Async.Ignore >> Async.StartImmediate)
+// !~! shortcut for (Async.AwaitIAsyncResult >> Async.Ignore >> Async.RunSynchronously)
 let a = !~!conn.Strings.Set(1,"k1","abc") 
 
 let r2 = !!!conn.Strings.Append(1,"k1","def")

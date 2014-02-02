@@ -89,7 +89,7 @@ module ConnectionModule =
     let inline (!!)  (t: Task<'T>) = t |> Async.AwaitTask
     
     /// Run plain Task/IAsyncResult on current thread
-    let (!~!)  (t: IAsyncResult) = t |> (Async.AwaitIAsyncResult >> Async.Ignore >> Async.StartImmediate)
+    let (!~!)  (t: IAsyncResult) = t |> (Async.AwaitIAsyncResult >> Async.Ignore >> Async.RunSynchronously)
 
     /// Run task Task<'T> on current thread and return results
     let inline (!!!)  (t: Task<'T>) = t.Result // |> (Async.AwaitTask >> Async.RunSynchronously)

@@ -9,7 +9,7 @@ open NUnit.Framework
 [<Test>]
 let ``Could increment`` () =
     let conn = (new Connection("127.0.0.1", maxPoolSize = 2))
-    let incTest c  = Async.StartImmediate (async {
+    let incTest c  = Async.RunSynchronously (async {
         use! lock = makeLock c 0 "l" 60
 
         let! v1 = !!c.Strings.GetInt64(0, "testinc")

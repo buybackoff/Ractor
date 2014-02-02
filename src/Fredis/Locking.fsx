@@ -72,7 +72,7 @@ let conn = (new Connection("127.0.0.1", maxPoolSize = 2))
 //    let res = !!!conn.Scripting.Eval(db, lua, [|lockerKey|],[|lockerExpiry * 1000|]) :?> Int64
 //    res 
 //
-////tryEnter () |> Async.StartImmediate
+////tryEnter () |> Async.RunSynchronously
 ////exit()
 ////1
 //
