@@ -2,6 +2,7 @@
 #r "BookSleeve.dll"
 #r "Fredis.dll"
 #load "Connection.fs"
+#load "Monitor.fs"
 
 open System
 open System.Text
@@ -11,15 +12,16 @@ open Fredis
 // ported from F# rewrite of original BookSleeve tests here http://caxelrud.blogspot.ru/2013/03/redis-tests-with-f-using-booksleeve.html
 // Here all test are rewritten with Fredis
 
-let conn = new Connection("127.0.0.1", maxPoolSize = 2)
+let conn = (new Connection("127.0.0.1", maxPoolSize = 2))
+
 
 // !!! evaluates Task<T> on current thread, shortcut for (Async.AwaitTask >> Async.RunSynchronously)
-let res = !!!conn.Lists.RemoveFirstString(1, "nonex")
+//let res = !!!conn.Lists.RemoveFirstString(1, "nonex")
 
 
 // This will block until in another redis client you do "SELECT 1" then repeat "LPUSH nonex abc" 5 times, see fsi output during this ops
 //for i in 0..4 do
-//    use c = +conn // this usage should be alway
+//    use c = +conn // this usage should be always
 //    let res = 
 //        async {
 //            // !! shortcut for Async.AwaitTask

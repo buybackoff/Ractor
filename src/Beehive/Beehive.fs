@@ -38,3 +38,18 @@ module Beehive =
 
 // The project should extend either FSharp.Actor or Pigeon. Pigeon already works with protobuf-net
 // and targets Akka's API. Should make messages compatible with Pigeon + use its interfaces?
+
+
+// Should name it Bee Yard, Beehive is a node
+
+// Analogy with modern CPUs and NUMA
+
+// Bee Yard (cluster of nodes) = CPU
+
+// Node is a Beehive = CPU core with its local cache L1/L2 cache
+
+// Actor = thread
+
+// Redis is a shared L3 or RAM
+
+// Dtatabase/S3 - hard drive 

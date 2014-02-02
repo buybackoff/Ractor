@@ -51,8 +51,11 @@
   <ItemGroup>
     <Compile Include="AssemblyInfo.fs" />
     <Compile Include="Connection.fs" />
+    <Compile Include="Monitor.fs" />
     <None Include="Script.fsx" />
     <None Include="packages.config" />
+    <None Include="Locking.fsx" />
+    <Compile Include="Structures.fs" />
   </ItemGroup>
   <PropertyGroup>
     <MinimumVisualStudioVersion Condition="'$(MinimumVisualStudioVersion)' == ''">11</MinimumVisualStudioVersion>
