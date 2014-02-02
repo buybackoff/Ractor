@@ -11,7 +11,18 @@ open Fredis
 // ported from F# rewrite of original BookSleeve tests here http://caxelrud.blogspot.ru/2013/03/redis-tests-with-f-using-booksleeve.html
 // Here all test are rewritten with Fredis
 
-let conn = new Connection("127.0.0.1", maxPoolSize = 2)
+let conn = new Connection("127.0.0.1", minPoolSize = 2, maxPoolSize = 20)
+
+do
+    let lim = 100000
+    for i in 1..lim do
+        use c = +conn
+        let ping = !!!c.Server.Ping()
+        if i % 100 = 0 then
+            Console.Write(i.ToString() + ":")
+            Console.Write(ping.ToString() + " ")
+        if i % 1500 =0 then Console.WriteLine("")
+        
 
 // !!! evaluates Task<T> on current thread, shortcut for (Async.AwaitTask >> Async.RunSynchronously)
 let res = !!!conn.Lists.RemoveFirstString(1, "nonex")
@@ -48,9 +59,9 @@ let a' =
     async{
         // Async.AwaitIAsyncResult >> Async.Ignore
         return! !~conn.Strings.Set(1,"k1","abc")
-    } |> Async.StartImmediate
+    } |> Async.RunSynchronously
 
-// !~! shortcut for (Async.AwaitIAsyncResult >> Async.Ignore >> Async.StartImmediate)
+// !~! shortcut for (Async.AwaitIAsyncResult >> Async.Ignore >> Async.RunSynchronously)
 let a = !~!conn.Strings.Set(1,"k1","abc") 
 
 let r2 = !!!conn.Strings.Append(1,"k1","def")

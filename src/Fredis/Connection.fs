@@ -1,4 +1,5 @@
 ﻿namespace Fredis
+#nowarn "864"
 
 open System
 open System.Collections.Generic
@@ -19,10 +20,10 @@ module Utils =
 
 
 type Connection
-    (host:string,?port:int,?ioTimeout:int,?password:string,?maxUnsent:int,?allowAdmin:bool,?syncTimeout:int,?maxPoolSize:int) as this =
+    (host:string,?port:int,?ioTimeout:int,?password:string,?maxUnsent:int,?allowAdmin:bool,?syncTimeout:int,?minPoolSize:int,?maxPoolSize:int) as this =
     inherit RedisConnection(host,port??=6379,ioTimeout??=(-1),password??=null,maxUnsent??=Int32.MaxValue,allowAdmin??=false)
     
-    let pool : ConnectionPool ref = ref (new ConnectionPool(host,port??=6379,ioTimeout??=(-1),password??=null,maxUnsent??=Int32.MaxValue,allowAdmin??=false,maxPoolSize??=2))
+    let pool : ConnectionPool ref = ref (new ConnectionPool(host,port??=6379,ioTimeout??=(-1),password??=null,maxUnsent??=Int32.MaxValue,allowAdmin??=false,minPoolSize??=2,maxPoolSize??=20))
     
     do 
         base.Open().Wait() // |> ignore
@@ -34,20 +35,20 @@ type Connection
 
     /// Get an existing connection from a pool or a new connection to the same server with same parameters
     /// Use this method when a call to Redis could be blocking, e.g. when using distributed locks
-    member this.Use with get() = lock pool (fun _ -> (!pool).Get() )
+    member this.Use with get() = (!pool).Get()
+
+    member this.Dispose() = if not ((!pool).TryReturn(this)) then base.Dispose()
+            
 
     /// Shortcut for Use() method
     static member (~+) (connection:Connection) = connection.Use
 
     interface IDisposable with
-        member this.Dispose() =
-            lock pool (
-                fun _ -> if not ((!pool).TryReturn(this)) then this.Dispose()
-            )
+        member this.Dispose() = this.Dispose()
 
 
 and [<Sealed;AllowNullLiteralAttribute>] internal ConnectionPool
-    (host:string,?port:int,?ioTimeout:int,?password:string,?maxUnsent:int,?allowAdmin:bool,?syncTimeout:int,?maxPoolSize:int) =
+    (host:string,?port:int,?ioTimeout:int,?password:string,?maxUnsent:int,?allowAdmin:bool,?syncTimeout:int,?minPoolSize:int,?maxPoolSize:int) =
     
     let port = defaultArg port 6379
     let ioTimeout = defaultArg ioTimeout -1
@@ -55,26 +56,54 @@ and [<Sealed;AllowNullLiteralAttribute>] internal ConnectionPool
     let maxUnsent = defaultArg maxUnsent Int32.MaxValue
     let allowAdmin = defaultArg allowAdmin false
     let syncTimeout = defaultArg syncTimeout 10000
-    let maxPoolSize = defaultArg maxPoolSize 1
+    let minPoolSize = defaultArg minPoolSize 1
+    let maxPoolSize = defaultArg maxPoolSize 10
     let pool = new BlockingCollection<Connection>(maxPoolSize)
     
-    let tryAddNew () = 
-        let conn = new Connection(host,port,ioTimeout,password,maxUnsent,allowAdmin,syncTimeout)
-        if pool.TryAdd(conn) then 
-            conn.Open().Wait() // |> ignore
-            true
-        else false
+    let counter = ref 0 // produced connection
 
-    member internal this.TryReturn(conn:Connection) = pool.TryAdd(conn) 
-    member internal this.Get() : Connection = 
-        let rec get() = 
-            let succ, conn = pool.TryTake()
-            if succ then 
-                conn
+    let tryAddNew () = 
+        lock counter (fun _ ->
+            if !counter < maxPoolSize then
+                let conn = new Connection(host,port,ioTimeout,password,maxUnsent,allowAdmin,syncTimeout)
+                if pool.TryAdd(conn) then 
+                    conn.Open().Wait() 
+                    counter := !counter + 1
+                    true
+                else
+                    failwith "wrong counting"
+            else false
+        )
+
+//    do
+//        for i in 1..minPoolSize do
+//            tryAddNew() |> ignore
+
+    member internal this.TryReturn(conn:Connection) = 
+        lock counter (fun _ ->
+            if !counter < minPoolSize then
+                pool.TryAdd(conn)
             else
-                tryAddNew() |> ignore
-                get()
-        get()
+                counter := !counter - 1
+                false
+        )
+
+    member internal this.Get() : Connection = 
+        if !counter < maxPoolSize then
+            lock counter (fun _ ->
+                let succ, conn = pool.TryTake()
+                if succ then 
+                    Console.WriteLine("try take") 
+                    Console.WriteLine("counter" + (!counter).ToString()) 
+                    conn
+                else
+                    Console.WriteLine("add new") 
+                    tryAddNew() |> ignore
+                    pool.Take()
+            )
+        else
+            Console.WriteLine("wait for free connection") 
+            pool.Take() // block until a Connection is back
 
 [<AutoOpenAttribute>]
 module ConnectionModule =
@@ -89,7 +118,7 @@ module ConnectionModule =
     let inline (!!)  (t: Task<'T>) = t |> Async.AwaitTask
     
     /// Run plain Task/IAsyncResult on current thread
-    let (!~!)  (t: IAsyncResult) = t |> (Async.AwaitIAsyncResult >> Async.Ignore >> Async.StartImmediate)
+    let (!~!)  (t: IAsyncResult) = t |> (Async.AwaitIAsyncResult >> Async.Ignore >> Async.RunSynchronously)
 
     /// Run task Task<'T> on current thread and return results
     let inline (!!!)  (t: Task<'T>) = t.Result // |> (Async.AwaitTask >> Async.RunSynchronously)
