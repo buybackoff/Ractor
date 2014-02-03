@@ -14,13 +14,13 @@ open Fredis
 
 let conn = new Connection("127.0.0.1", maxPoolSize = 2)
 
-// evaluates Task<T> on current thread, shortcut for (Async.AwaitTask >> Async.RunSynchronously)
+// !!! evaluates Task<T> on current thread, shortcut for (Async.AwaitTask >> Async.RunSynchronously)
 let res = !!!conn.Lists.RemoveFirstString(1, "nonex")
 
 
 // This will block until in another redis client you do "SELECT 1" then repeat "LPUSH nonex abc" 5 times, see fsi output during this ops
 //for i in 0..4 do
-//    use c = +conn // this usage should be alway
+//    use c = +conn // this usage should be standard for potentially blocking calls
 //    let res = 
 //        async {
 //            // !! shortcut for Async.AwaitTask
@@ -32,7 +32,8 @@ let res = !!!conn.Lists.RemoveFirstString(1, "nonex")
 
 //Connections
 
-let r1= !!!conn.Server.Ping()
+let r1=conn.Server.Ping()
+r1.Result
 conn.Features.Version
 
 //Tests Strings--------------------------------------------
@@ -51,16 +52,15 @@ let a' =
     } |> Async.RunSynchronously
 
 // !~! shortcut for (Async.AwaitIAsyncResult >> Async.Ignore >> Async.RunSynchronously)
-let a = !~!conn.Strings.Set(1,"k1","abc") 
+!~!conn.Strings.Set(1,"k1","abc") 
 
-let r2 = async { return! !!conn.Strings.Append(1,"k1","def") } |> Async.RunSynchronously
+let r2 = !!!conn.Strings.Append(1,"k1","def")
 
-Assert.AreEqual(r2, 6L)
+
 (*> val it : int64 = 6L *)
 
 let r3= !!!conn.Strings.GetString(1,"k1")
 
-(*>val r3 : string = "abcdef" *)
 
 //SET
 

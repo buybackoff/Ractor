@@ -61,7 +61,6 @@
     <Compile Include="Tests.fs" />
     <None Include="packages.config" />
     <None Include="Tests.fsx" />
-    <None Include="NullInAsync.fsx" />
   </ItemGroup>
   <ItemGroup>
     <Reference Include="BookSleeve">

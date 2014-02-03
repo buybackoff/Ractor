@@ -22,19 +22,18 @@ be accesses via `%` prefix operator).
 Operators:
 
 	/// Get an existing connection from a pool or a new connection to the same server with same parameters
-	/// Use this method when a call to Redis could be blocking, e.g. when using distributed locks
-	let (~+) (conn:Connection) = conn.Use
-	/// GetOpenSubscriberChannel on connection
-	let (~%) (conn:Connection) = conn.GetOpenSubscriberChannel()
-	/// Async await plain Task and return Async<unit>, to be used with do! inside Async
-	let (!~)  (t: IAsyncResult) = t |> (Async.AwaitIAsyncResult >> Async.Ignore)
-	/// Async await typed Task<'T> and return Async<'T>, to be used with let! inside Async
-	let inline (!!)  (t: Task<'T>) = t |> Async.AwaitTask
-	/// Run plain Task/IAsyncResult on current thread
-	let (!~!)  (t: IAsyncResult) = t |> (Async.AwaitIAsyncResult >> Async.Ignore >> Async.StartImmediate)
-	/// Run task Task<'T> on current thread and return results
-	let inline (!!!)  (t: Task<'T>) = t.Result // |> (Async.AwaitTask >> Async.RunSynchronously)
-    
+    /// Use this method when a call to Redis could be blocking, e.g. when using distributed locks
+    let (~+) (conn:Connection) = conn.Clone
+    /// GetOpenSubscriberChannel on connection
+    let (~%) (conn:Connection) = conn.GetOpenSubscriberChannel()
+    /// Async await plain Task and return Async<unit>, to be used with do! inside Async
+    let (!~)  (t: IAsyncResult) = t |> (Async.AwaitIAsyncResult >> Async.Ignore)
+    /// Async await typed Task<'T> and return Async<'T>, to be used with let! inside Async
+    let inline (!!)  (t: Task<'T>) = t |> Async.AwaitTask
+    /// Run plain Task/IAsyncResult on current thread
+    let (!~!)  (t: IAsyncResult) = t |> (Async.AwaitIAsyncResult >> Async.Ignore >> Async.RunSynchronously)
+    /// Run task Task<'T> on current thread and return results
+    let inline (!!!)  (t: Task<'T>) = t.Result // |> (Async.AwaitTask >> Async.RunSynchronously)
 
 Install & Usage
 ----------------------
@@ -52,7 +51,7 @@ See BookSleeve docs for API. Some examples how to use Fredis operators from Test
     async{
         // Async.AwaitIAsyncResult >> Async.Ignore
         return! !~conn.Strings.Set(1,"k1","abc")
-    } |> Async.StartImmediate
+    } |> Async.RunSynchronously
 	// !~! shortcut for (Async.AwaitIAsyncResult >> Async.Ignore >> Async.StartImmediate)
 	!~!conn.Strings.Set(1,"k1","abc") 
 	let r2 = async { return! !!conn.Strings.Append(1,"k1","def") } |> Async.RunSynchronously
@@ -61,17 +60,15 @@ See BookSleeve docs for API. Some examples how to use Fredis operators from Test
 
 Up for grabs!
 ----------------------
-I started this library to add "correct distributed blocking lock" (not yet implemented) 
+I started this library to add async distributed locks
 and to add convenience shortcuts for working with Task<'T> from F# Async. Additional useful 
 features could be automatic serialization of generic types using protobuf-net and
 a DSL that will allow to use native Redis commands with .NET types. 
 
 
-I won't be able to spend all my time on this and am not sure that I could complete the features alone.
+I won't be able to spend all my time on this and am not sure that I could complete the features alone at all.
 This project is an ideal candidate to be a shared community project. Please fork, contribute your
  edits and new ideas, add your name to the license and let's party hard on this project!
-
-I hope to move this to github.com/fsprojects but cannot find the detailed instructons I believe I've seen some time ago.
 
 **TODOs:**
 
