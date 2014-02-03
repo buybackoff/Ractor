@@ -52,7 +52,7 @@ See BookSleeve docs for API. Some examples how to use Fredis operators from Test
         // Async.AwaitIAsyncResult >> Async.Ignore
         return! !~conn.Strings.Set(1,"k1","abc")
     } |> Async.RunSynchronously
-	// !~! shortcut for (Async.AwaitIAsyncResult >> Async.Ignore >> Async.StartImmediate)
+	// !~! shortcut for (Async.AwaitIAsyncResult >> Async.Ignore >> Async.RunSynchronously)
 	!~!conn.Strings.Set(1,"k1","abc") 
 	let r2 = async { return! !!conn.Strings.Append(1,"k1","def") } |> Async.RunSynchronously
 	let r3 = !!!conn.Strings.GetString(1,"k1")
