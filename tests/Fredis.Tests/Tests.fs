@@ -22,20 +22,20 @@ let ``hello, Fredis`` () =
             Console.Write(ping.ToString() + " ")
         if i % 1500 =0 then Console.WriteLine("")
 
-    for i in 1..lim do
-        let ping = !!!conn.Server.Ping()
-        if i % 100 = 0 then
-            Console.Write(i.ToString() + ":")
-            Console.Write(ping.ToString() + " ")
-        if i % 1500 =0 then Console.WriteLine("")
-
- 
-        for i = 1 to countPerThread do incTest(c))
-
-    let res = !!!conn.Strings.GetInt64(0, "testinc")
-
-    incrementers () |> ignore
-    //if res.Value <> int64(countPerThread * threadCount) then failwith "you are stupid bastartd!" else Console.WriteLine("you are genius!")
+//    for i in 1..lim do
+//        let ping = !!!conn.Server.Ping()
+//        if i % 100 = 0 then
+//            Console.Write(i.ToString() + ":")
+//            Console.Write(ping.ToString() + " ")
+//        if i % 1500 =0 then Console.WriteLine("")
+//
+// 
+//        for i = 1 to countPerThread do incTest(c))
+//
+//    let res = !!!conn.Strings.GetInt64(0, "testinc")
+//
+//    incrementers () |> ignore
+//    //if res.Value <> int64(countPerThread * threadCount) then failwith "you are stupid bastartd!" else Console.WriteLine("you are genius!")
 
     //res.Value
     ()
