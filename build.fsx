@@ -23,6 +23,7 @@ open System
 // (used by attributes in AssemblyInfo, name of a NuGet package and directory in 'src')
 let project = "Fredis"
 
+
 // Short summary of the project
 // (used as description in AssemblyInfo and as a short summary for NuGet package)
 let summary = "F# Redis client"
@@ -49,6 +50,18 @@ let gitHome = "https://github.com/buybackoff"
 // The name of the project on GitHub
 let gitName = "Fredis"
 let cloneUrl = "git@github.com:buybackoff/Fredis.git"
+
+
+
+// --------------------------------------------------------------------------------------
+// Beehive
+// --------------------------------------------------------------------------------------
+
+let projectBeehive = "Beehive"
+let summaryBeehive = "Redis based distributed Actor System extending Fredis and FSharp.Actor/Pigeon"
+let descriptionBeehive = """
+ Redis based distributed Actor System extending Fredis and FSharp.Actor/Pigeon. """
+let tagsBeehive = "F# fsharp redis actor agents"
 
 // --------------------------------------------------------------------------------------
 // END TODO: The rest of the file includes standard build steps 
@@ -121,6 +134,21 @@ Target "NuGet" (fun _ ->
             Publish = hasBuildParam "nugetkey"
             Dependencies = [] })
         ("nuget/" + project + ".nuspec")
+
+    NuGet (fun p -> 
+        { p with   
+            Authors = authors
+            Project = projectBeehive
+            Summary = summaryBeehive
+            Description = description + "\n\n" + descriptionBeehive
+            Version = release.NugetVersion
+            ReleaseNotes = String.concat " " release.Notes
+            Tags = tagsBeehive
+            OutputPath = "bin"
+            AccessKey = getBuildParamOrDefault "nugetkey" ""
+            Publish = hasBuildParam "nugetkey" 
+            Dependencies = [] })
+        ("nuget/Beehive.nuspec")
 )
 
 // --------------------------------------------------------------------------------------

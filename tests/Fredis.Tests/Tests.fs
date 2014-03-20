@@ -5,6 +5,9 @@ open System.Linq
 open System.Text
 open System.Threading.Tasks
 open Fredis
+open System
+open System.Text
+open System.Diagnostics
 open NUnit.Framework
 
 [<Test>]
@@ -27,3 +30,12 @@ let ``hello, Fredis`` () =
         if i % 1500 =0 then Console.WriteLine("")
 
  
+        for i = 1 to countPerThread do incTest(c))
+
+    let res = !!!conn.Strings.GetInt64(0, "testinc")
+
+    incrementers () |> ignore
+    //if res.Value <> int64(countPerThread * threadCount) then failwith "you are stupid bastartd!" else Console.WriteLine("you are genius!")
+
+    //res.Value
+    ()
