@@ -37,12 +37,6 @@ namespace Fredis {
 
 
     [AttributeUsage(AttributeTargets.Property)]
-    public class CustomFieldAttribute : ServiceStack.DataAnnotations.CustomFieldAttribute {
-        public CustomFieldAttribute(string sql) : base(sql) { }
-    }
-
-
-    [AttributeUsage(AttributeTargets.Property)]
     public class DecimalLengthAttribute : ServiceStack.DataAnnotations.DecimalLengthAttribute {
         public DecimalLengthAttribute(int precision, int scale) : base(precision, scale) { }
         public DecimalLengthAttribute(int precision) : base(precision) { }
@@ -58,13 +52,9 @@ namespace Fredis {
     }
 
 
-    public class DescriptionAttribute : ServiceStack.DataAnnotations.DescriptionAttribute {
-        public DescriptionAttribute(string description) : base(description) { }
-    }
-
 
     [AttributeUsage(AttributeTargets.Property)]
-    public class ForeignKeyAttribute : ServiceStack.DataAnnotations.ForeignKeyAttribute {
+    public class ForeignKeyAttribute : ServiceStack.OrmLite.ForeignKeyAttribute {
         public ForeignKeyAttribute(Type type) : base(type) { }
     }
 
@@ -82,31 +72,54 @@ namespace Fredis {
 
 
     public class MetaAttribute : ServiceStack.DataAnnotations.MetaAttribute {
-        public MetaAttribute(string name, string value) : base(name, value) {}
+        public MetaAttribute(string name, string value) : base(name, value) { }
     }
 
-
+    /// <summary>
+    /// Execute the provided SQL instead of default table generations. All other attributes 
+    /// that affect schema generation are ignored
+    /// </summary>
     [AttributeUsage(AttributeTargets.Class, AllowMultiple = true)]
-    public class PostCreateTableAttribute : ServiceStack.DataAnnotations.PostCreateTableAttribute {
-        public PostCreateTableAttribute(string sql) : base(sql) {}
+    public class CreateTableAttribute : Attribute {
+        public string Sql { get; set; }
+
+        public CreateTableAttribute(string sql) { Sql = sql; }
     }
 
-
+    /// <summary>
+    /// Execute custom SQL code after a table is created
+    /// </summary>
     [AttributeUsage(AttributeTargets.Class, AllowMultiple = true)]
-    public class PostDropTableAttribute : ServiceStack.DataAnnotations.PostDropTableAttribute {
-        public PostDropTableAttribute(string sql) : base(sql) {}
+    public class AfterCreateTableAttribute : Attribute {
+        public string Sql { get; set; }
+        public AfterCreateTableAttribute(string sql) { Sql = sql; }
     }
 
-
+    /// <summary>
+    /// Execute custom SQL code after a table is dropped
+    /// </summary>
     [AttributeUsage(AttributeTargets.Class, AllowMultiple = true)]
-    public class PreCreateTableAttribute : ServiceStack.DataAnnotations.PreCreateTableAttribute {
-        public PreCreateTableAttribute(string sql) : base(sql) {}
+    public class AfterDropTableAttribute : Attribute {
+        public string Sql { get; set; }
+        public AfterDropTableAttribute(string sql) { Sql = sql; }
     }
 
-
+    /// <summary>
+    /// Execute custom SQL code before a table is created
+    /// </summary>
     [AttributeUsage(AttributeTargets.Class, AllowMultiple = true)]
-    public class PreDropTableAttribute : ServiceStack.DataAnnotations.PreDropTableAttribute {
-        public PreDropTableAttribute(string sql) : base(sql) {}
+    public class BeforeCreateTableAttribute : Attribute {
+        public string Sql { get; set; }
+        public BeforeCreateTableAttribute(string sql) { Sql = sql; }
+    }
+
+    /// <summary>
+    /// Execute custom SQL code before a table is dropped
+    /// </summary>
+    [AttributeUsage(AttributeTargets.Class, AllowMultiple = true)]
+    public class BeforeDropTableAttribute : Attribute {
+        public string Sql { get; set; }
+        public BeforeDropTableAttribute(string sql) { Sql = sql; }
     }
 
 
@@ -116,44 +129,41 @@ namespace Fredis {
     }
 
 
-    public class RangeAttribute : ServiceStack.DataAnnotations.RangeAttribute {
-        public RangeAttribute(int min, int max) : base(min, max) {}
-        public RangeAttribute(double min, double max) : base(min, max) {}
-        public RangeAttribute(Type type, string min, string max) : base(type, min, max) {}
+    public class RangeAttribute : System.ComponentModel.DataAnnotations.RangeAttribute {
+        public RangeAttribute(int min, int max) : base(min, max) { }
+        public RangeAttribute(double min, double max) : base(min, max) { }
+        public RangeAttribute(Type type, string min, string max) : base(type, min, max) { }
     }
 
 
-    [AttributeUsage(AttributeTargets.Property)]
-    public class ReferenceAttribute : ServiceStack.DataAnnotations.ReferenceAttribute {
 
-    }
 
 
     [AttributeUsage(AttributeTargets.Property | AttributeTargets.Field | AttributeTargets.Class | AttributeTargets.Struct)]
     public class ReferencesAttribute : ServiceStack.DataAnnotations.ReferencesAttribute {
-        public ReferencesAttribute(Type type) : base(type) {}
+        public ReferencesAttribute(Type type) : base(type) { }
     }
 
 
-    public class RequiredAttribute : ServiceStack.DataAnnotations.RequiredAttribute {
+    public class RequiredAttribute : System.ComponentModel.DataAnnotations.RequiredAttribute {
 
     }
 
 
     [AttributeUsage(AttributeTargets.Class)]
-    public class SchemaAttribute : ServiceStack.DataAnnotations.SchemaAttribute {
-        public SchemaAttribute(string name) : base(name) {}
+    public class SchemaAttribute : ServiceStack.OrmLite.SchemaAttribute {
+        public SchemaAttribute(string name) : base(name) { }
     }
 
 
     [AttributeUsage(AttributeTargets.Property)]
     public class SequenceAttribute : ServiceStack.DataAnnotations.SequenceAttribute {
-        public SequenceAttribute(string name) : base(name) {}
+        public SequenceAttribute(string name) : base(name) { }
     }
 
 
-    public class StringLengthAttribute : ServiceStack.DataAnnotations.StringLengthAttribute {
-        public StringLengthAttribute(int maximumLength) : base(maximumLength) {}
+    public class StringLengthAttribute : System.ComponentModel.DataAnnotations.StringLengthAttribute {
+        public StringLengthAttribute(int maximumLength) : base(maximumLength) { }
     }
 
 }
