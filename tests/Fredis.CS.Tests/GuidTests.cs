@@ -25,10 +25,10 @@ namespace Fredis.CS.Tests {
 
         [Test]
         public void GuidFirstLetterDistribution() {
-            const int count = 1000000;
+            const int count = 1000;
             var freq = new Dictionary<string, int>();
             for (int i = 0; i < count; i++) {
-                var guidFirstChar = GuidGenerator.NewGuid().ToString("N").Substring(0, 2);
+                var guidFirstChar = GuidGenerator.NewGuid(4).ToString("N").Substring(0, 2);
                 if (freq.ContainsKey(guidFirstChar)) {
                     freq[guidFirstChar] = freq[guidFirstChar] + 1;
                 } else {
@@ -52,7 +52,7 @@ namespace Fredis.CS.Tests {
 
             for (uint epoch = 0; epoch < 16; epoch++) {
                 Console.WriteLine("Epoch: {0}", epoch);
-                const int count = 10000000;
+                const int count = 1000;
                 var freq = new Dictionary<uint, int>();
                 for (int i = 0; i < count; i++) {
                     var shard = GuidGenerator.NewGuid(epoch).Shard();

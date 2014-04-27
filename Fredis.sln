@@ -17,6 +17,7 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "project", "project", "{BF60
 		nuget\Beehive.nuspec = nuget\Beehive.nuspec
 		build.fsx = build.fsx
 		nuget\Fredis.nuspec = nuget\Fredis.nuspec
+		Fredis.Persistence.nuspec = Fredis.Persistence.nuspec
 		README.md = README.md
 		RELEASE_NOTES.md = RELEASE_NOTES.md
 	EndProjectSection
@@ -41,9 +42,9 @@ Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "Fredis.Tests", "tests\Fredi
 EndProject
 Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "Beehive", "src\Beehive\Beehive.fsproj", "{B14B082B-D563-4E15-8C33-81F32E853995}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Fredis.IO", "src\Fredis.CS\Fredis.IO.csproj", "{6780D11C-42AD-46DC-B49D-95912164BB23}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Fredis.Persistence", "src\Fredis.CS\Fredis.Persistence.csproj", "{6780D11C-42AD-46DC-B49D-95912164BB23}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Fredis.CS.Tests", "tests\Fredis.CS.Tests\Fredis.CS.Tests.csproj", "{3842EBE5-E76E-40DE-A375-905970DD0F30}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Fredis.Persistence.Tests", "tests\Fredis.CS.Tests\Fredis.Persistence.Tests.csproj", "{3842EBE5-E76E-40DE-A375-905970DD0F30}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

@@ -11,10 +11,10 @@ namespace Fredis {
         long Id { get; set; }
 
         /// <summary>
-        /// Normaly all data changes are stored as events so this property means creation time for 
+        /// Normally all data changes are stored as events so this property means creation time for 
         /// events and the time when a snapshot of a state was taken for denormalized cache of state
         /// </summary>
         [Index(false)]
-        DateTimeOffset UpdatedAt { get; set; }
+        DateTime UpdatedAt { get; set; }
     }
 }

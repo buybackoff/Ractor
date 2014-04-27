@@ -1,3 +1,20 @@
+Update 04/14
+=======================
+Adding persistence stuff to caching/redis stuff since they use the same objects. This commit adds a typed DB persistor with a simple sharding strategy similar to Pinterest's one but with Guids and without moving data ever, really (data stays on the same physical shard forever, in case of AWS will need only downtime for resizing and that is it).
+
+The goal is to put together very simple APIs to work with POCOs and files and make it scalable at least to some moderate size to win time when single boxes could choke (using AWS as a base case).
+
+Booksleeve is superseeded by StackExchange.Redis, which is even better. Redis cluster is almost there. Given AWS's speed to catch up with redis 
+it is safe to assume they will have cluster ASAP, so all caching should be done in redis non memcached. 
+
+I still do not see a clear roadmap of this project, but will spend three summer months in a CS school directly 
+on it to do redis-based actors and other stuff from the issues page, which will be relevant then. In addition, will have to
+do for myself some simple caching/persistence invisible interplay unless StackExchange publishes theirs.
+
+
+The text below is only 50% relevant.
+
+
 Fredis
 =======================
 Fredis is a BookSleeve wrapper for convenient usage from F# (plus planned some extentions, 

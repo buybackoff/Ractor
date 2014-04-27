@@ -18,6 +18,6 @@ namespace Fredis {
         /// </summary>
         [DataMember]
         [Index(false)]
-        public virtual DateTimeOffset UpdatedAt { get; set; }
+        public virtual DateTime UpdatedAt { get; set; }
     }
 }

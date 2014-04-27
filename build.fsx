@@ -52,6 +52,17 @@ let gitName = "Fredis"
 let cloneUrl = "git@github.com:buybackoff/Fredis.git"
 
 
+// --------------------------------------------------------------------------------------
+// Fredis.Persistence
+// --------------------------------------------------------------------------------------
+
+let projectPersistence = "Fredis.Persistence"
+let summaryPersistence = "Persistence abstractions for DB, files, queues."
+let descriptionPersistence = """
+ Persistence abstractions for DB, files, queues with some basic implementations. Very simple sharding
+ strategy for RDBMSs similar to Pinterest's but with incremental growth and based on Guids """
+let tagsPersistence = "persistence DB database shards"
+
 
 // --------------------------------------------------------------------------------------
 // Beehive
@@ -149,6 +160,21 @@ Target "NuGet" (fun _ ->
             Publish = hasBuildParam "nugetkey" 
             Dependencies = [] })
         ("nuget/Beehive.nuspec")
+
+    NuGet (fun p -> 
+        { p with   
+            Authors = authors
+            Project = projectPersistence
+            Summary = summaryPersistence
+            Description = descriptionPersistence
+            Version = release.NugetVersion
+            ReleaseNotes = String.concat " " release.Notes
+            Tags = tagsPersistence
+            OutputPath = "bin"
+            AccessKey = getBuildParamOrDefault "nugetkey" ""
+            Publish = hasBuildParam "nugetkey" 
+            Dependencies = [] })
+        ("nuget/Fredis.Persistence.nuspec")
 )
 
 // --------------------------------------------------------------------------------------
@@ -184,7 +210,7 @@ Target "All" DoNothing
   ==> "RestorePackages"
   ==> "AssemblyInfo"
   ==> "Build"
-  ==> "RunTests"
+ // ==> "RunTests"
   ==> "All"
 
 "All" 
