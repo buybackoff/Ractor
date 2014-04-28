@@ -89,6 +89,9 @@ namespace Fredis {
             return bytes;
         }
 
+        /// <summary>
+        /// Shard in which the Guid is stored
+        /// </summary>
         public static uint Epoch(this Guid guid) {
             var bytes = guid.ToByteArray();
             return (uint)(bytes[7] >> 4);
@@ -134,7 +137,7 @@ namespace Fredis {
 
             var numberOfShardInEpoch = lastShardInEpoch - firstShardInEpoch + 1;
 
-            var shard = (ushort)(firstShardInEpoch + (numberOfShardInEpoch * virtualShard) / 65536 - 1); // 6553*6* not 5!
+            var shard = (ushort)(firstShardInEpoch + ((numberOfShardInEpoch * virtualShard) / 65536) - 1); // 6553*6* not 5!
 
             return shard;
         }

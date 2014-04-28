@@ -52,7 +52,7 @@ namespace Fredis.CS.Tests {
 
             for (uint epoch = 0; epoch < 16; epoch++) {
                 Console.WriteLine("Epoch: {0}", epoch);
-                const int count = 1000;
+                const int count = 10000;
                 var freq = new Dictionary<uint, int>();
                 for (int i = 0; i < count; i++) {
                     var shard = GuidGenerator.NewGuid(epoch).Shard();
@@ -87,6 +87,13 @@ namespace Fredis.CS.Tests {
             Console.WriteLine("System:");
             for (int i = 0; i < count; i++) {
                 Console.WriteLine(Guid.NewGuid().ToString("D"));
+            }
+
+            Console.WriteLine("System:");
+            for (int i = 0; i < count; i++) {
+                Guid guid;
+                NativeMethods.UuidCreateSequential(out guid);
+                Console.WriteLine(guid);
             }
         }
 

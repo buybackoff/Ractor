@@ -60,8 +60,9 @@
       <SpecificVersion>False</SpecificVersion>
       <HintPath>..\..\packages\ServiceStack.OrmLite.MySql.3.9.71\lib\net35\ServiceStack.OrmLite.dll</HintPath>
     </Reference>
-    <Reference Include="ServiceStack.OrmLite.MySql">
-      <HintPath>..\..\packages\ServiceStack.OrmLite.MySql.3.9.71\lib\net35\ServiceStack.OrmLite.MySql.dll</HintPath>
+    <Reference Include="ServiceStack.OrmLite.MySql, Version=3.9.71.0, Culture=neutral, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\..\..\..\Source\ServiceStack.OrmLite\src\ServiceStack.OrmLite.MySql\bin\Release\ServiceStack.OrmLite.MySql.dll</HintPath>
     </Reference>
     <Reference Include="ServiceStack.OrmLite.SqliteNET">
       <HintPath>..\..\packages\ServiceStack.OrmLite.Sqlite32.3.9.71\lib\net40\ServiceStack.OrmLite.SqliteNET.dll</HintPath>

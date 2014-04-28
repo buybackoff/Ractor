@@ -93,6 +93,7 @@
     <Compile Include="IRelationalPersistor.cs">
       <DependentUpon>Interfaces.cs</DependentUpon>
     </Compile>
+    <Compile Include="IUniqueLongGenerator.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="TablePerHierarchyAttribute.cs">
       <DependentUpon>Attributes.cs</DependentUpon>

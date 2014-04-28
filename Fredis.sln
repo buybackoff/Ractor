@@ -17,7 +17,7 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "project", "project", "{BF60
 		nuget\Beehive.nuspec = nuget\Beehive.nuspec
 		build.fsx = build.fsx
 		nuget\Fredis.nuspec = nuget\Fredis.nuspec
-		Fredis.Persistence.nuspec = Fredis.Persistence.nuspec
+		nuget\Fredis.Persistence.nuspec = nuget\Fredis.Persistence.nuspec
 		README.md = README.md
 		RELEASE_NOTES.md = RELEASE_NOTES.md
 	EndProjectSection

@@ -9,7 +9,7 @@ using ServiceStack.Common.Extensions;
 using ServiceStack.OrmLite;
 using ServiceStack.Text;
 
-// Thoughts: caching should be done inside Fredis(F#), Fredis object must implement IPocoPersistor + ICacheClient
+// Thoughts: caching should be done inside Fredis(F#), Fredis object must implement (have properties) IPocoPersistor + ICacheClient
 // Cache must be aware of IDataObjects, CacheIndex should be independent from DB indexes
 // Think how to leverage Redis lists/hashes/zlists for foreign keys relationships? E.g. FB's friends 
 // CacheIndex: 1x1, like a DB index
@@ -35,6 +35,25 @@ namespace Fredis {
 
         private readonly Dictionary<ushort, string> _shards = new Dictionary<ushort, string>();
 
+        /// <summary>
+        /// A number from 0 to 15 (HEX digit) showing number of shards
+        /// {0,1},
+        /// {1,2},
+        /// {2,3},
+        /// {3,5},
+        /// {4,8},
+        /// {5,13},
+        /// {6,21},
+        /// {7,34},
+        /// {8,55},
+        /// {9,89},
+        /// {10,144},
+        /// {11,233},
+        /// {12,377},
+        /// {13,610},
+        /// {14,987},
+        /// {15,1597}
+        /// </summary>
         public ushort Epoch { get; private set; }
 
         /// <summary>
@@ -73,7 +92,14 @@ namespace Fredis {
 
             // epoch is determined from number of connection strings for shards
             // TODO unit test
-            Epoch = GuidGenerator.EpochToShards.First(x => x.Value >= numberOfShards).Key;
+            var epochKvp = GuidGenerator.EpochToShards.FirstOrDefault(x => x.Value == numberOfShards);
+
+            if (epochKvp.Equals(default(KeyValuePair<ushort, ushort>))) {
+                throw new ApplicationException("Wrong number of shards");
+            }
+
+            Epoch = epochKvp.Key;
+            // 
 
             foreach (var keyValuePair in sortedShards) {
                 var key = keyValuePair.Key.ToString(CultureInfo.InvariantCulture);
@@ -169,7 +195,7 @@ namespace Fredis {
                         return basket;
                     }).SelectMany(x => x).ToList(); // ToArray to get the actual result
 
-                if (hasErrors) throw new DataException("Could not insert data");
+                if (hasErrors) throw new DataException("Could not insert data"); // TODO show error message
 
                 // ReSharper disable once RedundantAssignment
                 items = result;
@@ -408,8 +434,13 @@ namespace Fredis {
                 .WithDegreeOfParallelism(baskets.Count())
                 .WithExecutionMode(ParallelExecutionMode.ForceParallelism)
                 .Select(lu => {
+                    var shardedGuids = lu.ToList();
                     using (var db = DbFactory.OpenDbConnection(lu.Key.ToString(CultureInfo.InvariantCulture))) {
-                        return db.Select<T>(q => Sql.In(q.Guid, guids));
+                        return shardedGuids.Count > 1
+                            ? db.Select<T>(q => Sql.In(q.Guid, shardedGuids))
+                            : db.Single<T>("Guid = {0} LIMIT 1;", shardedGuids.Single()).ItemAsList();
+                        // "LIMIT 1" increases performance 15x in case when Guid index is not unique - same optimisation "stop when found first" as with uniue index
+                        
                     }
                 }).SelectMany(x => x).ToList();
 
@@ -427,6 +458,7 @@ namespace Fredis {
 
 
         public T GetById<T>(long id) where T : IDataObject, new() {
+            // TODO use single
             return GetByIds<T>(id.ItemAsList()).Single();
         }
 

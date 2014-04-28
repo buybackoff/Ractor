@@ -77,7 +77,7 @@ namespace Fredis.Persistence.Tests {
 
             Persistor.CreateTable<RootAsset>(true);
 
-            for (int i = 0; i < 10; i++) {
+            for (int i = 0; i < 1; i++) {
 
 
                 var dobj = new RootAsset() {
@@ -88,6 +88,8 @@ namespace Fredis.Persistence.Tests {
 
                 var fromDb = Persistor.GetById<RootAsset>(dobj.Guid);
                 Assert.AreEqual("inserted", fromDb.Value);
+
+                Console.WriteLine(dobj.Guid);
 
                 fromDb.Value = "updated";
                 Persistor.Update(fromDb);
@@ -101,7 +103,7 @@ namespace Fredis.Persistence.Tests {
 
             Persistor.CreateTable<DataObject>(false);
             var list = new List<DataObject>();
-            for (int i = 0; i < 500; i++) {
+            for (int i = 0; i < 50000; i++) {
 
                 var dobj = new DataObject() {
                     Value = "inserted"
@@ -117,7 +119,7 @@ namespace Fredis.Persistence.Tests {
 
             Persistor.CreateTable<RootAsset>(false);
             var list = new List<RootAsset>();
-            for (int i = 0; i < 500; i++) {
+            for (int i = 0; i < 50000; i++) {
 
                 var dobj = new RootAsset() {
                     Value = "inserted"
@@ -126,5 +128,29 @@ namespace Fredis.Persistence.Tests {
             }
             Persistor.Insert(list);
         }
+
+
+        [Test]
+        public void CouldSelectManyDistributedDataObject() {
+
+            //Persistor.CreateTable<RootAsset>(true);
+            //var list = new List<RootAsset>();
+            //for (int i = 0; i < 100000; i++) {
+
+            //    var dobj = new RootAsset() {
+            //        Value = "inserted"
+            //    };
+            //    list.Add(dobj);
+            //}
+            //Persistor.Insert(list);
+
+            var values = Persistor.Select<RootAsset>(q => q.Id < 201).Select(ra => ra.Guid).ToList();
+            RootAsset a;
+            foreach (var value in values) {
+                a = Persistor.GetById<RootAsset>(value);
+            }
+            //Persistor.GetByIds<RootAsset>(values);
+        }
+
     }
 }
