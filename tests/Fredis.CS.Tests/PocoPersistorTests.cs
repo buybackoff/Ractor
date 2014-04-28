@@ -1,9 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using Fredis;
 using NUnit.Framework;
 using ServiceStack.OrmLite;
 
@@ -99,9 +96,9 @@ namespace Fredis.Persistence.Tests {
         }
 
         [Test]
-        public void CouldCreateTableAndCrudManyDataObject() {
+        public void CouldCreateTableAndInsertManyDataObject() {
 
-            Persistor.CreateTable<DataObject>(false);
+            Persistor.CreateTable<DataObject>(true);
             var list = new List<DataObject>();
             for (int i = 0; i < 50000; i++) {
 
@@ -115,7 +112,7 @@ namespace Fredis.Persistence.Tests {
 
 
         [Test]
-        public void CouldCreateTableAndCrudManyDistributedDataObject() {
+        public void CouldCreateTableAndInsertManyDistributedDataObject() {
 
             Persistor.CreateTable<RootAsset>(false);
             var list = new List<RootAsset>();
