@@ -9,8 +9,6 @@ namespace Fredis {
     /// </summary>
     public interface IPocoPersistor {
 
-
-
         /// <summary>
         /// Create a table for type T
         /// </summary>
@@ -70,6 +68,8 @@ namespace Fredis {
         /// Execute custom SQL and discard results
         /// </summary>
         void ExecuteSql(string sql, bool onShards = false);
+        // TODO add method to execute any SQL that returns results. And other methods that make sense at this abstraction level without being too SS.ORML-specific
+        // count
 
         /// <summary>
         /// 
@@ -90,6 +90,8 @@ namespace Fredis {
         /// 
         /// </summary>
         List<T> GetByIds<T>(List<Guid> guids) where T : IDistributedDataObject, new();
+
+        
 
     }
 }

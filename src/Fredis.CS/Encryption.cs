@@ -123,6 +123,29 @@ namespace Fredis {
 
     static class CryptoExtentions {
 
+        public static string GetMD5Hash(this Stream input) {
+            var position = input.Position;
+            var sb = new StringBuilder();
+            var hasher = MD5.Create();
+            var hashValue = hasher.ComputeHash(input);
+            foreach (var b in hashValue)
+                sb.Append(b.ToString("x2").ToLower());
+            input.Position = position;
+            return sb.ToString();
+        }
+
+        public static string GetSHA256Hash(this Stream input) {
+            var position = input.Position;
+            var sb = new StringBuilder();
+            var hasher = SHA256.Create();
+            var hashValue = hasher.ComputeHash(input);
+            foreach (var b in hashValue)
+                sb.Append(b.ToString("x2").ToLower());
+            input.Position = position;
+            return sb.ToString();
+        }
+
+
         private const int _KEY_LENGTH = 256;
 
         public static MemoryStream Encrypt(this Stream inputStream, byte[] key, byte[] iv) {

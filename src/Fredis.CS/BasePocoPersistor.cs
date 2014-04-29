@@ -5,6 +5,7 @@ using System.Diagnostics;
 using System.Globalization;
 using System.Linq;
 using System.Linq.Expressions;
+using System.Threading.Tasks;
 using ServiceStack.Common.Extensions;
 using ServiceStack.OrmLite;
 using ServiceStack.Text;
@@ -21,6 +22,19 @@ using ServiceStack.Text;
 
 // Better to forget about fancy cache/DB integration stuff
 // add ElasticSearch into the equation
+
+
+// Async: 
+// * SS is not going to add async methods
+// * MySQL connector doesn't have proper implementation
+// * Redis client is done very well. Better to design to big system so that Redis hit ratio is high than to fight DB micro optimizations
+
+
+// Cache: http://meta.stackexchange.com/questions/69164/does-stack-overflow-use-caching-and-if-so-how
+// http://meta.stackexchange.com/questions/110320/stack-overflow-db-performance-and-redis-cache
+// http://stackoverflow.com/questions/9596877/stackoverflow-redis-and-cache-invalidation
+
+
 
 namespace Fredis {
     /// <summary>
@@ -353,7 +367,7 @@ namespace Fredis {
 
 
 
-        public List<T> Select<T>(Expression<Func<T, bool>> predicate = null) where T : IDataObject, new() {
+        private List<T> SelectOld<T>(Expression<Func<T, bool>> predicate = null) where T : IDataObject, new() {
 
             var isDistributed = typeof(IDistributedDataObject).IsAssignableFrom(typeof(T));
 
@@ -374,6 +388,53 @@ namespace Fredis {
 
             using (var db = DbFactory.OpenDbConnection()) {
                 return predicate == null ? db.Select<T>() : db.Select(predicate);
+            }
+        }
+
+
+        public List<T> Select<T>(Expression<Func<T, bool>> predicate = null) where T : IDataObject, new() {
+
+            return QueryOperation<T, List<T>>(db => predicate == null ? db.Select<T>() : db.Select(predicate), result => result.SelectMany(x => x).ToList());
+        }
+
+        public long Count<T>() where T : IDataObject, new() {
+
+            return QueryOperation<T, long>(db => db.Count<T>(),
+                result => result.Aggregate(0L, (acc, i) => acc + i));
+        }
+
+        // TODO add aggregation Func
+        // TODO this is SS specific, should be private but convenient to have it for now
+        public TR QueryOperation<T, TR>(Func<IDbConnection, TR> operation, Func<List<TR>, TR> aggregation = null, List<ushort> shards = null ) where T : IDataObject, new() {
+
+            var isDistributed = typeof(IDistributedDataObject).IsAssignableFrom(typeof(T));
+
+            if (isDistributed) {
+                var luShards = shards == null
+                ? _shards
+                : shards.ToDictionary(luShard => luShard, luShard => _shards[luShard]);
+
+                var result = luShards
+                    .AsParallel()
+                    .WithDegreeOfParallelism(Math.Min(_shards.Count, 64))
+                    .WithExecutionMode(ParallelExecutionMode.ForceParallelism)
+                    .Select(dbName => {
+                        using (var db = DbFactory.OpenDbConnection(dbName.Key.ToString(CultureInfo.InvariantCulture))) {
+                            return operation(db);
+                        }
+                    }).ToList();
+                if (aggregation == null) throw new ApplicationException("No aggregation function for distributed data objects");
+                var flatResult = aggregation(result);
+                return flatResult;
+            }
+
+            // TODO this doesn't feel right
+            if (aggregation != null) throw new ApplicationException("Aggregation function is not expected");
+            if (shards != null) throw new ApplicationException("Shards parameter is not expected");
+
+
+            using (var db = DbFactory.OpenDbConnection()) {
+                return operation(db);
             }
         }
 
@@ -440,7 +501,7 @@ namespace Fredis {
                             ? db.Select<T>(q => Sql.In(q.Guid, shardedGuids))
                             : db.Single<T>("Guid = {0} LIMIT 1;", shardedGuids.Single()).ItemAsList();
                         // "LIMIT 1" increases performance 15x in case when Guid index is not unique - same optimisation "stop when found first" as with uniue index
-                        
+
                     }
                 }).SelectMany(x => x).ToList();
 
@@ -459,7 +520,7 @@ namespace Fredis {
 
         public T GetById<T>(long id) where T : IDataObject, new() {
             // TODO use single
-            return GetByIds<T>(id.ItemAsList()).Single();
+            return GetByIds<T>(id.ItemAsList()).SingleOrDefault(); //
         }
 
 
