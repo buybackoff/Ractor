@@ -35,6 +35,17 @@ using ServiceStack.Text;
 // http://stackoverflow.com/questions/9596877/stackoverflow-redis-and-cache-invalidation
 
 
+// TODO gather all comments and thoughts in README
+
+// for Persistence use words Insert, Update, Delete, Select
+// for Cache use words Put, Replace, Evict/Invalidate/Remove, Get/Lookup
+// these four should work well together with simplified ICache interface
+// (this cache is ephemeral, like MC which won't fail but will silently and randomly evict)
+// complex/advanced cache in persistenct in terms that it reflects all info from DB, e.g. 
+// user names, followers, etc
+
+
+
 
 namespace Fredis {
     /// <summary>

@@ -1,6 +1,5 @@
 ﻿using System;
 using System.IO;
-using System.Threading;
 using System.Threading.Tasks;
 using ServiceStack.Common;
 using ServiceStack.Text;
@@ -20,8 +19,13 @@ namespace Fredis {
         /// <param name="path">Directory to store blobs</param>
         public FileBlobPersistor(string path) {
             _path = path;
+            //Serializer = new BaseBinarySerializer();
         }
 
+        /// <summary>
+        /// Binary serializer for POCOs
+        /// </summary>
+        //public IBinarySerializer Serializer { get; set; }
 
         public bool TryPut(Stream stream, out string key) {
             var md5Hash = stream.GetSHA256Hash();
@@ -179,30 +183,30 @@ namespace Fredis {
     // Thanks to John Skeet
     // https://msmvps.com/blogs/jon_skeet/archive/2011/05/17/eduasync-part-5-making-task-lt-t-gt-awaitable.aspx
 
-    internal static class TaskExtensions {
-        public static TaskAwaiter<T> GetAwaiter<T>(this Task<T> task) {
-            return new TaskAwaiter<T>(task);
-        }
-    }
+    //internal static class TaskExtensions {
+    //    public static TaskAwaiter<T> GetAwaiter<T>(this Task<T> task) {
+    //        return new TaskAwaiter<T>(task);
+    //    }
+    //}
 
-    internal struct TaskAwaiter<T> {
-        private readonly Task<T> _task;
+    //internal struct TaskAwaiter<T> {
+    //    private readonly Task<T> _task;
 
-        internal TaskAwaiter(Task<T> task) {
-            this._task = task;
-        }
+    //    internal TaskAwaiter(Task<T> task) {
+    //        this._task = task;
+    //    }
 
-        public bool IsCompleted { get { return _task.IsCompleted; } }
+    //    public bool IsCompleted { get { return _task.IsCompleted; } }
 
-        public void OnCompleted(Action action) {
-            SynchronizationContext context = SynchronizationContext.Current;
-            TaskScheduler scheduler = context == null ? TaskScheduler.Current
-                : TaskScheduler.FromCurrentSynchronizationContext();
-            _task.ContinueWith(ignored => action(), scheduler);
-        }
+    //    public void OnCompleted(Action action) {
+    //        SynchronizationContext context = SynchronizationContext.Current;
+    //        TaskScheduler scheduler = context == null ? TaskScheduler.Current
+    //            : TaskScheduler.FromCurrentSynchronizationContext();
+    //        _task.ContinueWith(ignored => action(), scheduler);
+    //    }
 
-        public T GetResult() {
-            return _task.Result;
-        }
-    }
+    //    public T GetResult() {
+    //        return _task.Result;
+    //    }
+    //}
 }

@@ -9,7 +9,7 @@ namespace Fredis {
     /// <summary>
     /// Use one table to store a hierarchy of POCOs.
     /// </summary>
-    [Obsolete] // TODO delete or implement? with automaping should not be that complex...
+    [Obsolete] // TODO delete or implement? with automaping should not be that complex, but what are the use cases?...
     [AttributeUsage(AttributeTargets.Class)]
     public class TablePerHierarchyAttribute : Attribute {
         /// <summary>

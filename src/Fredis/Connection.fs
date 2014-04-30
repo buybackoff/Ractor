@@ -11,15 +11,6 @@ open System.Threading.Tasks
 
 open BookSleeve
 
-// removed pool for factory. something fishy going on with pool and blocking requests, 
-// it is just unneeded complexity, let's keep + operator for "create a new IDisposable copy 
-// of this connection" that will kill itself on Dispose()
-// Come back here when pool is **really** needed. For blocking queues an agent will take a connection
-// for its whole lifetime, so the pool is not needed, just a new connection.
-
-// TODO make Clone logic similar to BS SubscriberChannel with Interlocked.Exchange. This will 
-// allow to use +conn it a tight loop like in the test without opening a new connection on each loop. 
-
 // TODO Async looping lock based on setnx. Do not try to use blpop - too complex for artificial gain and uses a connection per lock.
 
 
