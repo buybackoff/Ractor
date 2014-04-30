@@ -7,9 +7,6 @@ using StackExchange.Redis;
 namespace Fredis
 {
 
-	// each command must have three versions
-	// Type item only
-
     public partial class Redis : IRedis {
 
         public bool Set<T>(T item, TimeSpan? expiry = null, When when = When.Always, bool fireAndForget = false) {
@@ -45,8 +42,8 @@ namespace Fredis
         }
 
 
-        public T Get<T>(string key, bool fullKey = false) {
-            var k = !fullKey
+        public T Get<T>(string key, bool keyIsPrefixed = false) {
+            var k = !keyIsPrefixed
                 ? GetTypePrefix<T>() + ":" + key
                 : key;
             return IsTypeCompressed<T>()
@@ -54,8 +51,8 @@ namespace Fredis
                 : ((string)GetDb().StringGet(k)).FromJsv<T>();
         }
 
-        public async Task<T> GetAsync<T>(string key, bool fullKey = false) {
-            var k = !fullKey
+        public async Task<T> GetAsync<T>(string key, bool keyIsPrefixed = false) {
+            var k = !keyIsPrefixed
                 ? GetTypePrefix<T>() + ":" + key
                 : key;
             var result = await GetDb().StringGetAsync(k);
@@ -65,8 +62,8 @@ namespace Fredis
         }
 
 
-        public bool SAdd<TRoot, TValue>(TRoot root, TValue value, string setKey = null, bool fireAndForget = false) {
-            var key = GetItemFullKey(root) + ":set:" + (setKey ?? typeof(TValue).Name);
+        public bool SAdd<TRoot, TValue>(TRoot root, TValue value, string setName = null, bool fireAndForget = false) {
+            var key = GetItemFullKey(root) + ":set:" + (setName ?? typeof(TValue).Name);
             var val = value.ToJsv();
             var ff = fireAndForget ? CommandFlags.FireAndForget : CommandFlags.None;
             return IsTypeCompressed<TValue>()
@@ -104,12 +101,12 @@ namespace Fredis
         }
 
 
-        public TValue HGet<TRoot, TValue>(string rootKey, string field, bool fullKey = false, string hashKey = null) {
-            var k = !fullKey
+        public TValue HGet<TRoot, TValue>(string rootKey, string field, bool rootKeyIsPrefixed = false, string hashName = null) {
+            var k = !rootKeyIsPrefixed
                 ? GetTypePrefix<TRoot>() + ":" + rootKey
                 : rootKey;
 
-            var key = GetItemFullKey(k) + ":hash:" + (hashKey ?? typeof(TValue).Name);
+            var key = k + ":hash:" + (hashName ?? typeof(TValue).Name);
 
             return IsTypeCompressed<TValue>()
                 ? ((byte[])GetDb().HashGet(key, field)).GUnzip().FromJsv<TValue>()
