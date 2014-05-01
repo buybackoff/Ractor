@@ -81,6 +81,7 @@
     <Compile Include="GuidTests.cs" />
     <Compile Include="PocoPersistorTests.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="RedisTests.cs" />
     <Compile Include="SerializationTests.cs" />
   </ItemGroup>
   <ItemGroup>

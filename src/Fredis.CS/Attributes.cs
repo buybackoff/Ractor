@@ -2,6 +2,8 @@
 
 namespace Fredis {
 
+    // TODO remove most of the attributes
+
     // SS attributes to hide RDBMS's ORM implementation
     // We will always depend on SS but must be able to use other IDBPersistor implementation
 

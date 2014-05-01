@@ -7,6 +7,10 @@ open System.Runtime.CompilerServices
 
 open Fredis
 
+    // TODO what I smoked then??? Review if there is anything usefull here...
+
+
+
 [<AutoOpenAttribute>]
 module Monitor = 
     

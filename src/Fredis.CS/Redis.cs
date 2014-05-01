@@ -1,49 +1,77 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Globalization;
 using System.Linq;
 using System.Reflection;
+using ServiceStack.Common;
 using ServiceStack.Text;
 using StackExchange.Redis;
 
 namespace Fredis {
-    
 
-    public partial class Redis {
+    // TODO a type cannot have two namespaces when they are defined at type level via attribute
+    // better define a namespace in an instance of Redis and this will be a logical replacement of numbered databases
 
-        // non-commands
+    public partial class Redis : IRedis {
 
-        public Redis(string connectionString) {
+        // all non-commands stuff
+
+        public string KeyNameSpace { get; private set; }
+        private readonly string _nameSpace;
+
+        public Redis(string connectionString, string keyNameSpace = "") {
             ConnectionMultiplexer = ConnectionMultiplexer.Connect(connectionString);
-
+            KeyNameSpace = keyNameSpace ?? ""; // just if null is provided
+            _nameSpace = KeyNameSpace.IsNullOrEmpty() ? "" : KeyNameSpace + ":";
         }
 
         public ConnectionMultiplexer ConnectionMultiplexer { get; private set; }
 
         /// <summary>
-        /// Return a key for an item T, e.g. NameSpace:ItemType:ItemId
+        /// Return a full key for an item T, e.g. "ItemType:i:ItemKey"
         /// </summary>
         public string GetItemFullKey<T>(T item) {
             var ci = GetCacheInfo<T>();
             return ci.GetFullKey(item);
         }
 
+        /// <summary>
+        /// Return a key for an item T, e.g. "ItemKey"
+        /// </summary>
         public string GetItemKey<T>(T item) {
             var ci = GetCacheInfo<T>();
             return ci.GetKey(item);
         }
 
+        /// <summary>
+        /// Return a full key for a type T, e.g. "ItemType:t"
+        /// </summary>
+        public string GetTypeFullKey<T>() {
+            var ci = GetCacheInfo<T>();
+            return ci.GetTypePrefix() + ":t";
+        }
+
+        /// <summary>
+        /// Return a prefix for a type T, e.g. "ItemType" (from CacheContract attribute or default to type name)
+        /// </summary>
         public string GetTypePrefix<T>() {
             var ci = GetCacheInfo<T>();
             return ci.GetTypePrefix();
         }
 
-        private TimeSpan? GetTypeExpiry<T>() {
+        /// <summary>
+        /// Return expiry TimeSpan from type attribute
+        /// </summary>
+        public TimeSpan? GetTypeExpiry<T>() {
             var ci = GetCacheInfo<T>();
             return ci.CacheContract == null ? null : ci.CacheContract.Expiry;
         }
 
-        private bool IsTypeCompressed<T>() {
+        /// <summary>
+        /// Return compressed flag from type attribute
+        /// </summary>
+        public bool IsTypeCompressed<T>() {
             var ci = GetCacheInfo<T>();
             return ci.CacheContract != null && ci.CacheContract.Compressed;
         }
@@ -55,13 +83,21 @@ namespace Fredis {
                 case When.Exists:
                     return StackExchange.Redis.When.Exists;
                 case When.NotExists:
-                default:
                     return StackExchange.Redis.When.NotExists;
             }
+            throw new ApplicationException("wrong Wjen enum");
         }
 
         private IDatabase GetDb() {
             return ConnectionMultiplexer.GetDatabase();
+        }
+
+
+        private T UnpackResultNullable<T>(RedisValue result) {
+            if (result.IsNull) return default(T);
+            return IsTypeCompressed<T>()
+                ? ((byte[])result).GUnzip().FromJsv<T>()
+                : ((string)result).FromJsv<T>();
         }
 
         /// <summary>
@@ -77,46 +113,46 @@ namespace Fredis {
             CacheInfo ci;
             if (CacheInfos.TryGetValue(name, out ci)) return ci;
             ci = new CacheInfo(typeof(T));
-
             CacheInfos[name] = ci;
             return ci;
         }
 
 
         private class CacheInfo {
-            public CacheContractAttribute CacheContract { get; set; }
-            
+            public CacheContractAttribute CacheContract { get; private set; }
+
             private PropertyInfo CacheKeyProperty { get; set; }
-
             private PropertyInfo PrimaryKeyProperty { get; set; }
-
             public CacheInfo(Type type) {
+
                 CacheContract = type.HasAttribute<CacheContractAttribute>()
                     ? type.FirstAttribute<CacheContractAttribute>()
-                    : null;
+                    : new CacheContractAttribute {
+                        Compressed = false,
+                        Expiry = null,
+                        Name = type.Name
+                    };
 
-                if (type.HasAttribute<CacheKeyAttribute>()) {
-                    CacheKeyProperty = (type).GetProperties(BindingFlags.Public | BindingFlags.Instance)
-                        .Single(p =>
-                            p.GetCustomAttributes(typeof (CacheKeyAttribute), false).Count() == 1);
-                } else {
-                    CacheKeyProperty = null;
-                }
+                CacheKeyProperty = (type).GetProperties(BindingFlags.Public | BindingFlags.Instance)
+                    .SingleOrDefault(p =>
+                        p.GetCustomAttributes(typeof(CacheKeyAttribute), false).Count() == 1);
 
-                if (type.HasAttribute<PrimaryKeyAttribute>()) {
-                    PrimaryKeyProperty = (type).GetProperties(BindingFlags.Public | BindingFlags.Instance)
-                        .Single(p =>
-                            p.GetCustomAttributes(typeof(PrimaryKeyAttribute), false).Count() == 1);
-                } else {
-                    PrimaryKeyProperty = null;
-                }
+                PrimaryKeyProperty = (type).GetProperties(BindingFlags.Public | BindingFlags.Instance)
+                    .SingleOrDefault(p =>
+                        p.GetCustomAttributes(typeof(PrimaryKeyAttribute), false).Count() == 1);
             }
 
             public string GetTypePrefix() {
-                return CacheContract.NameSpace + ":" + CacheContract.Name;
+                Debug.Assert(CacheContract != null);
+                return CacheContract.Name;
             }
 
             public string GetKey(object obj) {
+
+                // TODO keys of primitive types
+                if (obj is string || obj is int || obj is long) {
+                    return obj.ToString();
+                }
 
                 if (CacheKeyProperty != null) {
                     return CacheKeyProperty.GetValue(obj, null).ToString();
@@ -140,9 +176,9 @@ namespace Fredis {
             /// e.g. ns:n:key
             /// </summary>
             public string GetFullKey(object obj) {
-                return GetTypePrefix() + ":" + GetKey(obj);
+                return GetTypePrefix() + ":i:" + GetKey(obj);
             }
         }
-    
+
     }
 }

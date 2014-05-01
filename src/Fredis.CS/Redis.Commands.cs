@@ -7,112 +7,29 @@ using StackExchange.Redis;
 namespace Fredis
 {
 
-    public partial class Redis : IRedis {
+    // WIP
+    // For each write command we need 
+    // - fully typed version with implicit key + Async version;
+    // - typed version with custom explicit key + Async version;
+    // 
+    // For each read command we need:
+    // - typed version with root/owner object (for collections only) + Async version
+    // - typed version with custom explicit key and optional bool to indicate prefixed explicit full key + Async version
+    //
+    // Need to test each method with primitive, struct(?), pure POCO, CacheContract decorated POCO, IDO, IDDO
 
-        public bool Set<T>(T item, TimeSpan? expiry = null, When when = When.Always, bool fireAndForget = false) {
-            var key = GetItemFullKey(item);
-            var value = item.ToJsv();
-            var ex = expiry ?? GetTypeExpiry<T>();
-            var wh = MapWhen(when);
-            var ff = fireAndForget ? CommandFlags.FireAndForget : CommandFlags.None;
-			return IsTypeCompressed<T>() 
-                ? GetDb().StringSet(key, value.GZip(), ex, wh, ff)
-                : GetDb().StringSet(key, value, ex, wh, ff);
-        }
+    // Lists
+    // Strings
+    // Hashes
+    // Sets
+    // SortedSets
+    // Keys
+    // Other
 
-        public bool Set<T>(string key, T item, TimeSpan? expiry = null, When when = When.Always, bool fireAndForget = false) {
-            var value = item.ToJsv();
-            var ex = expiry ?? GetTypeExpiry<T>();
-            var wh = MapWhen(when);
-            var ff = fireAndForget ? CommandFlags.FireAndForget : CommandFlags.None;
-            return IsTypeCompressed<T>()
-                ? GetDb().StringSet(key, value.GZip(), ex, wh, ff)
-                : GetDb().StringSet(key, value, ex, wh, ff);
-        }
-
-        public async Task<bool> SetAsync<T>(T item, TimeSpan? expiry = null, When when = When.Always, bool fireAndForget = false) {
-            var key = GetItemFullKey(item);
-            var value = item.ToJsv();
-            var ex = expiry ?? GetTypeExpiry<T>();
-            var wh = MapWhen(when);
-            var ff = fireAndForget ? CommandFlags.FireAndForget : CommandFlags.None;
-            return  IsTypeCompressed<T>()
-                ? await GetDb().StringSetAsync(key, value.GZip(), ex, wh, ff)
-                : await GetDb().StringSetAsync(key, value, ex, wh, ff);
-        }
+    public partial class Redis {
 
 
-        public T Get<T>(string key, bool keyIsPrefixed = false) {
-            var k = !keyIsPrefixed
-                ? GetTypePrefix<T>() + ":" + key
-                : key;
-            return IsTypeCompressed<T>()
-                ? ((byte[])GetDb().StringGet(k)).GUnzip().FromJsv<T>()
-                : ((string)GetDb().StringGet(k)).FromJsv<T>();
-        }
-
-        public async Task<T> GetAsync<T>(string key, bool keyIsPrefixed = false) {
-            var k = !keyIsPrefixed
-                ? GetTypePrefix<T>() + ":" + key
-                : key;
-            var result = await GetDb().StringGetAsync(k);
-            return IsTypeCompressed<T>()
-                ? ((byte[])result).GUnzip().FromJsv<T>()
-                : ((string)result).FromJsv<T>();
-        }
-
-
-        public bool SAdd<TRoot, TValue>(TRoot root, TValue value, string setName = null, bool fireAndForget = false) {
-            var key = GetItemFullKey(root) + ":set:" + (setName ?? typeof(TValue).Name);
-            var val = value.ToJsv();
-            var ff = fireAndForget ? CommandFlags.FireAndForget : CommandFlags.None;
-            return IsTypeCompressed<TValue>()
-                ? GetDb().SetAdd(key, val.GZip(), ff)
-                : GetDb().SetAdd(key, val, ff);
-        }
-
-        public bool SAdd<TValue>(string key, TValue value, bool fireAndForget = false) {
-            var val = value.ToJsv();
-            var ff = fireAndForget ? CommandFlags.FireAndForget : CommandFlags.None;
-            return IsTypeCompressed<TValue>()
-                ? GetDb().SetAdd(key, val.GZip(), ff)
-                : GetDb().SetAdd(key, val, ff);
-        }
-
-
-
-        public bool HSet<TRoot, TValue>(TRoot root, TValue value, string hashKey = null, bool fireAndForget = false) {
-            var key = GetItemFullKey(root) + ":hash:" + (hashKey ?? typeof(TValue).Name);
-            var field = GetItemKey(value);
-            var val = value.ToJsv();
-            var ff = fireAndForget ? CommandFlags.FireAndForget : CommandFlags.None;
-            return IsTypeCompressed<TValue>()
-                ? GetDb().HashSet(key, field, val.GZip(), StackExchange.Redis.When.Always , ff)
-                : GetDb().HashSet(key, field, val, StackExchange.Redis.When.Always, ff);
-        }
-
-
-        public TValue HGet<TRoot, TValue>(TRoot root, string field, string hashKey = null) {
-            var key = GetItemFullKey(root) + ":hash:" + (hashKey ?? typeof(TValue).Name);
-
-            return IsTypeCompressed<TValue>()
-                ? ((byte[])GetDb().HashGet(key, field)).GUnzip().FromJsv<TValue>()
-                : ((string)GetDb().HashGet(key, field)).FromJsv<TValue>();
-        }
-
-
-        public TValue HGet<TRoot, TValue>(string rootKey, string field, bool rootKeyIsPrefixed = false, string hashName = null) {
-            var k = !rootKeyIsPrefixed
-                ? GetTypePrefix<TRoot>() + ":" + rootKey
-                : rootKey;
-
-            var key = k + ":hash:" + (hashName ?? typeof(TValue).Name);
-
-            return IsTypeCompressed<TValue>()
-                ? ((byte[])GetDb().HashGet(key, field)).GUnzip().FromJsv<TValue>()
-                : ((string)GetDb().HashGet(key, field)).FromJsv<TValue>();
-        }
-
+      
 
     }
 }

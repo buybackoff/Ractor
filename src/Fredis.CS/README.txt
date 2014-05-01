@@ -59,3 +59,31 @@ nodes then scale up. TODO - need some basic model with read/writes, costs, etc.
 
 
 
+// Thoughts: caching should be done inside Fredis(F#), Fredis object must implement (have properties) IPocoPersistor + ICacheClient
+// Cache must be aware of IDataObjects, CacheIndex should be independent from DB indexes
+// Think how to leverage Redis lists/hashes/zlists for foreign keys relationships? E.g. FB's friends 
+// CacheIndex: 1x1, like a DB index
+// CacheSet<T,U>(column) - Id of a column to list of row Ids; typed - returns actual objects
+// FriendShip {Id, First, Second, etc} - CacheSet on First and Second with column vice versa
+// CacheHash - Id of a column to hash, need expression to select keys and values
+// CacheZHash - same as above
+// understand deeply the SE.Redis API before doing anything other than CacheIndex
+
+// Better to forget about fancy cache/DB integration stuff
+// add ElasticSearch into the equation
+
+
+// Async: 
+// * SS is not going to add async methods
+// * MySQL connector doesn't have proper implementation
+// * Redis client is done very well. Better to design to big system so that Redis hit ratio is high than to fight DB micro optimizations
+
+
+// Cache: http://meta.stackexchange.com/questions/69164/does-stack-overflow-use-caching-and-if-so-how
+// http://meta.stackexchange.com/questions/110320/stack-overflow-db-performance-and-redis-cache
+// http://stackoverflow.com/questions/9596877/stackoverflow-redis-and-cache-invalidation
+
+
+
+
+

@@ -117,6 +117,21 @@
     </Compile>
     <Compile Include="Interfaces.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="Redis.Commands.Keys.cs">
+      <DependentUpon>Redis.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Redis.Commands.SortedSets.cs">
+      <DependentUpon>Redis.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Redis.Commands.Lists.cs">
+      <DependentUpon>Redis.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Redis.Commands.Hashes.cs">
+      <DependentUpon>Redis.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Redis.Commands.Sets.cs">
+      <DependentUpon>Redis.cs</DependentUpon>
+    </Compile>
     <Compile Include="Redis.cs" />
     <Compile Include="TablePerHierarchyAttribute.cs">
       <DependentUpon>Attributes.cs</DependentUpon>
@@ -126,6 +141,9 @@
     <None Include="app.config" />
     <None Include="packages.config" />
     <Compile Include="Redis.Commands.cs">
+      <DependentUpon>Redis.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Redis.Commands.Strings.cs">
       <DependentUpon>Redis.cs</DependentUpon>
     </Compile>
   </ItemGroup>
