@@ -96,8 +96,10 @@ namespace Fredis {
                 : ((string)result).FromJsv<T>();
         }
 
-        private RedisValue PackResultNullable<T>(T item) {
-            // TODO null check for only reference types
+        private RedisValue PackValueNullable<T>(T item) {
+            if (!typeof(T).IsValueType && EqualityComparer<T>.Default.Equals(item, default(T))) {
+                return RedisValue.Null;
+            }
             return IsTypeCompressed<T>()
                 ? (RedisValue)item.ToJsv().GZip()
                 : (RedisValue)item.ToJsv();
@@ -135,6 +137,8 @@ namespace Fredis {
                         Name = type.Name
                     };
 
+                if (CacheContract.Name == null) CacheContract.Name = type.Name;
+
                 CacheKeyProperty = (type).GetProperties(BindingFlags.Public | BindingFlags.Instance)
                     .SingleOrDefault(p =>
                         p.GetCustomAttributes(typeof(CacheKeyAttribute), false).Count() == 1);
@@ -150,8 +154,7 @@ namespace Fredis {
             }
 
             public string GetKey(object obj) {
-                // TODO keys of primitive types, add other tyeps
-                if (obj is string || obj.GetType().IsPrimitive) {
+                if (obj is string) {
                     return obj.ToString();
                 }
                 if (CacheKeyProperty != null) {
@@ -165,6 +168,7 @@ namespace Fredis {
                 if (ido != null) {
                     return ido.Id.ToString(CultureInfo.InvariantCulture);
                 }
+                // TODO? with reflection check for "Id" and "Key"? or just restrict to IDataObject?
                 if (PrimaryKeyProperty == null) throw new ApplicationException("Cannot determine cache key. Add CacheKey or PrimaryKey attribute to a key property");
                 return PrimaryKeyProperty.GetValue(obj, null).ToString();
             }

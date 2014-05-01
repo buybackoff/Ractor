@@ -36,17 +36,17 @@ namespace Fredis {
         /// <typeparam name="TValue">Type of value stored in the list</typeparam>
         /// <param name="root">Root object (owner) of the list</param>
         /// <param name="index">Index of value</param>
-        /// <param name="listName">Optional list name that is appended to root schema instead of 
+        /// <param name="listKey">Optional list name that is appended to root schema instead of 
         /// TValue type name </param>
         /// <returns>The requested element, or default(TValue) when index is out of range.</returns>
-        public TValue LIndex<TRoot, TValue>(TRoot root, long index, string listName = null) {
-            var k = _nameSpace + GetItemFullKey(root) + ":list:" + (listName ?? typeof(TValue).Name);
+        public TValue LIndex<TRoot, TValue>(TRoot root, long index, string listKey = null) {
+            var k = _nameSpace + GetItemFullKey(root) + ":lists:" + (listKey ?? GetTypePrefix<TValue>());
             var result = GetDb().ListGetByIndex(k, index);
             return UnpackResultNullable<TValue>(result);
         }
 
-        public async Task<TValue> LIndexAsync<TRoot, TValue>(TRoot root, long index, string listName = null) {
-            var k = _nameSpace + GetItemFullKey(root) + ":list:" + (listName ?? typeof(TValue).Name);
+        public async Task<TValue> LIndexAsync<TRoot, TValue>(TRoot root, long index, string listKey = null) {
+            var k = _nameSpace + GetItemFullKey(root) + ":lists:" + (listKey ?? GetTypePrefix<TValue>());
             var result = await GetDb().ListGetByIndexAsync(k, index);
             return UnpackResultNullable<TValue>(result);
         }
@@ -67,11 +67,11 @@ namespace Fredis {
 
         #region LInsert
 
-        public long LInsert<TRoot, TValue>(TRoot root, bool after, TValue pivot, TValue value, string listName = null,
+        public long LInsert<TRoot, TValue>(TRoot root, bool after, TValue pivot, TValue value, string listKey = null,
             bool fireAndForget = false) {
-            var k = _nameSpace + GetItemFullKey(root) + ":list:" + (listName ?? typeof(TValue).Name);
-            var p = PackResultNullable(pivot);
-            var v = PackResultNullable(value);
+            var k = _nameSpace + GetItemFullKey(root) + ":lists:" + (listKey ?? GetTypePrefix<TValue>());
+            var p = PackValueNullable(pivot);
+            var v = PackValueNullable(value);
             var ff = fireAndForget ? CommandFlags.FireAndForget : CommandFlags.None;
             var result = after
                 ? GetDb().ListInsertAfter(k, p, v, ff)
@@ -80,10 +80,10 @@ namespace Fredis {
         }
 
         public async Task<long> LInsertAsync<TRoot, TValue>(TRoot root, bool after, TValue pivot, TValue value,
-            string listName = null, bool fireAndForget = false) {
-            var k = _nameSpace + GetItemFullKey(root) + ":list:" + (listName ?? typeof(TValue).Name);
-            var p = PackResultNullable(pivot);
-            var v = PackResultNullable(value);
+            string listKey = null, bool fireAndForget = false) {
+            var k = _nameSpace + GetItemFullKey(root) + ":lists:" + (listKey ?? GetTypePrefix<TValue>());
+            var p = PackValueNullable(pivot);
+            var v = PackValueNullable(value);
             var ff = fireAndForget ? CommandFlags.FireAndForget : CommandFlags.None;
             var result = after
                 ? await GetDb().ListInsertAfterAsync(k, p, v, ff)
@@ -93,8 +93,8 @@ namespace Fredis {
 
         public long LInsert<TValue>(string fullKey, bool after, TValue pivot, TValue value, bool fireAndForget = false) {
             var k = _nameSpace + fullKey;
-            var p = PackResultNullable(pivot);
-            var v = PackResultNullable(value);
+            var p = PackValueNullable(pivot);
+            var v = PackValueNullable(value);
             var ff = fireAndForget ? CommandFlags.FireAndForget : CommandFlags.None;
             var result = after
                 ? GetDb().ListInsertAfter(k, p, v, ff)
@@ -105,8 +105,8 @@ namespace Fredis {
         public async Task<long> LInsertAsync<TValue>(string fullKey, bool after, TValue pivot, TValue value,
             bool fireAndForget = false) {
             var k = _nameSpace + fullKey;
-            var p = PackResultNullable(pivot);
-            var v = PackResultNullable(value);
+            var p = PackValueNullable(pivot);
+            var v = PackValueNullable(value);
             var ff = fireAndForget ? CommandFlags.FireAndForget : CommandFlags.None;
             var result = after
                 ? await GetDb().ListInsertAfterAsync(k, p, v, ff)
@@ -118,14 +118,14 @@ namespace Fredis {
 
         #region LLen
 
-        public long LLen<TRoot, TValue>(TRoot root, string listName = null) {
-            var k = _nameSpace + GetItemFullKey(root) + ":list:" + (listName ?? typeof(TValue).Name);
+        public long LLen<TRoot, TValue>(TRoot root, string listKey = null) {
+            var k = _nameSpace + GetItemFullKey(root) + ":lists:" + (listKey ?? GetTypePrefix<TValue>());
             var result = GetDb().ListLength(k);
             return result;
         }
 
-        public async Task<long> LLenAsync<TRoot, TValue>(TRoot root, string listName = null) {
-            var k = _nameSpace + GetItemFullKey(root) + ":list:" + (listName ?? typeof(TValue).Name);
+        public async Task<long> LLenAsync<TRoot, TValue>(TRoot root, string listKey = null) {
+            var k = _nameSpace + GetItemFullKey(root) + ":lists:" + (listKey ?? GetTypePrefix<TValue>());
             var result = await GetDb().ListLengthAsync(k);
             return result;
         }
@@ -146,14 +146,14 @@ namespace Fredis {
 
         #region LPop
 
-        public TValue LPop<TRoot, TValue>(TRoot root, string listName = null) {
-            var k = _nameSpace + GetItemFullKey(root) + ":list:" + (listName ?? typeof(TValue).Name);
+        public TValue LPop<TRoot, TValue>(TRoot root, string listKey = null) {
+            var k = _nameSpace + GetItemFullKey(root) + ":lists:" + (listKey ?? GetTypePrefix<TValue>());
             var result = GetDb().ListLeftPop(k);
             return UnpackResultNullable<TValue>(result);
         }
 
-        public async Task<TValue> LPopAsync<TRoot, TValue>(TRoot root, long index, string listName = null) {
-            var k = _nameSpace + GetItemFullKey(root) + ":list:" + (listName ?? typeof(TValue).Name);
+        public async Task<TValue> LPopAsync<TRoot, TValue>(TRoot root, long index, string listKey = null) {
+            var k = _nameSpace + GetItemFullKey(root) + ":lists:" + (listKey ?? GetTypePrefix<TValue>());
             var result = await GetDb().ListLeftPopAsync(k);
             return UnpackResultNullable<TValue>(result);
         }
@@ -174,40 +174,40 @@ namespace Fredis {
 
         #region LPush
 
-        public long LPush<TRoot, TValue>(TRoot root, TValue[] values, string listName = null,
+        public long LPush<TRoot, TValue>(TRoot root, TValue[] values, string listKey = null,
             bool fireAndForget = false) {
-            var k = _nameSpace + GetItemFullKey(root) + ":list:" + (listName ?? typeof(TValue).Name);
-            var v = values.Select(PackResultNullable).ToArray();
+            var k = _nameSpace + GetItemFullKey(root) + ":lists:" + (listKey ?? GetTypePrefix<TValue>());
+            var v = values.Select(PackValueNullable).ToArray();
             var ff = fireAndForget ? CommandFlags.FireAndForget : CommandFlags.None;
             var result = GetDb().ListLeftPush(k, v, ff);
             return result;
         }
 
         // Redis docs say that SETEX,SETNX,PSETEX could be deprecated, so assume that methods with X's will be replaced by parameterized ones everywhere...
-        public long LPush<TRoot, TValue>(TRoot root, TValue value, string listName = null,
+        public long LPush<TRoot, TValue>(TRoot root, TValue value, string listKey = null,
             When when = When.Always, bool fireAndForget = false) {
-            var k = _nameSpace + GetItemFullKey(root) + ":list:" + (listName ?? typeof(TValue).Name);
-            var v = PackResultNullable(value);
+            var k = _nameSpace + GetItemFullKey(root) + ":lists:" + (listKey ?? GetTypePrefix<TValue>());
+            var v = PackValueNullable(value);
             var wh = MapWhen(when);
             var ff = fireAndForget ? CommandFlags.FireAndForget : CommandFlags.None;
             var result = GetDb().ListLeftPush(k, v, wh, ff);
             return result;
         }
 
-        public async Task<long> LPushAsync<TRoot, TValue>(TRoot root, TValue[] values, string listName = null,
+        public async Task<long> LPushAsync<TRoot, TValue>(TRoot root, TValue[] values, string listKey = null,
             bool fireAndForget = false) {
-            var k = _nameSpace + GetItemFullKey(root) + ":list:" + (listName ?? typeof(TValue).Name);
-            var v = values.Select(PackResultNullable).ToArray();
+            var k = _nameSpace + GetItemFullKey(root) + ":lists:" + (listKey ?? GetTypePrefix<TValue>());
+            var v = values.Select(PackValueNullable).ToArray();
             var ff = fireAndForget ? CommandFlags.FireAndForget : CommandFlags.None;
             var result = await GetDb().ListLeftPushAsync(k, v, ff);
             return result;
         }
 
         // Redis docs say that SETEX,SETNX,PSETEX could be deprecated, so assume that methods with X's will be replaced by parameterized ones everywhere...
-        public async Task<long> LPushAsync<TRoot, TValue>(TRoot root, TValue value, string listName = null,
+        public async Task<long> LPushAsync<TRoot, TValue>(TRoot root, TValue value, string listKey = null,
             When when = When.Always, bool fireAndForget = false) {
-            var k = _nameSpace + GetItemFullKey(root) + ":list:" + (listName ?? typeof(TValue).Name);
-            var v = PackResultNullable(value);
+            var k = _nameSpace + GetItemFullKey(root) + ":lists:" + (listKey ?? GetTypePrefix<TValue>());
+            var v = PackValueNullable(value);
             var wh = MapWhen(when);
             var ff = fireAndForget ? CommandFlags.FireAndForget : CommandFlags.None;
             var result = await GetDb().ListLeftPushAsync(k, v, wh, ff);
@@ -215,40 +215,40 @@ namespace Fredis {
         }
 
 
-        public long LPush<TValue>(string fullKey, TValue[] values, string listName = null,
+        public long LPush<TValue>(string fullKey, TValue[] values, string listKey = null,
             bool fireAndForget = false) {
             var k = _nameSpace + fullKey;
-            var v = values.Select(PackResultNullable).ToArray();
+            var v = values.Select(PackValueNullable).ToArray();
             var ff = fireAndForget ? CommandFlags.FireAndForget : CommandFlags.None;
             var result = GetDb().ListLeftPush(k, v, ff);
             return result;
         }
 
         // Redis docs say that SETEX,SETNX,PSETEX could be deprecated, so assume that methods with X's will be replaced by parameterized ones everywhere...
-        public long LPush<TValue>(string fullKey, TValue value, string listName = null,
+        public long LPush<TValue>(string fullKey, TValue value, string listKey = null,
             When when = When.Always, bool fireAndForget = false) {
             var k = _nameSpace + fullKey;
-            var v = PackResultNullable(value);
+            var v = PackValueNullable(value);
             var wh = MapWhen(when);
             var ff = fireAndForget ? CommandFlags.FireAndForget : CommandFlags.None;
             var result = GetDb().ListLeftPush(k, v, wh, ff);
             return result;
         }
 
-        public async Task<long> LPushAsync<TValue>(string fullKey, TValue[] values, string listName = null,
+        public async Task<long> LPushAsync<TValue>(string fullKey, TValue[] values, string listKey = null,
             bool fireAndForget = false) {
             var k = _nameSpace + fullKey;
-            var v = values.Select(PackResultNullable).ToArray();
+            var v = values.Select(PackValueNullable).ToArray();
             var ff = fireAndForget ? CommandFlags.FireAndForget : CommandFlags.None;
             var result = await GetDb().ListLeftPushAsync(k, v, ff);
             return result;
         }
 
         // Redis docs say that SETEX,SETNX,PSETEX could be deprecated, so assume that methods with X's will be replaced by parameterized ones everywhere...
-        public async Task<long> LPushAsync<TValue>(string fullKey, TValue value, string listName = null,
+        public async Task<long> LPushAsync<TValue>(string fullKey, TValue value, string listKey = null,
             When when = When.Always, bool fireAndForget = false) {
             var k = _nameSpace + fullKey;
-            var v = PackResultNullable(value);
+            var v = PackValueNullable(value);
             var wh = MapWhen(when);
             var ff = fireAndForget ? CommandFlags.FireAndForget : CommandFlags.None;
             var result = await GetDb().ListLeftPushAsync(k, v, wh, ff);
@@ -259,14 +259,14 @@ namespace Fredis {
 
         #region LRange
 
-        public TValue[] LRange<TRoot, TValue>(TRoot root, long start, long stop, string listName = null) {
-            var k = _nameSpace + GetItemFullKey(root) + ":list:" + (listName ?? typeof(TValue).Name);
+        public TValue[] LRange<TRoot, TValue>(TRoot root, long start, long stop, string listKey = null) {
+            var k = _nameSpace + GetItemFullKey(root) + ":lists:" + (listKey ?? GetTypePrefix<TValue>());
             var result = GetDb().ListRange(k, start, stop);
             return result.Select(UnpackResultNullable<TValue>).ToArray();
         }
 
-        public async Task<TValue[]> LRangeAsync<TRoot, TValue>(TRoot root, long start, long stop, string listName = null) {
-            var k = _nameSpace + GetItemFullKey(root) + ":list:" + (listName ?? typeof(TValue).Name);
+        public async Task<TValue[]> LRangeAsync<TRoot, TValue>(TRoot root, long start, long stop, string listKey = null) {
+            var k = _nameSpace + GetItemFullKey(root) + ":lists:" + (listKey ?? GetTypePrefix<TValue>());
             var result = await GetDb().ListRangeAsync(k, start, stop);
             return result.Select(UnpackResultNullable<TValue>).ToArray();
         }
@@ -287,19 +287,19 @@ namespace Fredis {
 
         #region LRem
 
-        public long LRem<TRoot, TValue>(TRoot root, long count, TValue value, string listName = null,
+        public long LRem<TRoot, TValue>(TRoot root, long count, TValue value, string listKey = null,
             bool fireAndForget = false) {
-            var k = _nameSpace + GetItemFullKey(root) + ":list:" + (listName ?? typeof(TValue).Name);
-            var v = PackResultNullable(value);
+            var k = _nameSpace + GetItemFullKey(root) + ":lists:" + (listKey ?? GetTypePrefix<TValue>());
+            var v = PackValueNullable(value);
             var ff = fireAndForget ? CommandFlags.FireAndForget : CommandFlags.None;
             var result = GetDb().ListRemove(k, v, count, ff);
             return result;
         }
 
         public async Task<long> LRemAsync<TRoot, TValue>(TRoot root, long count, TValue value,
-            string listName = null, bool fireAndForget = false) {
-            var k = _nameSpace + GetItemFullKey(root) + ":list:" + (listName ?? typeof(TValue).Name);
-            var v = PackResultNullable(value);
+            string listKey = null, bool fireAndForget = false) {
+            var k = _nameSpace + GetItemFullKey(root) + ":lists:" + (listKey ?? GetTypePrefix<TValue>());
+            var v = PackValueNullable(value);
             var ff = fireAndForget ? CommandFlags.FireAndForget : CommandFlags.None;
             var result = await GetDb().ListRemoveAsync(k, v, count, ff);
             return result;
@@ -307,7 +307,7 @@ namespace Fredis {
 
         public long LRem<TValue>(string fullKey, long count, TValue value, bool fireAndForget = false) {
             var k = _nameSpace + fullKey;
-            var v = PackResultNullable(value);
+            var v = PackValueNullable(value);
             var ff = fireAndForget ? CommandFlags.FireAndForget : CommandFlags.None;
             var result = GetDb().ListRemove(k, v, count, ff);
             return result;
@@ -316,7 +316,7 @@ namespace Fredis {
         public async Task<long> LRemAsync<TValue>(string fullKey, long count, TValue value,
             bool fireAndForget = false) {
             var k = _nameSpace + fullKey;
-            var v = PackResultNullable(value);
+            var v = PackValueNullable(value);
             var ff = fireAndForget ? CommandFlags.FireAndForget : CommandFlags.None;
             var result = await GetDb().ListRemoveAsync(k, v, count, ff);
             return result;
@@ -326,25 +326,25 @@ namespace Fredis {
 
         #region LSet
 
-        public void LSet<TRoot, TValue>(TRoot root, long index, TValue value, string listName = null,
+        public void LSet<TRoot, TValue>(TRoot root, long index, TValue value, string listKey = null,
             bool fireAndForget = false) {
-            var k = _nameSpace + GetItemFullKey(root) + ":list:" + (listName ?? typeof(TValue).Name);
-            var v = PackResultNullable(value);
+            var k = _nameSpace + GetItemFullKey(root) + ":lists:" + (listKey ?? GetTypePrefix<TValue>());
+            var v = PackValueNullable(value);
             var ff = fireAndForget ? CommandFlags.FireAndForget : CommandFlags.None;
             GetDb().ListSetByIndex(k, index, v, ff);
         }
 
         public async Task LSetAsync<TRoot, TValue>(TRoot root, long index, TValue value,
-            string listName = null, bool fireAndForget = false) {
-            var k = _nameSpace + GetItemFullKey(root) + ":list:" + (listName ?? typeof(TValue).Name);
-            var v = PackResultNullable(value);
+            string listKey = null, bool fireAndForget = false) {
+            var k = _nameSpace + GetItemFullKey(root) + ":lists:" + (listKey ?? GetTypePrefix<TValue>());
+            var v = PackValueNullable(value);
             var ff = fireAndForget ? CommandFlags.FireAndForget : CommandFlags.None;
             await GetDb().ListSetByIndexAsync(k, index, v, ff);
         }
 
         public void LSet<TValue>(string fullKey, long index, TValue value, bool fireAndForget = false) {
             var k = _nameSpace + fullKey;
-            var v = PackResultNullable(value);
+            var v = PackValueNullable(value);
             var ff = fireAndForget ? CommandFlags.FireAndForget : CommandFlags.None;
             GetDb().ListSetByIndex(k, index, v, ff);
         }
@@ -352,7 +352,7 @@ namespace Fredis {
         public async Task LSetAsync<TValue>(string fullKey, long index, TValue value,
             bool fireAndForget = false) {
             var k = _nameSpace + fullKey;
-            var v = PackResultNullable(value);
+            var v = PackValueNullable(value);
             var ff = fireAndForget ? CommandFlags.FireAndForget : CommandFlags.None;
             await GetDb().ListSetByIndexAsync(k, index, v, ff);
 
@@ -362,13 +362,13 @@ namespace Fredis {
 
         #region LTrim
 
-        public void LTrim<TRoot, TValue>(TRoot root, long start, long stop, string listName = null) {
-            var k = _nameSpace + GetItemFullKey(root) + ":list:" + (listName ?? typeof(TValue).Name);
+        public void LTrim<TRoot, TValue>(TRoot root, long start, long stop, string listKey = null) {
+            var k = _nameSpace + GetItemFullKey(root) + ":lists:" + (listKey ?? GetTypePrefix<TValue>());
             GetDb().ListTrim(k, start, stop);
         }
 
-        public async Task LTrimAsync<TRoot, TValue>(TRoot root, long start, long stop, string listName = null) {
-            var k = _nameSpace + GetItemFullKey(root) + ":list:" + (listName ?? typeof(TValue).Name);
+        public async Task LTrimAsync<TRoot, TValue>(TRoot root, long start, long stop, string listKey = null) {
+            var k = _nameSpace + GetItemFullKey(root) + ":lists:" + (listKey ?? GetTypePrefix<TValue>());
             await GetDb().ListTrimAsync(k, start, stop);
         }
 
@@ -386,14 +386,14 @@ namespace Fredis {
 
         #region RPop
 
-        public TValue RPop<TRoot, TValue>(TRoot root, string listName = null) {
-            var k = _nameSpace + GetItemFullKey(root) + ":list:" + (listName ?? typeof(TValue).Name);
+        public TValue RPop<TRoot, TValue>(TRoot root, string listKey = null) {
+            var k = _nameSpace + GetItemFullKey(root) + ":lists:" + (listKey ?? GetTypePrefix<TValue>());
             var result = GetDb().ListRightPop(k);
             return UnpackResultNullable<TValue>(result);
         }
 
-        public async Task<TValue> RPopAsync<TRoot, TValue>(TRoot root, long index, string listName = null) {
-            var k = _nameSpace + GetItemFullKey(root) + ":list:" + (listName ?? typeof(TValue).Name);
+        public async Task<TValue> RPopAsync<TRoot, TValue>(TRoot root, long index, string listKey = null) {
+            var k = _nameSpace + GetItemFullKey(root) + ":lists:" + (listKey ?? GetTypePrefix<TValue>());
             var result = await GetDb().ListRightPopAsync(k);
             return UnpackResultNullable<TValue>(result);
         }
@@ -416,16 +416,16 @@ namespace Fredis {
 
         public TValue RPopLPush<TSource, TDesctination, TValue>(TSource source,
             TDesctination destination, string sourceListName = null, string destinationListName = null) {
-            var kSource = _nameSpace + GetItemFullKey(source) + ":list:" + (sourceListName ?? typeof(TValue).Name);
-            var kDestination = _nameSpace + GetItemFullKey(destination) + ":list:" + (destinationListName ?? typeof(TValue).Name);
+            var kSource = _nameSpace + GetItemFullKey(source) + ":lists:" + (sourceListName ?? GetTypePrefix<TValue>());
+            var kDestination = _nameSpace + GetItemFullKey(destination) + ":lists:" + (destinationListName ?? GetTypePrefix<TValue>());
             var result = GetDb().ListRightPopLeftPush(kSource, kDestination);
             return UnpackResultNullable<TValue>(result);
         }
 
         public async Task<TValue> RPopLPushAsync<TSource, TDesctination, TValue>(TSource source,
             TDesctination destination, string sourceListName = null, string destinationListName = null) {
-            var kSource = _nameSpace + GetItemFullKey(source) + ":list:" + (sourceListName ?? typeof(TValue).Name);
-            var kDestination = _nameSpace + GetItemFullKey(destination) + ":list:" + (destinationListName ?? typeof(TValue).Name);
+            var kSource = _nameSpace + GetItemFullKey(source) + ":lists:" + (sourceListName ?? GetTypePrefix<TValue>());
+            var kDestination = _nameSpace + GetItemFullKey(destination) + ":lists:" + (destinationListName ?? GetTypePrefix<TValue>());
             var result = await GetDb().ListRightPopLeftPushAsync(kSource, kDestination);
             return UnpackResultNullable<TValue>(result);
         }
@@ -448,40 +448,40 @@ namespace Fredis {
 
         #region RPush
 
-        public long RPush<TRoot, TValue>(TRoot root, TValue[] values, string listName = null,
+        public long RPush<TRoot, TValue>(TRoot root, TValue[] values, string listKey = null,
             bool fireAndForget = false) {
-            var k = _nameSpace + GetItemFullKey(root) + ":list:" + (listName ?? typeof(TValue).Name);
-            var v = values.Select(PackResultNullable).ToArray();
+            var k = _nameSpace + GetItemFullKey(root) + ":lists:" + (listKey ?? GetTypePrefix<TValue>());
+            var v = values.Select(PackValueNullable).ToArray();
             var ff = fireAndForget ? CommandFlags.FireAndForget : CommandFlags.None;
             var result = GetDb().ListRightPush(k, v, ff);
             return result;
         }
 
         // Redis docs say that SETEX,SETNX,PSETEX could be deprecated, so assume that methods with X's will be replaced by parameterized ones everywhere...
-        public long RPush<TRoot, TValue>(TRoot root, TValue value, string listName = null,
+        public long RPush<TRoot, TValue>(TRoot root, TValue value, string listKey = null,
             When when = When.Always, bool fireAndForget = false) {
-            var k = _nameSpace + GetItemFullKey(root) + ":list:" + (listName ?? typeof(TValue).Name);
-            var v = PackResultNullable(value);
+            var k = _nameSpace + GetItemFullKey(root) + ":lists:" + (listKey ?? GetTypePrefix<TValue>());
+            var v = PackValueNullable(value);
             var wh = MapWhen(when);
             var ff = fireAndForget ? CommandFlags.FireAndForget : CommandFlags.None;
             var result = GetDb().ListRightPush(k, v, wh, ff);
             return result;
         }
 
-        public async Task<long> RPushAsync<TRoot, TValue>(TRoot root, TValue[] values, string listName = null,
+        public async Task<long> RPushAsync<TRoot, TValue>(TRoot root, TValue[] values, string listKey = null,
             bool fireAndForget = false) {
-            var k = _nameSpace + GetItemFullKey(root) + ":list:" + (listName ?? typeof(TValue).Name);
-            var v = values.Select(PackResultNullable).ToArray();
+            var k = _nameSpace + GetItemFullKey(root) + ":lists:" + (listKey ?? GetTypePrefix<TValue>());
+            var v = values.Select(PackValueNullable).ToArray();
             var ff = fireAndForget ? CommandFlags.FireAndForget : CommandFlags.None;
             var result = await GetDb().ListRightPushAsync(k, v, ff);
             return result;
         }
 
         // Redis docs say that SETEX,SETNX,PSETEX could be deprecated, so assume that methods with X's will be replaced by parameterized ones everywhere...
-        public async Task<long> RPushAsync<TRoot, TValue>(TRoot root, TValue value, string listName = null,
+        public async Task<long> RPushAsync<TRoot, TValue>(TRoot root, TValue value, string listKey = null,
             When when = When.Always, bool fireAndForget = false) {
-            var k = _nameSpace + GetItemFullKey(root) + ":list:" + (listName ?? typeof(TValue).Name);
-            var v = PackResultNullable(value);
+            var k = _nameSpace + GetItemFullKey(root) + ":lists:" + (listKey ?? GetTypePrefix<TValue>());
+            var v = PackValueNullable(value);
             var wh = MapWhen(when);
             var ff = fireAndForget ? CommandFlags.FireAndForget : CommandFlags.None;
             var result = await GetDb().ListRightPushAsync(k, v, wh, ff);
@@ -489,40 +489,40 @@ namespace Fredis {
         }
 
 
-        public long RPush<TValue>(string fullKey, TValue[] values, string listName = null,
+        public long RPush<TValue>(string fullKey, TValue[] values, string listKey = null,
             bool fireAndForget = false) {
             var k = _nameSpace + fullKey;
-            var v = values.Select(PackResultNullable).ToArray();
+            var v = values.Select(PackValueNullable).ToArray();
             var ff = fireAndForget ? CommandFlags.FireAndForget : CommandFlags.None;
             var result = GetDb().ListRightPush(k, v, ff);
             return result;
         }
 
         // Redis docs say that SETEX,SETNX,PSETEX could be deprecated, so assume that methods with X's will be replaced by parameterized ones everywhere...
-        public long RPush<TValue>(string fullKey, TValue value, string listName = null,
+        public long RPush<TValue>(string fullKey, TValue value, string listKey = null,
             When when = When.Always, bool fireAndForget = false) {
             var k = _nameSpace + fullKey;
-            var v = PackResultNullable(value);
+            var v = PackValueNullable(value);
             var wh = MapWhen(when);
             var ff = fireAndForget ? CommandFlags.FireAndForget : CommandFlags.None;
             var result = GetDb().ListRightPush(k, v, wh, ff);
             return result;
         }
 
-        public async Task<long> RPushAsync<TValue>(string fullKey, TValue[] values, string listName = null,
+        public async Task<long> RPushAsync<TValue>(string fullKey, TValue[] values, string listKey = null,
             bool fireAndForget = false) {
             var k = _nameSpace + fullKey;
-            var v = values.Select(PackResultNullable).ToArray();
+            var v = values.Select(PackValueNullable).ToArray();
             var ff = fireAndForget ? CommandFlags.FireAndForget : CommandFlags.None;
             var result = await GetDb().ListRightPushAsync(k, v, ff);
             return result;
         }
 
         // Redis docs say that SETEX,SETNX,PSETEX could be deprecated, so assume that methods with X's will be replaced by parameterized ones everywhere...
-        public async Task<long> RPushAsync<TValue>(string fullKey, TValue value, string listName = null,
+        public async Task<long> RPushAsync<TValue>(string fullKey, TValue value, string listKey = null,
             When when = When.Always, bool fireAndForget = false) {
             var k = _nameSpace + fullKey;
-            var v = PackResultNullable(value);
+            var v = PackValueNullable(value);
             var wh = MapWhen(when);
             var ff = fireAndForget ? CommandFlags.FireAndForget : CommandFlags.None;
             var result = await GetDb().ListRightPushAsync(k, v, wh, ff);

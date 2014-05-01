@@ -13,7 +13,7 @@ namespace Fredis {
 
         public CacheContractAttribute() {
             Expiry = null;
-            Name = "";
+            Name = null;
             Compressed = false;
             //StoreAsHash = false; // TODO
         }

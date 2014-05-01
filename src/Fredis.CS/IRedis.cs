@@ -25,6 +25,6 @@ namespace Fredis {
     }
 
     public interface IRedis {
-        bool Set<T>(T item, TimeSpan? expiry = null, When when = When.Always, bool fireAndForget = false);
+        //bool Set<T>(T item, TimeSpan? expiry = null, When when = When.Always, bool fireAndForget = false);
     }
 }
