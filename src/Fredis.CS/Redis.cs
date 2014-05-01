@@ -10,12 +10,9 @@ using StackExchange.Redis;
 
 namespace Fredis {
 
-    // TODO a type cannot have two namespaces when they are defined at type level via attribute
-    // better define a namespace in an instance of Redis and this will be a logical replacement of numbered databases
-
     public partial class Redis : IRedis {
 
-        // all non-commands stuff
+        // all non-commands stuff here
 
         public string KeyNameSpace { get; private set; }
         private readonly string _nameSpace;
@@ -26,7 +23,7 @@ namespace Fredis {
             _nameSpace = KeyNameSpace.IsNullOrEmpty() ? "" : KeyNameSpace + ":";
         }
 
-        public ConnectionMultiplexer ConnectionMultiplexer { get; private set; }
+        private ConnectionMultiplexer ConnectionMultiplexer { get; set; }
 
         /// <summary>
         /// Return a full key for an item T, e.g. "ItemType:i:ItemKey"
@@ -85,19 +82,25 @@ namespace Fredis {
                 case When.NotExists:
                     return StackExchange.Redis.When.NotExists;
             }
-            throw new ApplicationException("wrong Wjen enum");
+            throw new ApplicationException("wrong When enum");
         }
 
         private IDatabase GetDb() {
             return ConnectionMultiplexer.GetDatabase();
         }
 
-
         private T UnpackResultNullable<T>(RedisValue result) {
             if (result.IsNull) return default(T);
             return IsTypeCompressed<T>()
                 ? ((byte[])result).GUnzip().FromJsv<T>()
                 : ((string)result).FromJsv<T>();
+        }
+
+        private RedisValue PackResultNullable<T>(T item) {
+            // TODO null check for only reference types
+            return IsTypeCompressed<T>()
+                ? (RedisValue)item.ToJsv().GZip()
+                : (RedisValue)item.ToJsv();
         }
 
         /// <summary>
@@ -116,7 +119,6 @@ namespace Fredis {
             CacheInfos[name] = ci;
             return ci;
         }
-
 
         private class CacheInfo {
             public CacheContractAttribute CacheContract { get; private set; }
@@ -148,16 +150,13 @@ namespace Fredis {
             }
 
             public string GetKey(object obj) {
-
-                // TODO keys of primitive types
-                if (obj is string || obj is int || obj is long) {
+                // TODO keys of primitive types, add other tyeps
+                if (obj is string || obj.GetType().IsPrimitive) {
                     return obj.ToString();
                 }
-
                 if (CacheKeyProperty != null) {
                     return CacheKeyProperty.GetValue(obj, null).ToString();
                 }
-
                 var iddo = obj as IDistributedDataObject;
                 if (iddo != null) {
                     return iddo.Guid.ToString("N");
@@ -166,19 +165,13 @@ namespace Fredis {
                 if (ido != null) {
                     return ido.Id.ToString(CultureInfo.InvariantCulture);
                 }
-
-                if (PrimaryKeyProperty == null) throw new ApplicationException("Missing PrimaryKeyAttribute");
-
+                if (PrimaryKeyProperty == null) throw new ApplicationException("Cannot determine cache key. Add CacheKey or PrimaryKey attribute to a key property");
                 return PrimaryKeyProperty.GetValue(obj, null).ToString();
             }
 
-            /// <summary>
-            /// e.g. ns:n:key
-            /// </summary>
             public string GetFullKey(object obj) {
                 return GetTypePrefix() + ":i:" + GetKey(obj);
             }
         }
-
     }
 }

@@ -26,10 +26,10 @@ namespace Fredis
     // Keys
     // Other
 
+    // if I do not understand anything in Fredis API without documentation then something is wrong
+    // TODO write docs only after extracting interface and on inteface, not implementation
+
     public partial class Redis {
-
-
-      
-
+        // misc commands here
     }
 }

@@ -14,8 +14,8 @@ namespace Fredis {
 
     public partial class Redis {
 
-        public bool HSet<TRoot, TValue>(TRoot root, TValue value, string hashKey = null, When when = When.Always, bool fireAndForget = false) {
-            var key = GetItemFullKey(root) + ":hash:" + (hashKey ?? typeof(TValue).Name);
+        public bool HSet<TRoot, TValue>(TRoot root, TValue value, string hashName = null, When when = When.Always, bool fireAndForget = false) {
+            var key = GetItemFullKey(root) + ":hash:" + (hashName ?? typeof(TValue).Name);
             var field = GetItemKey(value);
             var val = value.ToJsv();
             var wh = MapWhen(when);
