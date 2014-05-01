@@ -7,6 +7,7 @@ using StackExchange.Redis;
 //          <T>     <T>Async    key     keyAsycn    Tests   TestsAsync
 // Set      x       x           x       x           x
 // Get      x       x           x       x           x   
+// StrLen   x       x           x       x           x   
 
 
 namespace Fredis {
@@ -140,6 +141,37 @@ namespace Fredis {
         #endregion
 
 
+        #region StrLen
+
+        public long StrLen<TRoot>(TRoot root, string stringKey) {
+            var k = _nameSpace + GetItemFullKey(root) + ":strings:" + stringKey;
+            var result = GetDb().StringLength(k);
+            return result;
+        }
+
+        public async Task<long> StrLenAsync<TRoot>(TRoot root, string stringKey) {
+            var k = _nameSpace + GetItemFullKey(root) + ":strings:" + stringKey;
+            var result = await GetDb().StringLengthAsync(k);
+            return result;
+        }
+
+        public long StrLen<T>(string key, bool isFullKey = false) {
+            var k = _nameSpace + (!isFullKey
+                ? GetTypePrefix<T>() + ":i:" + key
+                : key);
+            var result = GetDb().StringLength(k);
+            return (result);
+        }
+
+        public async Task<long> StrLenAsync<T>(string key, bool isFullKey = false) {
+            var k = _nameSpace + (!isFullKey
+                ? GetTypePrefix<T>() + ":i:" + key
+                : key);
+            var result = await GetDb().StringLengthAsync(k);
+            return result;
+        }
+
+        #endregion
 
 
     }
