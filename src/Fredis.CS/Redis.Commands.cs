@@ -1,11 +1,11 @@
 ﻿using System;
+using System.Linq;
 using System.Threading.Tasks;
 using ServiceStack.Common;
 using ServiceStack.Text;
 using StackExchange.Redis;
 
-namespace Fredis
-{
+namespace Fredis {
 
     // WIP
     // For each write command we need 
@@ -31,5 +31,42 @@ namespace Fredis
 
     public partial class Redis {
         // misc commands here
+
+        public bool Del(string key) {
+            var k = _nameSpace + key;
+            return GetDb().KeyDelete(k);
+        }
+
+        public async Task<bool> DelAsync(string key) {
+            var k = _nameSpace + key;
+            return await GetDb().KeyDeleteAsync(k);
+        }
+
+        public long Del(string[] keys) {
+            var ks = keys.Select(k => (RedisKey) (_nameSpace + k)).ToArray();
+            return GetDb().KeyDelete(ks);
+        }
+
+        public async Task<long> DelAsync(string[] keys) {
+            var ks = keys.Select(k => (RedisKey)(_nameSpace + k)).ToArray();
+            return await GetDb().KeyDeleteAsync(ks);
+        }
+
+
+        public TResult Eval<TResult>(string script, string[] keys = null, object[] values = null) {
+            var result = GetDb().ScriptEvaluate(script,
+                keys == null ? null : keys.Select(k => (RedisKey)(_nameSpace + k)).ToArray(),
+                values == null ? null : values.Select(PackValueNullable).ToArray());
+            return UnpackResultNullable<TResult>((RedisValue)result);
+        }
+
+        public async Task<TResult> EvalAsync<TResult>(string script, string[] keys = null, object[] values = null) {
+            var result = await GetDb().ScriptEvaluateAsync(script,
+                keys == null ? null : keys.Select(k => (RedisKey)(_nameSpace + k)).ToArray(),
+                values == null ? null : values.Select(PackValueNullable).ToArray());
+            return UnpackResultNullable<TResult>((RedisValue)result);
+        }
+
+
     }
 }

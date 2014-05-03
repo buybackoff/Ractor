@@ -215,7 +215,7 @@ namespace Fredis {
         }
 
 
-        public long LPush<TValue>(string fullKey, TValue[] values, string listKey = null,
+        public long LPush<TValue>(string fullKey, TValue[] values,
             bool fireAndForget = false) {
             var k = _nameSpace + fullKey;
             var v = values.Select(PackValueNullable).ToArray();
@@ -225,7 +225,7 @@ namespace Fredis {
         }
 
         // Redis docs say that SETEX,SETNX,PSETEX could be deprecated, so assume that methods with X's will be replaced by parameterized ones everywhere...
-        public long LPush<TValue>(string fullKey, TValue value, string listKey = null,
+        public long LPush<TValue>(string fullKey, TValue value,
             When when = When.Always, bool fireAndForget = false) {
             var k = _nameSpace + fullKey;
             var v = PackValueNullable(value);
@@ -235,7 +235,7 @@ namespace Fredis {
             return result;
         }
 
-        public async Task<long> LPushAsync<TValue>(string fullKey, TValue[] values, string listKey = null,
+        public async Task<long> LPushAsync<TValue>(string fullKey, TValue[] values,
             bool fireAndForget = false) {
             var k = _nameSpace + fullKey;
             var v = values.Select(PackValueNullable).ToArray();
@@ -245,7 +245,7 @@ namespace Fredis {
         }
 
         // Redis docs say that SETEX,SETNX,PSETEX could be deprecated, so assume that methods with X's will be replaced by parameterized ones everywhere...
-        public async Task<long> LPushAsync<TValue>(string fullKey, TValue value, string listKey = null,
+        public async Task<long> LPushAsync<TValue>(string fullKey, TValue value,
             When when = When.Always, bool fireAndForget = false) {
             var k = _nameSpace + fullKey;
             var v = PackValueNullable(value);
@@ -392,7 +392,7 @@ namespace Fredis {
             return UnpackResultNullable<TValue>(result);
         }
 
-        public async Task<TValue> RPopAsync<TRoot, TValue>(TRoot root, long index, string listKey = null) {
+        public async Task<TValue> RPopAsync<TRoot, TValue>(TRoot root, string listKey = null) {
             var k = _nameSpace + GetItemFullKey(root) + ":lists:" + (listKey ?? GetTypePrefix<TValue>());
             var result = await GetDb().ListRightPopAsync(k);
             return UnpackResultNullable<TValue>(result);
@@ -489,7 +489,7 @@ namespace Fredis {
         }
 
 
-        public long RPush<TValue>(string fullKey, TValue[] values, string listKey = null,
+        public long RPush<TValue>(string fullKey, TValue[] values,
             bool fireAndForget = false) {
             var k = _nameSpace + fullKey;
             var v = values.Select(PackValueNullable).ToArray();
@@ -499,7 +499,7 @@ namespace Fredis {
         }
 
         // Redis docs say that SETEX,SETNX,PSETEX could be deprecated, so assume that methods with X's will be replaced by parameterized ones everywhere...
-        public long RPush<TValue>(string fullKey, TValue value, string listKey = null,
+        public long RPush<TValue>(string fullKey, TValue value,
             When when = When.Always, bool fireAndForget = false) {
             var k = _nameSpace + fullKey;
             var v = PackValueNullable(value);
@@ -509,7 +509,7 @@ namespace Fredis {
             return result;
         }
 
-        public async Task<long> RPushAsync<TValue>(string fullKey, TValue[] values, string listKey = null,
+        public async Task<long> RPushAsync<TValue>(string fullKey, TValue[] values,
             bool fireAndForget = false) {
             var k = _nameSpace + fullKey;
             var v = values.Select(PackValueNullable).ToArray();
@@ -519,7 +519,7 @@ namespace Fredis {
         }
 
         // Redis docs say that SETEX,SETNX,PSETEX could be deprecated, so assume that methods with X's will be replaced by parameterized ones everywhere...
-        public async Task<long> RPushAsync<TValue>(string fullKey, TValue value, string listKey = null,
+        public async Task<long> RPushAsync<TValue>(string fullKey, TValue value,
             When when = When.Always, bool fireAndForget = false) {
             var k = _nameSpace + fullKey;
             var v = PackValueNullable(value);

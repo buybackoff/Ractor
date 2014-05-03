@@ -1,0 +1,53 @@
+﻿//namespace Fredis
+//
+//open System
+//open System.Collections.Concurrent
+//open System.Threading
+//
+//type internal Mailbox<'T>(redis : Redis, id : string) = 
+//    //let mutable inbox = ConcurrentQueue<'a>()
+//    let awaitMsg = new AutoResetEvent(false)
+//    // fredis:mailbox:MessageType: - string 
+//    // fredis:mailbox:MessageType:channel
+//    // fredis:mailbox:MessageType:inbox - list with unprocessed items
+//    // fredis:mailbox:MessageType:pipeline - list with items that are being processed
+//    // fredis:mailbox:MessageType:outbox - hash with results
+//    let prefix = id + ":Mailbox:"
+//    let inboxKey = prefix + ":inbox"
+//    let pipelineKey = prefix + ":pipeline"
+//    let resultsKey = prefix + ":results"
+//    let channelKey = prefix + ":channel"
+//    do redis.Subscribe(channelKey, Action<_, _>(fun ch v -> awaitMsg.Set() |> ignore))
+//    
+//    let rec await timeout = 
+//        async { 
+//            //let! message = !!redis.RPopAsync("")
+//            // atomically move to safe place while processing
+//            let lua = @"
+//local result = redis.call('RPOP', KEYS[1])
+//if result ~= nil
+//    redis.call('HSET', KEYS[2], ARGV[1], result)
+//end
+//return result"
+//            let pipelineId = Guid.NewGuid().ToString("N")
+//            let! message = !!redis.EvalAsync<'T * string>(lua, [| inboxKey; pipelineKey |], [| pipelineId |])
+//            if Object.Equals(message, null) then 
+//                let! recd = Async.AwaitWaitHandle(awaitMsg, timeout)
+//                if recd then return! await timeout
+//                else return raise (TimeoutException("Receive timed out"))
+//            else return message, pipelineId
+//        }
+//    
+//    member this.Post(msg : 'T * string) = 
+//        redis.RPushAsync<'T * string>(inboxKey, msg) |> ignore
+//        awaitMsg.Set() |> ignore
+//        let notification = if snd (msg) = null then "" else snd (msg)
+//        redis.PublishAsync<string>(channelKey, notification) |> ignore
+//    
+//    member this.DeleteFromPipeline(pipelineId:string) =
+//        redis.HDelAsync(pipelineKey, pipelineId) |> ignore
+//
+//    member this.Receive(timeout, cancellationToken) = await (defaultArg timeout Timeout.Infinite)
+//    member this.Length = int (redis.LLen(inboxKey))
+//    member this.IsEmpty = this.Length = 0
+//    member x.Dispose() = awaitMsg.Dispose()

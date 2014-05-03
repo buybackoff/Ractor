@@ -12,7 +12,7 @@ open Fredis
 // ported from F# rewrite of original BookSleeve tests here http://caxelrud.blogspot.ru/2013/03/redis-tests-with-f-using-booksleeve.html
 // Here all test are rewritten with Fredis
 
-let conn = (new Connection("127.0.0.1", maxPoolSize = 2))
+let conn = (new Connection("127.0.0.1"))
 //let db = 0
 //let lockingConn = +conn
 //let lockerKey = "l" + ":fredis_lock"

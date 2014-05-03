@@ -116,6 +116,9 @@
       <DependentUpon>Interfaces.cs</DependentUpon>
     </Compile>
     <Compile Include="Interfaces.cs" />
+    <Compile Include="ISerializer.cs">
+      <DependentUpon>Interfaces.cs</DependentUpon>
+    </Compile>
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Redis.Commands.Keys.cs">
       <DependentUpon>Redis.cs</DependentUpon>
@@ -144,6 +147,9 @@
       <DependentUpon>Redis.cs</DependentUpon>
     </Compile>
     <Compile Include="Redis.Commands.Strings.cs">
+      <DependentUpon>Redis.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Redis.Commands.PubSub.cs">
       <DependentUpon>Redis.cs</DependentUpon>
     </Compile>
   </ItemGroup>

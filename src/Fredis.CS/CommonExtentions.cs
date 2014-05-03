@@ -23,6 +23,30 @@ namespace Fredis {
                        };
         }
 
+        public static byte[] Zip(this byte[] bytes) {
+            using (var inStream = new MemoryStream(bytes)) {
+                using (var outStream = new MemoryStream()) {
+                    using (var compress = new GZipStream(outStream, CompressionMode.Compress)) {
+                        inStream.CopyTo(compress);
+                    }
+                    return outStream.ToArray();
+                }
+            }
+        }
+
+
+        public static byte[] UnZip(this byte[] bytes) {
+            byte[] outBytes;
+            using (var inStream = new MemoryStream(bytes)) {
+                using (var outStream = new MemoryStream()) {
+                    using (var deCompress = new GZipStream(inStream, CompressionMode.Decompress)) {
+                        deCompress.CopyTo(outStream);
+                    }
+                    outBytes = outStream.ToArray();
+                }
+            }
+            return outBytes;
+        }
         
     }
 

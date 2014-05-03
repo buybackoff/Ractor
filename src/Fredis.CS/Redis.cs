@@ -17,10 +17,13 @@ namespace Fredis {
         public string KeyNameSpace { get; private set; }
         private readonly string _nameSpace;
 
+        public ISerializer Serializer { get; set; }
+
         public Redis(string connectionString, string keyNameSpace = "") {
             ConnectionMultiplexer = ConnectionMultiplexer.Connect(connectionString);
             KeyNameSpace = keyNameSpace ?? ""; // just if null is provided
             _nameSpace = KeyNameSpace.IsNullOrEmpty() ? "" : KeyNameSpace + ":";
+            Serializer = new JsonSerializer();
         }
 
         private ConnectionMultiplexer ConnectionMultiplexer { get; set; }
@@ -91,18 +94,20 @@ namespace Fredis {
 
         private T UnpackResultNullable<T>(RedisValue result) {
             if (result.IsNull) return default(T);
-            return IsTypeCompressed<T>()
-                ? ((byte[])result).GUnzip().FromJsv<T>()
-                : ((string)result).FromJsv<T>();
+            var bytes = IsTypeCompressed<T>()
+                ? ((byte[])result).UnZip()
+                : ((byte[])result);
+            return Serializer.Deserialize<T>(bytes);
         }
 
         private RedisValue PackValueNullable<T>(T item) {
             if (!typeof(T).IsValueType && EqualityComparer<T>.Default.Equals(item, default(T))) {
                 return RedisValue.Null;
             }
+            var bytes = Serializer.Serialize(item);
             return IsTypeCompressed<T>()
-                ? (RedisValue)item.ToJsv().GZip()
-                : (RedisValue)item.ToJsv();
+                ? (RedisValue)bytes.Zip()
+                : (RedisValue)bytes;
         }
 
         /// <summary>
