@@ -60,5 +60,5 @@ This software is distributed under the License is distributed on an "AS IS" BASI
 WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 
 StackExchange.Redis is licensed separately; see https://github.com/StackExchange/StackExchange.Redis/blob/master/LICENSE.
-ServiceStackV3 is licensed separately; see https://github.com/ServiceStack/ServiceStack/blob/v3/LICENSE
+ServiceStackV3 is licensed separately; see https://github.com/ServiceStack/ServiceStack/blob/v3/LICENSE.
 Redis is licensed separately; see http://redis.io/topics/license. 
