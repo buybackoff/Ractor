@@ -3,10 +3,13 @@
 open System
 open System.Collections.Generic
 open System.Threading
+open System.Threading.Tasks
 open Fredis
 
-// TODO local queue
-type Actor<'Tin, 'Tout> private (redis : Redis, id : string, ?computation : 'Tin -> Async<'Tout>) = 
+type ExceptionInfo<'T> = 
+    | ExceptionInfo of string * 'T * Exception
+
+type Actor<'Tin, 'Tout> internal (redis : Redis, id : string, ?computation : 'Tin -> Async<'Tout>) = 
     let children = Dictionary<string, Actor<'Tout, _>>()
     let mutable started = false
     let mutable cts = Unchecked.defaultof<CancellationTokenSource>
@@ -39,6 +42,7 @@ if result ~= nil
     redis.call('HSET', KEYS[2], ARGV[1], result)
 end
 return result"
+            // TODO add ZSet with timestamp as rank to monitor the pipeline state
             let pipelineId = Guid.NewGuid().ToString("N")
             let! message = !!redis.EvalAsync<'T * string>(lua, [| inboxKey; pipelineKey |], [| pipelineId |])
             if Object.Equals(message, null) then 
@@ -48,17 +52,17 @@ return result"
             else return message, pipelineId
         }
     
-    member __.Id = id
-    member __.Children = children.Keys
-    member __.QueueLength = int (redis.LLen(inboxKey))
+    member this.Id = id
+    member this.Children = children.Keys
+    member this.QueueLength = int (redis.LLen(inboxKey))
     
-    member __.ErrorHandler 
+    member this.ErrorHandler 
         with get () = errorHandler
         and set (eh) = errorHandler <- eh
     
-    member private __.Computation = computation
+    member private this.Computation = computation
     
-    member __.Start() : unit = 
+    member this.Start() : unit = 
         if computation.IsNone then failwith "Cannot start an actor without computation"
         cts <- new CancellationTokenSource()
         async { 
@@ -87,19 +91,19 @@ return result"
         |> Async.Start
         started <- true
     
-    member __.Stop() = 
+    member this.Stop() = 
         if started then 
             started <- false
             cts.Cancel |> ignore
     
-    member __.Post(message : 'Tin, ?highPriority : bool) : unit = 
+    member this.Post(message : 'Tin, ?highPriority : bool) : unit = 
         let highPriority = defaultArg highPriority false
         if highPriority then redis.LPushAsync<'Tin * string>(inboxKey, (message, "")) |> ignore
         else redis.RPushAsync<'Tin * string>(inboxKey, (message, "")) |> ignore
         awaitMessageHandle.Set() |> ignore
         redis.PublishAsync<string>(channelKey, "") |> ignore
     
-    member __.PostAndReply(message : 'Tin, ?highPriority : bool, ?millisecondsTimeout) : Async<'Tout> = 
+    member this.PostAndReply(message : 'Tin, ?highPriority : bool, ?millisecondsTimeout) : Async<'Tout> = 
         let highPriority = defaultArg highPriority false
         let millisecondsTimeout = defaultArg millisecondsTimeout Timeout.Infinite
         match started with
@@ -129,8 +133,17 @@ return result"
                 }
             awaitResult millisecondsTimeout
     
-    member __.Link(actor : Actor<'Tout, _>) : unit = children.Add(actor.Id, actor)
-    member __.UnLink(actor : Actor<'Tout, _>) : bool = children.Remove(actor.Id)
+    // C# naming style and return type
+    member this.PostAndReplyAsync(message : 'Tin, ?highPriority : bool, ?millisecondsTimeout) : Task<'Tout> = 
+         let res : Async<'Tout> = this.PostAndReply(message, highPriority??=false, millisecondsTimeout??=Timeout.Infinite) 
+         res |> Async.StartAsTask
+
+    member this.Link(actor : Actor<'Tout, _>) = 
+        children.Add(actor.Id, actor)
+        this
+
+    member this.UnLink(actor : Actor<'Tout, _>) : bool = children.Remove(actor.Id)
+
     interface IDisposable with
         member x.Dispose() = 
             cts.Cancel |> ignore

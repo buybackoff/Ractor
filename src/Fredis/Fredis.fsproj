@@ -52,11 +52,8 @@
   <ItemGroup>
     <Compile Include="AssemblyInfo.fs" />
     <Compile Include="Utils.fs" />
-    <Compile Include="Monitor.fs" />
-    <None Include="Locking.fsx" />
     <None Include="app.config" />
     <None Include="packages.config" />
-    <Compile Include="Interfaces.fs" />
     <Compile Include="Serialization.fs" />
     <Compile Include="Logging.fs" />
     <Compile Include="Actor.fs" />
