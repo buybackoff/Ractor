@@ -3,7 +3,7 @@ namespace Fredis
 
 open System
 
-type ILogger = 
+type internal ILogger = 
     abstract Debug : string * exn option -> unit
     abstract Info : string * exn option -> unit
     abstract Warning : string * exn option -> unit

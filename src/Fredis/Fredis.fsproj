@@ -34,6 +34,8 @@
     <DefineConstants>TRACE</DefineConstants>
     <WarningLevel>3</WarningLevel>
     <DocumentationFile>..\..\bin\Fredis.xml</DocumentationFile>
+    <OtherFlags>
+    </OtherFlags>
   </PropertyGroup>
   <ItemGroup>
     <Reference Include="FsPickler">
@@ -78,6 +80,7 @@
     <Compile Include="Logging.fs" />
     <Compile Include="Actor.fs" />
     <Compile Include="Fredis.fs" />
+    <Compile Include="ActorExtensions.fs" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\Fredis.CS\Fredis.Persistence.csproj">
