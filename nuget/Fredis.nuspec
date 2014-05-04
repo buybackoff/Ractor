@@ -15,7 +15,8 @@
     <copyright>Copyright 2014</copyright>
     <tags>@tags@</tags>
     <dependencies>
-      <dependency id="BookSleeve" version="1.3.41" />
+      <dependency id="Fredis.Persistence" />
+      <dependency id="FsPickler" />
     </dependencies>
   </metadata>
   <files>

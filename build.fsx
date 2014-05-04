@@ -26,13 +26,16 @@ let project = "Fredis"
 
 // Short summary of the project
 // (used as description in AssemblyInfo and as a short summary for NuGet package)
-let summary = "F# Redis client"
+let summary = "Fredis (F#+Redis) is dead simple collection of APIs for POCOs cache/persistence + redis based distributed actors"
 
 // Longer description of the project
 // (used as a description for NuGet package; line breaks are automatically cleaned up)
 let description = """
- Fredis is a BookSleeve wrapper for convenient usage from F# (plus planned some extentions, 
-additional usefull commands, patterns and a DSL implemented as custom query expression commands). """
+ **Fredis** (F# + Redis) is a light distributed actors framework built on top of Redis.  Its API is similar to 
+F#'s MailboxProcessor and Fsharp.Actor library. The main difference is that in Fredis actors exist 
+is Redis per se as lists of messages, while a number of ephemeral workers (actors' "incarnations") take messages
+from Redis, process them and post results back."""
+
 // List of author names (for NuGet package)
 let authors = [ "Victor Baybekov" ]
 // Tags for your project (for NuGet package)
@@ -57,10 +60,13 @@ let cloneUrl = "git@github.com:buybackoff/Fredis.git"
 // --------------------------------------------------------------------------------------
 
 let projectPersistence = "Fredis.Persistence"
-let summaryPersistence = "Persistence abstractions for DB, files, queues."
+let summaryPersistence = "Fredis.Persistence is a collection of APIs for POCOs and blobs persistence and a strongly typed Redis
+client based on excellent Stackexchange.Redis library."
 let descriptionPersistence = """
- Persistence abstractions for DB, files, queues with some basic implementations. Very simple sharding
- strategy for RDBMSs similar to Pinterest's but with incremental growth and based on Guids """
+The typed Redis client has strong opinion about keys schema inside Redis and uses a concept 
+root/owner objects to store dependent objects/collections. POCO/database persistor base implementation
+wraps around ServiceStack.ORMLite.v3, however there is no binary dependency and any ORM could be plugged 
+in. Blob persistor saves large data objects to files or S3. """
 let tagsPersistence = "persistence DB database shards"
 
 

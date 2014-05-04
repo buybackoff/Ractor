@@ -1,132 +1,48 @@
-Update 04/14
-=======================
-Adding persistence stuff to caching/redis stuff since they use the same objects. This commit adds a typed DB persistor with a simple sharding strategy similar to Pinterest's one but with Guids and without moving data ever, really (data stays on the same physical shard forever, in case of AWS will need only downtime for resizing and that is it).
-
-The goal is to put together very simple APIs to work with POCOs and files and make it scalable at least to some moderate size to win time when single boxes could choke (using AWS as a base case).
-
-Booksleeve is superseeded by StackExchange.Redis, which is even better. Redis cluster is almost there. Given AWS's speed to catch up with redis 
-it is safe to assume they will have cluster ASAP, so all caching should be done in redis non memcached. 
-
-I still do not see a clear roadmap of this project, but will spend three summer months in a CS school directly 
-on it to do redis-based actors and other stuff from the issues page, which will be relevant then. In addition, will have to
-do for myself some simple caching/persistence invisible interplay unless StackExchange publishes theirs.
-
-
-The text below is only 50% relevant.
-
-
 Fredis
 =======================
-Fredis is a BookSleeve wrapper for convenient usage from F# (plus planned some extentions, 
-additional usefull commands, patterns and a DSL implemented as custom query expression commands).
+**Fredis** (F# + Redis) is a light distributed actors framework built on top of Redis. Its API is similar to 
+F#'s [MailboxProcessor](http://msdn.microsoft.com/en-us/library/ee370357.aspx) and [Fsharp.Actor](https://github.com/colinbull/Fsharp.Actor) library. The main difference is that in Fredis actors exist 
+is Redis per se as lists of messages, while a number of ephemeral workers (actors' "incarnations") take messages
+from Redis, process them and post results back.
 
->Urban Dictionary [defines](http://www.urbandictionary.com/define.php?term=fredis) Fredis as:
+Many benchmarks show that Redis is as performant as old popular message queues and even newer one, like ZMQ. 
+Existing distributed actors system use many to many connections, a design that at the first glance 
+removes a single point of failure. But a closer look reveals that such design introduces multiple points
+of failure because data is stored in some random nodes and at each point in time some node acts as a central
+one. If that node fails the system will have to elect another lead node, but the messages will be lost.
 
->A Fredis is a man/woman who likes to party hard. He/she is the life of the party even though they would not remember it.
+Fredis was build with AWS infrastructure in mind. In Amazon cloud, it is easy to create one central
+Redis cluster in multiple availability zones with multiple replicas. This is the most reliable 
+setup one could get, and it is available in minutes for cheap price. With this reliable central node
+one could then use autoscale group and even add spot instances to the system. Random shutdowns of any 
+worker nodes will not affect the system in any way. This setup gives an elastic, easy to maintain and 
+(automatically) scalable to a large size system of distributed actors.
+
+>Also Urban Dictionary [defines](http://www.urbandictionary.com/define.php?term=fredis) Fredis as: 
+"A Fredis is a man/woman who likes to party hard. He/she is the life of the party even though they 
+would not remember it." The goal of Fredis library is to become a life of a moderately-sized server
+application where a developer knows in advance that a single box will choke but there is not enough
+ resources to invest into "proper" infrastructure. Fredis will buy time and limit design of the
+ application to very simple data objects and persistence patterns. And while the applications growths,
+Fredis will grow as well and will become mature and robust for its stated tasks at a larger scale.
+
+**Fredis.Persistence** is a collection of APIs for POCOs and blobs persistence and a strongly typed Redis
+client based on excellent [Stackexchange.Redis](https://github.com/StackExchange/StackExchange.Redis) 
+library. The typed Redis client has strong opinion about keys schema inside Redis and uses a concept 
+root/owner objects to store dependent objects/collections. POCO/database persistor base implementation
+wraps around ServiceStack.ORMLite.v3, however there is no binary dependency and any ORM could be plugged 
+in. Blob persistor saves large data objects to files or S3 (TODO).
 
 
-Minimum Value Proposition
-----------------------
-In the current pre-alpha state the library could be already used as a slim wrapper over RedisConnection 
-object from BookSleeve. The type Connection inherits from RedisConnection and adds a connection pool
-accessible via Connection.Use() instance method or a prefix operator `+`.
-
-BookSleeve recommends using the same connection accross an application because the connection is thread safe,
-however in some cases you may need to create a new connection, e.g. for using blocking BLPOP/BRPOP
-commands (for subscriptions BookSleeve has a connection instance method `GetOpenSubscriberChannel` that could
-be accesses via `%` prefix operator).
-
-Operators:
-
-	/// Get an existing connection from a pool or a new connection to the same server with same parameters
-    /// Use this method when a call to Redis could be blocking, e.g. when using distributed locks
-    let (~+) (conn:Connection) = conn.Clone
-    /// GetOpenSubscriberChannel on connection
-    let (~%) (conn:Connection) = conn.GetOpenSubscriberChannel()
-    /// Async await plain Task and return Async<unit>, to be used with do! inside Async
-    let (!~)  (t: IAsyncResult) = t |> (Async.AwaitIAsyncResult >> Async.Ignore)
-    /// Async await typed Task<'T> and return Async<'T>, to be used with let! inside Async
-    let inline (!!)  (t: Task<'T>) = t |> Async.AwaitTask
-    /// Run plain Task/IAsyncResult on current thread
-    let (!~!)  (t: IAsyncResult) = t |> (Async.AwaitIAsyncResult >> Async.Ignore >> Async.RunSynchronously)
-    /// Run task Task<'T> on current thread and return results
-    let inline (!!!)  (t: Task<'T>) = t.Result // |> (Async.AwaitTask >> Async.RunSynchronously)
 
 Install & Usage
 ----------------------
 
 	PM> Install-Package Fredis
-
-See BookSleeve docs for API. Some examples how to use Fredis operators from Tests.fsx
-
-	let connection = new Connection("localhost")
-	let anotherReusedConnection = +connection
-	let subscriberChannel = %connection
-	let r1 = !!!conn.Server.Ping()
-	!~!conn.Strings.Set(2,"k1","1")
-	let a' = 
-    async{
-        // Async.AwaitIAsyncResult >> Async.Ignore
-        return! !~conn.Strings.Set(1,"k1","abc")
-    } |> Async.RunSynchronously
-	// !~! shortcut for (Async.AwaitIAsyncResult >> Async.Ignore >> Async.RunSynchronously)
-	!~!conn.Strings.Set(1,"k1","abc") 
-	let r2 = async { return! !!conn.Strings.Append(1,"k1","def") } |> Async.RunSynchronously
-	let r3 = !!!conn.Strings.GetString(1,"k1")
+	PM> Install-Package Fredis.Persistence
 
 
-Up for grabs!
-----------------------
-I started this library to add async distributed locks
-and to add convenience shortcuts for working with Task<'T> from F# Async. Additional useful 
-features could be automatic serialization of generic types using protobuf-net and
-a DSL that will allow to use native Redis commands with .NET types. 
-
-
-I won't be able to spend all my time on this and am not sure that I could complete the features alone at all.
-This project is an ideal candidate to be a shared community project. Please fork, contribute your
- edits and new ideas, add your name to the license and let's party hard on this project!
-
-**TODOs:**
-
-- **Extensions:**
-  * correct distributed blocking lock (honors the order of consumers trying to access a locked resource). ETA next release if the idea is feasible 
-
-
-- **Build-in serialization:** 
-Typed expressions with serialization hidden behind the scenes (some conventions with overridable params or IoC, by default protobuf-net?)
-
-- **DSL:**
-expressions implemented as custom query expression commands, with native Redis commands on any serializable types
-
-		let conn = .. // new connection
-		let version = // should equal pong
-			fredis conn {
-				PING
-			}
-	
-		let value:'T = new T()
-		let key = "mykey"
-			fredis conn {
-				SET key value // automatic serialization
-			}	
-
-		let value2:'T = // atomatic deserialization to 'T
-			fredis +conn {
-				GET key
-			}
-
-		let channel = "mychannel"
-		let value = 
-			fredis %conn {
-				SUBSCRIBE channel
-			}
-
-
-- **Distributed transport and persistence for Actors:**
-Redis is the ideal transport for distributed actors. E.g. in a MailBoxProcessor a Redis list + distributed blocking lock (replicating BlockingCollection behavior)
-could be used for a distributed concurrent queue implementation. Atomic `(B)RPOPLPUSH` commands could be 
-use for continuations.
+Docs & test are work in progress...
 
 
 License
@@ -143,5 +59,5 @@ You may obtain a copy of the License at
 This software is distributed under the License is distributed on an "AS IS" BASIS,
 WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 
-BookSleeve is licensed separately; see https://code.google.com/p/booksleeve/.
+StackExchange.Redis is licensed separately; see https://code.google.com/p/booksleeve/.
 Redis is licensed separately; see http://redis.io/.
