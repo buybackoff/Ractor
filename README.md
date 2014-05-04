@@ -73,6 +73,16 @@ Basic usage
     greeter.Start()
     Thread.Sleep(1000)
 
+Outputs
+    Not started yet
+    Hello, Greeter 1
+    Hello, Greeter 2
+    Hello, Greeter 3
+    Hello, Greeter 4
+    Hello, Greeter 5
+    Hello, Greeter via instance from Fredis.GetActor
+    Hello, Greeter via operator
+
 License
 ----------------------
 
