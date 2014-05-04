@@ -66,15 +66,17 @@ namespace Fredis {
 
 
 
-        public bool HDel(string fullKey, string field) {
+        public bool HDel(string fullKey, string field, bool fireAndForget = false) {
             var k = _nameSpace + fullKey;
-            var result = GetDb().HashDelete(k, field);
+            var ff = fireAndForget ? CommandFlags.FireAndForget : CommandFlags.None;
+            var result = GetDb().HashDelete(k, field, ff);
             return result;
         }
 
-        public async Task<bool> HDelAsync(string fullKey, string field) {
+        public async Task<bool> HDelAsync(string fullKey, string field, bool fireAndForget = false) {
             var k = _nameSpace + fullKey;
-            var result = await GetDb().HashDeleteAsync(k, field);
+            var ff = fireAndForget ? CommandFlags.FireAndForget : CommandFlags.None;
+            var result = await GetDb().HashDeleteAsync(k, field, ff);
             return result;
         }
 

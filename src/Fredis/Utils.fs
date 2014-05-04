@@ -10,11 +10,10 @@ open System.Threading.Tasks
 
 
 [<AutoOpenAttribute>]
-[<ObsoleteAttribute>]
 module internal Utils =
     /// Option-coalescing operator
-    [<ObsoleteAttribute>]
     let inline (??=) (opt:'a option) (fallback:'a) = if opt.IsSome then opt.Value else fallback
+
     /// Async await plain Task and return Async<unit>, to be used with do! inside Async
     [<ObsoleteAttribute>]
     let (!~)  (t: IAsyncResult) = t |> (Async.AwaitIAsyncResult >> Async.Ignore)

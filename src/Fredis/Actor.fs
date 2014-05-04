@@ -51,11 +51,11 @@ return result"
             // TODO add ZSet with timestamp as rank to monitor the pipeline state
             let pipelineId = Guid.NewGuid().ToString("N")
             
-            let message = 
-                redis.Eval<'T * string>(lua, 
+            let! message = 
+                redis.EvalAsync<'T * string>(lua, 
                                         [| redis.KeyNameSpace + ":" + inboxKey
                                            redis.KeyNameSpace + ":" + pipelineKey
-                                           pipelineId |])
+                                           pipelineId |]) |> Async.AwaitTask
             if Object.Equals(message, null) then 
                 let! recd = Async.AwaitWaitHandle(awaitMessageHandle, timeout)
                 if recd then return! await timeout
@@ -90,11 +90,10 @@ return result"
                         try 
                             let! result = computation.Value payload
                             children |> Seq.iter (fun a -> a.Value.Post(result))
-                            let! deleted = redis.HDelAsync(pipelineKey, pipelineId) |> Async.AwaitIAsyncResult
-                            if not deleted then Debug.Fail("did not delete value from pipeline")
+                            redis.HDel(pipelineKey, pipelineId, true) |> ignore
                             if messageId <> "" then 
                                 redis.HSet(resultsKey, messageId, result, When.Always, true) |> ignore
-                                redis.PublishAsync<string>(channelKey, messageId) |> ignore
+                                redis.Publish<string>(channelKey, messageId, true) |> ignore
                         with e -> 
                             let ei = ExceptionInfo(id, payload, e)
                             redis.LPush<ExceptionInfo<'Tin>>(errorsKey, ei, When.Always, true) |> ignore
@@ -115,11 +114,12 @@ return result"
     
     member this.Post<'Tin>(message : 'Tin, ?highPriority : bool) : unit = 
         // TODO? local execution if started? similar to PostAndReply.
+        // that will be good for chained actors - will save one trip to Redis and will have data to process right now, while pipeline is fire-and-forget write
         let highPriority = defaultArg highPriority false
         if highPriority then redis.RPushAsync<'Tin * string>(inboxKey, (message, "")) |> ignore
         else redis.LPushAsync<'Tin * string>(inboxKey, (message, "")) |> ignore
         awaitMessageHandle.Set() |> ignore
-        redis.PublishAsync<string>(channelKey, "") |> ignore
+        redis.Publish<string>(channelKey, "", true) |> ignore
     
     member this.PostAndReply(message : 'Tin, ?highPriority : bool, ?millisecondsTimeout) : Async<'Tout> = 
         let highPriority = defaultArg highPriority false
@@ -131,23 +131,25 @@ return result"
             async { 
                 let! result = computation.Value message
                 children |> Seq.iter (fun a -> a.Value.Post(result))
-                redis.HDelAsync(pipelineKey, pipelineId) |> ignore
+                redis.HDel(pipelineKey, pipelineId, true) |> ignore
                 return result
             }
-        | false -> 
+        | false ->  
             let resultId = Guid.NewGuid().ToString("N")
             if highPriority then redis.RPushAsync<'Tin * string>(inboxKey, (message, resultId)) |> ignore
             else redis.LPushAsync<'Tin * string>(inboxKey, (message, resultId)) |> ignore
             awaitMessageHandle.Set() |> ignore
-            redis.PublishAsync<string>(channelKey, "") |> ignore // no resultId here because we notify recievers that in turn will notify callers about results
+            redis.Publish<string>(channelKey, "", true) |> ignore // no resultId here because we notify recievers that in turn will notify callers about results
             let rec awaitResult timeout = 
                 async { 
-                    let! message = !!redis.HGetAsync<'Tout>(resultsKey, resultId)
+                    let! message = redis.HGetAsync<'Tout>(resultsKey, resultId) |> Async.AwaitTask
                     if Object.Equals(message, null) then 
                         let! recd = Async.AwaitWaitHandle(awaitResultHandle, timeout)
                         if recd then return! awaitResult timeout
                         else return raise (TimeoutException("PostAndReply timed out"))
-                    else return message
+                    else 
+                        redis.HDel(resultsKey, resultId, true) |> ignore
+                        return message
                 }
             awaitResult millisecondsTimeout
     

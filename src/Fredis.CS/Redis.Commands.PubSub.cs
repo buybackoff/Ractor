@@ -16,16 +16,18 @@ using StackExchange.Redis;
 namespace Fredis {
 
     public partial class Redis {
-        public long Publish<TMessage>(string channel, TMessage message) {
+        public long Publish<TMessage>(string channel, TMessage message, bool fireAndForget = false) {
             var sub = ConnectionMultiplexer.GetSubscriber();
             var m = PackValueNullable(message);
-            return sub.Publish(channel, m);
+            var ff = fireAndForget ? CommandFlags.FireAndForget : CommandFlags.None;
+            return sub.Publish(channel, m, ff);
         }
 
-        public async Task<long> PublishAsync<TMessage>(string channel, TMessage message) {
+        public async Task<long> PublishAsync<TMessage>(string channel, TMessage message, bool fireAndForget = false) {
             var sub = ConnectionMultiplexer.GetSubscriber();
             var m = PackValueNullable(message);
-            return await sub.PublishAsync(channel, m);
+            var ff = fireAndForget ? CommandFlags.FireAndForget : CommandFlags.None;
+            return await sub.PublishAsync(channel, m, ff);
         }
 
         public void Subscribe<TMessage>(string channel, Action<string, TMessage> handler) {
