@@ -5,7 +5,7 @@ F#'s [MailboxProcessor](http://msdn.microsoft.com/en-us/library/ee370357.aspx) a
 is Redis per se as lists of messages, while a number of ephemeral workers (actors' "incarnations") take messages
 from Redis, process them and post results back.
 
-Many benchmarks show that Redis is as performant as old popular message queues and even newer one, like ZMQ. 
+Benchmarks (e.g. [1](http://blog.jupo.org/2013/02/23/a-tale-of-two-queues/)) show that Redis is as performant as old popular message queues and even newer one, like ZMQ. 
 Existing distributed actors system use many to many connections, a design that at the first glance 
 removes a single point of failure. But a closer look reveals that such design introduces multiple points
 of failure because data is stored in some random nodes and at each point in time some node acts as a central
