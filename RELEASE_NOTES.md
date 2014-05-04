@@ -1,3 +1,6 @@
+#### 0.0.9 - May 5 2014
+* C# methods and added FSharp.Core.dll to NuGet package
+
 #### 0.0.8 - May 5 2014
 * Main methods Post and PostAndReply tested for basic corectness (still could be unobvious issues)
 

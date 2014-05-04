@@ -21,7 +21,7 @@ type Fredis(connectionString : string) =
     // We intentinally limit Actor creation to instance method of Fredis, not a static method
     // plus connection string. There is a way to make actors on different redis dbs, but only via
     // different fredis instances.
-    member internal this.CreateActor<'Tin, 'Tout>(id : string, computation : 'Tin -> Async<'Tout>) = 
+    member this.CreateActor<'Tin, 'Tout>(id : string, computation : 'Tin -> Async<'Tout>) = 
         if actors.ContainsKey(id) then raise (InvalidOperationException("Agent with the same id already exists: " + id))
         let actor = new Actor<'Tin, 'Tout>(redis, id, computation)
         actors.Add(id, actor)
@@ -31,9 +31,9 @@ type Fredis(connectionString : string) =
         let comp msg = computation.Invoke(msg) |> Async.AwaitTask
         this.CreateActor(id, comp)
     
-//    member this.CreateActor<'T>(id : string, computation : Action<'T>) = 
-//        let comp msg = async { computation.Invoke(msg) }
-//        this.CreateActor(id, comp)
+    member this.CreateActor<'T>(id : string, computation : Action<'T>) = 
+        let comp msg = async { computation.Invoke(msg) }
+        this.CreateActor(id, comp)
     
     static member GetActor<'Tin, 'Tout>(id : string) : Actor<'Tin, 'Tout> = unbox actors.[id] //:?> Actor<'Tin, 'Tout>
     static member RegisterDB(persistor : IPocoPersistor) = Fredis.RegisterDB(persistor, "")

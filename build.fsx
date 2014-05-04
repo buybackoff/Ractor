@@ -191,7 +191,7 @@ Target "All" DoNothing
   ==> "RestorePackages"
   ==> "AssemblyInfo"
   ==> "Build"
-  ==> "RunTests"
+ // ==> "RunTests"
   ==> "All"
 
 "All" 
@@ -201,4 +201,4 @@ Target "All" DoNothing
   ==> "ReleaseDocs"
   ==> "Release"
 
-RunTargetOrDefault "Release"
+RunTargetOrDefault "NuGet"

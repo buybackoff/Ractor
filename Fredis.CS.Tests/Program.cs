@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace Fredis.CS.Tests {
@@ -13,6 +14,9 @@ namespace Fredis.CS.Tests {
             }));
 
             greeter.Post<string>("C#");
+            greeter.Start();
+            Thread.Sleep(2000);
+
 
         }
     }

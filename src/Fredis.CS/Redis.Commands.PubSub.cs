@@ -60,7 +60,7 @@ namespace Fredis {
             if (channel == null) {
                 await sub.UnsubscribeAllAsync();
             } else {
-                sub.UnsubscribeAsync(channel);
+                await sub.UnsubscribeAsync(channel);
             }
         }
 

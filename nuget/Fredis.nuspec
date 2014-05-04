@@ -20,6 +20,7 @@
     </dependencies>
   </metadata>
   <files>
+    <file src="..\bin\FSharp.Core.dll" target="lib/net40" />
     <file src="..\bin\Fredis.dll" target="lib/net40" />
     <file src="..\bin\Fredis.pdb" target="lib/net40" />
   </files>

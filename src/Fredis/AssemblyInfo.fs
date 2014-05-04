@@ -4,9 +4,9 @@ open System.Reflection
 [<assembly: AssemblyTitleAttribute("Fredis")>]
 [<assembly: AssemblyProductAttribute("Fredis")>]
 [<assembly: AssemblyDescriptionAttribute("Fredis (F#+Redis) is dead simple collection of APIs for POCOs cache/persistence + redis based distributed actors")>]
-[<assembly: AssemblyVersionAttribute("0.0.8")>]
-[<assembly: AssemblyFileVersionAttribute("0.0.8")>]
+[<assembly: AssemblyVersionAttribute("0.0.9")>]
+[<assembly: AssemblyFileVersionAttribute("0.0.9")>]
 do ()
 
-//module internal AssemblyVersionInformation =
-//    let [<Literal>] Version = "0.0.8"
+module internal AssemblyVersionInformation =
+    let [<Literal>] Version = "0.0.9"

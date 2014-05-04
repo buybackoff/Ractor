@@ -126,7 +126,16 @@ return result"
         awaitMessageHandle.Set() |> ignore
         redis.Publish<string>(channelKey, "", true) |> ignore
     
-    member internal this.PostAndReply(message : 'Tin, highPriority : bool, millisecondsTimeout) : Async<'Tout> = 
+    member this.PostAndReply(message : 'Tin) : Async<'Tout> = 
+        this.PostAndReply(message, false, Timeout.Infinite)
+    
+    member this.PostAndReply(message : 'Tin, highPriority : bool) : Async<'Tout> = 
+        this.PostAndReply(message, highPriority, Timeout.Infinite)
+
+    member this.PostAndReply(message : 'Tin, millisecondsTimeout) : Async<'Tout> = 
+        this.PostAndReply(message, false, millisecondsTimeout)
+
+    member this.PostAndReply(message : 'Tin, highPriority : bool, millisecondsTimeout) : Async<'Tout> = 
         match started with
         | true -> 
             let pipelineId = Guid.NewGuid().ToString("N")
@@ -172,15 +181,15 @@ return result"
             this.PostAndReply(message, highPriority, millisecondsTimeout)
         res |> Async.StartAsTask
     
-    member internal this.Link(actor : Actor<'Tout, unit>) = 
+    member this.Link(actor : Actor<'Tout, unit>) = 
         children.Add(actor.Id, actor)
         this
     
-    member internal this.Link(actors : IEnumerable<Actor<'Tout, unit>>) = 
+    member this.Link(actors : IEnumerable<Actor<'Tout, unit>>) = 
         Seq.iter (fun (a : Actor<'Tout, _>) -> children.Add(a.Id, a)) actors
         this
     
-    member internal this.UnLink(actor : Actor<'Tout, unit>) : bool = children.Remove(actor.Id)
+    member this.UnLink(actor : Actor<'Tout, unit>) : bool = children.Remove(actor.Id)
     interface IDisposable with
         member x.Dispose() = 
             cts.Cancel |> ignore
