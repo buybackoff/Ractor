@@ -70,6 +70,7 @@ if result ~= nil then
     redis.call('HSET', KEYS[2], ARGV[1], result)
 end
 return result";
+            
             res = GetRedis().Eval<string>(lua, new[] { "a", "b" }, new[] {"field" });
             Assert.AreEqual(res, null);
 
@@ -79,6 +80,23 @@ return result";
             Assert.AreEqual(res, "value");
             Assert.AreEqual(field, "value");
 
+        }
+
+        [Test]
+        public void TestEval() {
+            var lua = @"
+local result = redis.call('RPOP', KEYS[1])
+if result ~= nil then
+    redis.call('HSET', KEYS[2], ARGV[1], result)
+end
+return result";
+            GetRedis().LPush<string>("greeter:Mailbox::inbox", "value");
+
+            var res = GetRedis().Eval<string>(lua, new[] { "greeter:Mailbox::inbox", "Fredis:greeter:Mailbox:pipeline" }, new[] { "test" });
+
+            Assert.AreEqual("value", res);
+
+            Console.WriteLine(res);
         }
 
     }

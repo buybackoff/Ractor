@@ -23,10 +23,12 @@ let ``hello, Fredis`` () =
 
     let firstGreeter = fredis.CreateActor("greeter", computation)
     //let sameGreeter  = fredis.GetActor<string, string>("greeter")
+    firstGreeter.Post("First Greeter 1")
+    firstGreeter.Post("First Greeter 2")
+    firstGreeter.Post("First Greeter 3")
+    firstGreeter.Post("First Greeter 4")
+    Thread.Sleep(1000)
     firstGreeter.Start()
-
-    //firstGreeter.Post("First Greeter")
-      
     Thread.Sleep(1000)
     //Console.WriteLine(t.Result)
     ()

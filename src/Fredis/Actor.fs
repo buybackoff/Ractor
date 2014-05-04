@@ -4,6 +4,7 @@ open System
 open System.Collections.Generic
 open System.Threading
 open System.Threading.Tasks
+open System.Diagnostics
 open Fredis
 
 type ExceptionInfo<'T> = 
@@ -15,7 +16,7 @@ type Actor<'Tin, 'Tout> internal (redis : Redis, id : string, ?computation : 'Ti
     let mutable cts = Unchecked.defaultof<CancellationTokenSource>
     let awaitMessageHandle = new AutoResetEvent(false)
     let awaitResultHandle = new AutoResetEvent(false)
-    let prefix = id + ":Mailbox:"
+    let prefix = id + ":Mailbox"
     let inboxKey = prefix + ":inbox"
     let pipelineKey = prefix + ":pipeline"
     let resultsKey = prefix + ":results"
@@ -39,13 +40,13 @@ type Actor<'Tin, 'Tout> internal (redis : Redis, id : string, ?computation : 'Ti
             // atomically move to safe place while processing
             let lua = @"
 local result = redis.call('RPOP', KEYS[1])
-if result ~= nil
+if result ~= nil then
     redis.call('HSET', KEYS[2], ARGV[1], result)
 end
 return result"
             // TODO add ZSet with timestamp as rank to monitor the pipeline state
             let pipelineId = Guid.NewGuid().ToString("N")
-            let! message = !!redis.EvalAsync<'T * string>(lua, [| inboxKey; pipelineKey |], [| pipelineId |])
+            let message = redis.Eval<'T * string>(lua, [| inboxKey; pipelineKey |], [| pipelineId |])
             if Object.Equals(message, null) then 
                 let! recd = Async.AwaitWaitHandle(awaitMessageHandle, timeout)
                 if recd then return! await timeout
@@ -67,8 +68,8 @@ return result"
         if computation.IsNone then failwith "Cannot start an actor without computation"
         cts <- new CancellationTokenSource()
         async { 
-            while not cts.Token.IsCancellationRequested do
-                do! !~semaphor.WaitAsync(cts.Token)
+            while (not cts.Token.IsCancellationRequested) do
+                do! semaphor.WaitAsync(cts.Token) |> Async.AwaitIAsyncResult |> Async.Ignore
                 try
                     let! msg = await Timeout.Infinite
                     let payload = (fst (fst msg))
@@ -77,8 +78,9 @@ return result"
                     async { 
                         try 
                             let! result = computation.Value payload
-                            children.Values |> Seq.iter (fun a -> a.Post(result))
-                            redis.HDelAsync(pipelineKey, pipelineId) |> ignore
+                            children |> Seq.iter (fun a -> a.Value.Post(result))
+                            let! deleted = redis.HDelAsync(pipelineKey, pipelineId) |> Async.AwaitIAsyncResult
+                            if not deleted then Debug.Fail("did not delete value from pipeline")
                             if messageId <> "" then 
                                 redis.HSet(resultsKey, messageId, result, When.Always, true) |> ignore
                                 redis.PublishAsync<string>(channelKey, messageId) |> ignore
@@ -115,7 +117,7 @@ return result"
             redis.HSet<'Tin>(pipelineKey, pipelineId, message, When.Always, true) |> ignore // save message
             async { 
                 let! result = computation.Value message
-                children.Values |> Seq.iter (fun a -> a.Post(result))
+                children |> Seq.iter (fun a -> a.Value.Post(result))
                 redis.HDelAsync(pipelineKey, pipelineId) |> ignore
                 return result
             }
