@@ -31,11 +31,19 @@ let ``hello, Fredis`` () =
 
     sameGreeter.Post("Greeter via instance from Fredis.GetActor")
 
-    // this will fail if computation return not Async<unit>
+    // this will fail if computation returns not Async<unit>
     "greeter" <-- "Greeter via operator"
 
     Console.WriteLine("Not started yet")
     Thread.Sleep(1000)
     greeter.Start()
     Thread.Sleep(1000)
+    ()
+
+
+[<Test>]
+let ``Pipeline is cleared after Post`` () =
+    let r = new Redis("localhost")
+
+
     ()

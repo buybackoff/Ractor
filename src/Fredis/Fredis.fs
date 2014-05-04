@@ -76,8 +76,8 @@ module Operators =
     let (<--) (id : string) (msg : 'Tin) : unit = Fredis.GetActor<'Tin, unit>(id).Post(msg)
     let (-->) (msg : 'Tin) (id : string)  : unit = Fredis.GetActor<'Tin, unit>(id).Post(msg)
 
-    let (<-*) (id : string) (msg : 'Tin) : Async<'Tout> = Fredis.GetActor(id).PostAndReply(msg)
-    let ( *->) (msg : 'Tin) (id : string)  : Async<'Tout> = Fredis.GetActor(id).PostAndReply(msg)
+    let (<-*) (id : string) (msg : 'Tin) : Async<'Tout> = Fredis.GetActor<'Tin, 'Tout>(id).PostAndReply(msg)
+    let ( *->) (msg : 'Tin) (id : string)  : Async<'Tout> = Fredis.GetActor<'Tin, 'Tout>(id).PostAndReply(msg)
 
     let (->>-) (parent : string) (child : string)  = 
         Fredis.GetActor(parent).Link(Fredis.GetActor(child))

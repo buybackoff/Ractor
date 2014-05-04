@@ -14,8 +14,7 @@ type ExceptionInfo<'T> =
 //type Actor() =
 //    abstract Post : 'a * ?highPriority:bool -> unit
 //    abstract PostAndReply: 'a * ?highPriority:bool * int option -> 'b
-
-type Actor<'Tin, 'Tout> internal (redis : Redis, id : string, ?computation : 'Tin -> Async<'Tout>) =
+type Actor<'Tin, 'Tout> internal (redis : Redis, id : string, ?computation : 'Tin -> Async<'Tout>) = 
     //inherit Actor()
     let children = Dictionary<string, Actor<'Tout, _>>()
     let mutable started = false
@@ -29,7 +28,6 @@ type Actor<'Tin, 'Tout> internal (redis : Redis, id : string, ?computation : 'Ti
     let channelKey = prefix + ":channel"
     let errorsKey = prefix + ":errors"
     let mutable errorHandler = Unchecked.defaultof<Actor<ExceptionInfo<'Tin>, _>>
-    
     // global limit for number of concurrent tasks
     static let semaphor = new SemaphoreSlim(Environment.ProcessorCount * 16)
     
@@ -47,12 +45,17 @@ type Actor<'Tin, 'Tout> internal (redis : Redis, id : string, ?computation : 'Ti
             let lua = @"
 local result = redis.call('RPOP', KEYS[1])
 if result ~= nil then
-    redis.call('HSET', KEYS[2], ARGV[1], result)
+    redis.call('HSET', KEYS[2], KEYS[3], result)
 end
 return result"
             // TODO add ZSet with timestamp as rank to monitor the pipeline state
             let pipelineId = Guid.NewGuid().ToString("N")
-            let message = redis.Eval<'T * string>(lua, [| inboxKey; pipelineKey |], [| pipelineId |])
+            
+            let message = 
+                redis.Eval<'T * string>(lua, 
+                                        [| redis.KeyNameSpace + ":" + inboxKey
+                                           redis.KeyNameSpace + ":" + pipelineKey
+                                           pipelineId |])
             if Object.Equals(message, null) then 
                 let! recd = Async.AwaitWaitHandle(awaitMessageHandle, timeout)
                 if recd then return! await timeout
@@ -75,8 +78,10 @@ return result"
         cts <- new CancellationTokenSource()
         async { 
             while (not cts.Token.IsCancellationRequested) do
-                do! semaphor.WaitAsync(cts.Token) |> Async.AwaitIAsyncResult |> Async.Ignore
-                try
+                do! semaphor.WaitAsync(cts.Token)
+                    |> Async.AwaitIAsyncResult
+                    |> Async.Ignore
+                try 
                     let! msg = await Timeout.Infinite
                     let payload = (fst (fst msg))
                     let messageId = (snd (fst msg))
@@ -93,7 +98,8 @@ return result"
                         with e -> 
                             let ei = ExceptionInfo(id, payload, e)
                             redis.LPush<ExceptionInfo<'Tin>>(errorsKey, ei, When.Always, true) |> ignore
-                            if errorHandler <> Unchecked.defaultof<Actor<ExceptionInfo<'Tin>, _>> then errorHandler.Post(ei)
+                            if errorHandler <> Unchecked.defaultof<Actor<ExceptionInfo<'Tin>, _>> then 
+                                errorHandler.Post(ei)
                     }
                     |> Async.Start
                 finally
@@ -106,8 +112,9 @@ return result"
         if started then 
             started <- false
             cts.Cancel |> ignore
-
+    
     member this.Post<'Tin>(message : 'Tin, ?highPriority : bool) : unit = 
+        // TODO? local execution if started? similar to PostAndReply.
         let highPriority = defaultArg highPriority false
         if highPriority then redis.RPushAsync<'Tin * string>(inboxKey, (message, "")) |> ignore
         else redis.LPushAsync<'Tin * string>(inboxKey, (message, "")) |> ignore
@@ -146,19 +153,19 @@ return result"
     
     // C# naming style and return type
     member this.PostAndReplyAsync(message : 'Tin, ?highPriority : bool, ?millisecondsTimeout) : Task<'Tout> = 
-         let res : Async<'Tout> = this.PostAndReply(message, highPriority??=false, millisecondsTimeout??=Timeout.Infinite) 
-         res |> Async.StartAsTask
-
+        let res : Async<'Tout> = 
+            this.PostAndReply(message, highPriority ??= false, millisecondsTimeout ??= Timeout.Infinite)
+        res |> Async.StartAsTask
+    
     member this.Link(actor : Actor<'Tout, _>) = 
         children.Add(actor.Id, actor)
         this
-
+    
     member this.Link(actors : seq<Actor<'Tout, _>>) = 
-        Seq.iter (fun (a:Actor<'Tout, _>) -> children.Add(a.Id, a)) actors
+        Seq.iter (fun (a : Actor<'Tout, _>) -> children.Add(a.Id, a)) actors
         this
-
+    
     member this.UnLink(actor : Actor<'Tout, _>) : bool = children.Remove(actor.Id)
-
     interface IDisposable with
         member x.Dispose() = 
             cts.Cancel |> ignore

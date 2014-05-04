@@ -52,17 +52,18 @@ namespace Fredis {
             return await GetDb().KeyDeleteAsync(ks);
         }
 
-
+        //Eval now doesn't prefixes keys, should use redis.KeyNameSpace + ":" + key to access a key.
         public TResult Eval<TResult>(string script, string[] keys = null, object[] values = null) {
             var result = GetDb().ScriptEvaluate(script,
-                keys == null ? null : keys.Select(k => (RedisKey)(_nameSpace + k)).ToArray(),
+                keys == null ? null : keys.Select(k => (RedisKey)(k)).ToArray(),
                 values == null ? null : values.Select(PackValueNullable).ToArray());
             return UnpackResultNullable<TResult>((RedisValue)result);
         }
 
+        //Eval now doesn't prefixes keys, should use redis.KeyNameSpace + ":" + key to access a key.
         public async Task<TResult> EvalAsync<TResult>(string script, string[] keys = null, object[] values = null) {
             var result = await GetDb().ScriptEvaluateAsync(script,
-                keys == null ? null : keys.Select(k => (RedisKey)(_nameSpace + k)).ToArray(),
+                keys == null ? null : keys.Select(k => (RedisKey)(k)).ToArray(),
                 values == null ? null : values.Select(PackValueNullable).ToArray());
             return UnpackResultNullable<TResult>((RedisValue)result);
         }
