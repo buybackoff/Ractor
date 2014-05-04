@@ -6,7 +6,6 @@ open System.Threading
 open Fredis
 
 // TODO local queue
-
 type Actor<'Tin, 'Tout> private (redis : Redis, id : string, ?computation : 'Tin -> Async<'Tout>) = 
     let children = Dictionary<string, Actor<'Tout, _>>()
     let mutable started = false
@@ -20,10 +19,9 @@ type Actor<'Tin, 'Tout> private (redis : Redis, id : string, ?computation : 'Tin
     let channelKey = prefix + ":channel"
     let errorsKey = prefix + ":errors"
     let mutable errorHandler = Unchecked.defaultof<Actor<ExceptionInfo<'Tin>, _>>
-    
     // global limit for number of tasks
     static let semaphor = new SemaphoreSlim(256)
-
+    
     do 
         redis.Subscribe(channelKey, 
                         Action<string, string>(fun channel message -> 
@@ -59,7 +57,7 @@ return result"
         and set (eh) = errorHandler <- eh
     
     member private __.Computation = computation
-
+    
     member __.Start() : unit = 
         if computation.IsNone then failwith "Cannot start an actor without computation"
         cts <- new CancellationTokenSource()
@@ -81,8 +79,7 @@ return result"
                     with e -> 
                         let ei = ExceptionInfo(id, payload, e)
                         redis.LPush<ExceptionInfo<'Tin>>(errorsKey, ei, When.Always, true) |> ignore
-                        if errorHandler <> Unchecked.defaultof<Actor<ExceptionInfo<'Tin>, _>> then
-                            errorHandler.Post(ei)
+                        if errorHandler <> Unchecked.defaultof<Actor<ExceptionInfo<'Tin>, _>> then errorHandler.Post(ei)
                 }
                 |> Async.Start
                 semaphor.Release() |> ignore
@@ -95,18 +92,26 @@ return result"
             started <- false
             cts.Cancel |> ignore
     
-    member __.Post(message : 'Tin, ?highPriority:bool) : unit = 
+    member __.Post(message : 'Tin, ?highPriority : bool) : unit = 
         let highPriority = defaultArg highPriority false
         if highPriority then redis.LPushAsync<'Tin * string>(inboxKey, (message, "")) |> ignore
         else redis.RPushAsync<'Tin * string>(inboxKey, (message, "")) |> ignore
         awaitMessageHandle.Set() |> ignore
         redis.PublishAsync<string>(channelKey, "") |> ignore
     
-    member __.PostAndReply(message : 'Tin, ?highPriority:bool, ?millisecondsTimeout) : Async<'Tout> = 
+    member __.PostAndReply(message : 'Tin, ?highPriority : bool, ?millisecondsTimeout) : Async<'Tout> = 
         let highPriority = defaultArg highPriority false
         let millisecondsTimeout = defaultArg millisecondsTimeout Timeout.Infinite
         match started with
-        | true -> computation.Value message
+        | true -> 
+            let pipelineId = Guid.NewGuid().ToString("N")
+            redis.HSet<'Tin>(pipelineKey, pipelineId, message, When.Always, true) |> ignore // save message
+            async { 
+                let! result = computation.Value message
+                children.Values |> Seq.iter (fun a -> a.Post(result))
+                redis.HDelAsync(pipelineKey, pipelineId) |> ignore
+                return result
+            }
         | false -> 
             let resultId = Guid.NewGuid().ToString("N")
             if highPriority then redis.LPushAsync<'Tin * string>(inboxKey, (message, resultId)) |> ignore
@@ -126,12 +131,10 @@ return result"
     
     member __.Link(actor : Actor<'Tout, _>) : unit = children.Add(actor.Id, actor)
     member __.UnLink(actor : Actor<'Tout, _>) : bool = children.Remove(actor.Id)
-    
-
     interface IDisposable with
         member x.Dispose() = 
             cts.Cancel |> ignore
             awaitMessageHandle.Dispose()
             awaitResultHandle.Dispose()
             cts.Dispose()
-            semaphor.Dispose() 
+            semaphor.Dispose()
