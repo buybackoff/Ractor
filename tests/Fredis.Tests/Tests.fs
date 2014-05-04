@@ -51,13 +51,13 @@ let ``PostAndReply local execution`` () =
 
     
 
-    let greeter = fredis.CreateActor("greeter", computation)
+    let greeter = fredis.CreateActor("greeterReply", computation)
     
     Console.WriteLine("Local execution")
     greeter.Start()
 
     // type annotations are required
-    let sameGreeter  = Fredis.GetActor<string, string>("greeter")
+    let sameGreeter  = Fredis.GetActor<string, string>("greeterReply")
     Console.WriteLine(greeter.PostAndReply("Greeter 1") |> Async.RunSynchronously)
     Console.WriteLine(greeter.PostAndReply("Greeter 2") |> Async.RunSynchronously)
     Console.WriteLine(greeter.PostAndReply("Greeter 3") |> Async.RunSynchronously)
@@ -67,7 +67,7 @@ let ``PostAndReply local execution`` () =
     Console.WriteLine(sameGreeter.PostAndReply("Greeter via instance from Fredis.GetActor") |> Async.RunSynchronously)
 
     // this will fail if computation returns not Async<unit>
-    let res : string = "greeter" <-* "Greeter via operator"  |> Async.RunSynchronously
+    let res : string = "greeterReply" <-* "Greeter via operator"  |> Async.RunSynchronously
     Console.WriteLine(res)
     ()
 

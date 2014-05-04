@@ -1,3 +1,6 @@
+#### 0.0.8 - May 5 2014
+* Main methods Post and PostAndReply tested for basic corectness (still could be unobvious issues)
+
 #### 0.0.7 - May 4 2014
 * Fredis first draft with actros
 

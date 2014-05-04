@@ -59,7 +59,9 @@ namespace Fredis.Persistence.Tests {
 
         [Test]
         public void TestEvalNil() {
-            var res = GetRedis().Eval<string>("return nil");
+            var r = GetRedis();
+
+            var res = r.Eval<string>("return nil");
             Assert.AreEqual(res, null);
 
             GetRedis().Del(new[] { "a", "b" });
@@ -67,15 +69,15 @@ namespace Fredis.Persistence.Tests {
             var lua = @"
 local result = redis.call('RPOP', KEYS[1])
 if result ~= nil then
-    redis.call('HSET', KEYS[2], ARGV[1], result)
+    redis.call('HSET', KEYS[2], KEYS[3], result)
 end
 return result";
-            
-            res = GetRedis().Eval<string>(lua, new[] { "a", "b" }, new[] {"field" });
+
+            res = r.Eval<string>(lua, new[] { r.KeyNameSpace + ":" + "a", r.KeyNameSpace + ":" + "b", "field" });
             Assert.AreEqual(res, null);
 
-            GetRedis().LPush<string>("a", "value");
-            res = GetRedis().Eval<string>(lua, new[] { "a", "b" }, new[] { "field" });
+            r.LPush<string>("a", "value");
+            res = GetRedis().Eval<string>(lua, new[] { r.KeyNameSpace + ":" + "a", r.KeyNameSpace + ":" + "b", "field" });
             var field = GetRedis().HGet<string>("b", "field");
             Assert.AreEqual(res, "value");
             Assert.AreEqual(field, "value");
@@ -84,15 +86,18 @@ return result";
 
         [Test]
         public void TestEval() {
+            var r = GetRedis();
+
             var lua = @"
 local result = redis.call('RPOP', KEYS[1])
 if result ~= nil then
-    redis.call('HSET', KEYS[2], ARGV[1], result)
+    redis.call('HSET', KEYS[2], KEYS[3], result)
 end
 return result";
-            GetRedis().LPush<string>("greeter:Mailbox::inbox", "value");
+            r.LPush<string>("greeter:Mailbox:inbox", "value");
 
-            var res = GetRedis().Eval<string>(lua, new[] { "greeter:Mailbox::inbox", "Fredis:greeter:Mailbox:pipeline" }, new[] { "test" });
+
+            var res = r.Eval<string>(lua, new[] { r.KeyNameSpace + ":" + "greeter:Mailbox:inbox", r.KeyNameSpace + ":" + "test:greeter:Mailbox:pipeline", "test" });
 
             Assert.AreEqual("value", res);
 

@@ -7,13 +7,10 @@ open System.Threading.Tasks
 open System.Diagnostics
 open Fredis
 
+// TODO exception handling
 type ExceptionInfo<'T> = 
     | ExceptionInfo of string * 'T * Exception
 
-//[<AbstractClass>]
-//type Actor() =
-//    abstract Post : 'a * ?highPriority:bool -> unit
-//    abstract PostAndReply: 'a * ?highPriority:bool * int option -> 'b
 type Actor<'Tin, 'Tout> internal (redis : Redis, id : string, ?computation : 'Tin -> Async<'Tout>) = 
     //inherit Actor()
     let children = Dictionary<string, Actor<'Tout, _>>()

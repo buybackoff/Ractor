@@ -24,8 +24,6 @@ Install
 Usage Example
 -------
 
-This example demonstrates using a function defined in this sample library.
-
 *)
 
 #r "Fredis.dll"
@@ -33,26 +31,30 @@ This example demonstrates using a function defined in this sample library.
 
 open System
 open System.Text
-
 open Fredis
 
+let fredis = new Fredis("localhost")
 
-let fredis = new Fredis("localhost:6379")
-
-let computation (input:string) : Async<string> =
-    Console.WriteLine("Hello, " + input)
+let computation (input:string) : Async<unit> =
     async {
-        return "Hello, " + input
+        Console.WriteLine("Hello, " + input)
     }
 
-let firstGreeter = fredis.CreateActor("greeter", computation)
-//let sameGreeter  = fredis.GetActor<string, string>("greeter")
-firstGreeter.Start()
+let greeter = fredis.CreateActor("greeter", computation)
+// type annotations are required
+let sameGreeter  = Fredis.GetActor<string, unit>("greeter")
+greeter.Post("Greeter 1")
+greeter.Post("Greeter 2")
+greeter.Post("Greeter 3")
+greeter.Post("Greeter 4")
+greeter.Post("Greeter 5")
 
-firstGreeter.Post("First Greeter")
-//sameGreeter.Post("Same Greeter")
-//"greeter" <-- "Greeter Using Operator"
+sameGreeter.Post("Greeter via instance from Fredis.GetActor")
 
+// this will fail if computation returns not Async<unit>
+"greeter" <-- "Greeter via operator"
+
+()
 
 
 (**

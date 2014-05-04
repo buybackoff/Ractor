@@ -100,7 +100,7 @@ namespace Fredis.Persistence.Tests {
 
             Persistor.CreateTable<DataObject>(true);
             var list = new List<DataObject>();
-            for (int i = 0; i < 50000; i++) {
+            for (int i = 0; i < 5000; i++) {
 
                 var dobj = new DataObject() {
                     Value = "inserted"
@@ -116,7 +116,7 @@ namespace Fredis.Persistence.Tests {
 
             Persistor.CreateTable<RootAsset>(false);
             var list = new List<RootAsset>();
-            for (int i = 0; i < 50000; i++) {
+            for (int i = 0; i < 5000; i++) {
 
                 var dobj = new RootAsset() {
                     Value = "inserted"
