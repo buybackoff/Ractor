@@ -36,10 +36,6 @@
     <DocumentationFile>..\..\bin\Fredis.xml</DocumentationFile>
   </PropertyGroup>
   <ItemGroup>
-    <Reference Include="Fredis.Persistence">
-      <HintPath>..\..\packages\Fredis.Persistence.0.0.5\lib\net40\Fredis.Persistence.dll</HintPath>
-      <Private>True</Private>
-    </Reference>
     <Reference Include="FsPickler">
       <HintPath>..\..\packages\FsPickler.0.8.6.2\lib\net45\FsPickler.dll</HintPath>
       <Private>True</Private>
@@ -82,6 +78,13 @@
     <Compile Include="Logging.fs" />
     <Compile Include="Actor.fs" />
     <Compile Include="Fredis.fs" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\Fredis.CS\Fredis.Persistence.csproj">
+      <Name>Fredis.Persistence</Name>
+      <Project>{6780d11c-42ad-46dc-b49d-95912164bb23}</Project>
+      <Private>True</Private>
+    </ProjectReference>
   </ItemGroup>
   <PropertyGroup>
     <MinimumVisualStudioVersion Condition="'$(MinimumVisualStudioVersion)' == ''">11</MinimumVisualStudioVersion>

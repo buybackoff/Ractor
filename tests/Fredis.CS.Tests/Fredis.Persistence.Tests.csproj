@@ -65,9 +65,6 @@
       <SpecificVersion>False</SpecificVersion>
       <HintPath>..\..\packages\ServiceStack.Text.3.9.71\lib\net35\ServiceStack.Text.dll</HintPath>
     </Reference>
-    <Reference Include="StackExchange.Redis">
-      <HintPath>..\..\packages\StackExchange.Redis.1.0.281\lib\net45\StackExchange.Redis.dll</HintPath>
-    </Reference>
     <Reference Include="System" />
     <Reference Include="System.ComponentModel.DataAnnotations" />
     <Reference Include="System.Core" />

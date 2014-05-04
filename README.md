@@ -5,8 +5,9 @@ F#'s [MailboxProcessor](http://msdn.microsoft.com/en-us/library/ee370357.aspx) a
 is Redis per se as lists of messages, while a number of ephemeral workers (actors' "incarnations") take messages
 from Redis, process them and post results back.
 
-Benchmarks (e.g. [1](http://blog.jupo.org/2013/02/23/a-tale-of-two-queues/)) show that Redis is as performant as old popular message queues and even newer one, like ZMQ. 
-Existing distributed actors system use many to many connections, a design that at the first glance 
+Benchmarks (e.g. [1](http://blog.jupo.org/2013/02/23/a-tale-of-two-queues/)) show that Redis is as performant 
+as old popular message queues and even newer ones, like ZMQ. 
+Existing distributed actor systems use many to many connections, a design that at the first glance 
 removes a single point of failure. But a closer look reveals that such design introduces multiple points
 of failure because data is stored in some random nodes and at each point in time some node acts as a central
 one. If that node fails the system will have to elect another lead node, but the messages will be lost.
@@ -28,7 +29,7 @@ Fredis will grow as well and will become mature and robust for its stated tasks 
 
 **Fredis.Persistence** is a collection of APIs for POCOs and blobs persistence and a strongly typed Redis
 client based on excellent [Stackexchange.Redis](https://github.com/StackExchange/StackExchange.Redis) 
-library. The typed Redis client has strong opinion about keys schema inside Redis and uses a concept 
+library. The typed Redis client has strong opinion about keys schema inside Redis and uses a concept of
 root/owner objects to store dependent objects/collections. POCO/database persistor base implementation
 wraps around ServiceStack.ORMLite.v3, however there is no binary dependency and any ORM could be plugged 
 in. Blob persistor saves large data objects to files or S3 (TODO).

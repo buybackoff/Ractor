@@ -8,34 +8,25 @@ open Fredis
 open System
 open System.Text
 open System.Diagnostics
+open System.Threading
 open NUnit.Framework
 
 [<Test>]
 let ``hello, Fredis`` () =
-//    let conn = new Connection("127.0.0.1")
-//    let lim = 10000
-//    for i in 1..lim do
-//        use c = +conn // little sense in a single thread with non-blocking ops
-//        let ping = !!!c.Server.Ping()
-//        if i % 100 = 0 then
-//            Console.Write(i.ToString() + ":")
-//            Console.Write(ping.ToString() + " ")
-//        if i % 1500 =0 then Console.WriteLine("")
+    let fredis = new Fredis("localhost:6379")
 
-//    for i in 1..lim do
-//        let ping = !!!conn.Server.Ping()
-//        if i % 100 = 0 then
-//            Console.Write(i.ToString() + ":")
-//            Console.Write(ping.ToString() + " ")
-//        if i % 1500 =0 then Console.WriteLine("")
-//
-// 
-//        for i = 1 to countPerThread do incTest(c))
-//
-//    let res = !!!conn.Strings.GetInt64(0, "testinc")
-//
-//    incrementers () |> ignore
-//    //if res.Value <> int64(countPerThread * threadCount) then failwith "you are stupid bastartd!" else Console.WriteLine("you are genius!")
+    let computation (input:string) : Async<string> =
+        Console.WriteLine("Hello, " + input)
+        async {
+            return "Hello, " + input
+        }
 
-    //res.Value
+    let firstGreeter = fredis.CreateActor("greeter", computation)
+    //let sameGreeter  = fredis.GetActor<string, string>("greeter")
+    firstGreeter.Start()
+
+    //firstGreeter.Post("First Greeter")
+      
+    Thread.Sleep(1000)
+    //Console.WriteLine(t.Result)
     ()

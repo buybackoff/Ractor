@@ -10,7 +10,7 @@
     <RootNamespace>FSharp.ProjectTemplate.Tests</RootNamespace>
     <AssemblyName>FSharp.ProjectTemplate.Tests</AssemblyName>
     <TargetFrameworkVersion>v4.5.1</TargetFrameworkVersion>
-    <TargetFSharpCoreVersion>4.3.0.0</TargetFSharpCoreVersion>
+    <TargetFSharpCoreVersion>4.3.1.0</TargetFSharpCoreVersion>
     <Name>Fredis.Tests</Name>
     <TargetFrameworkProfile />
     <SolutionDir Condition="$(SolutionDir) == '' Or $(SolutionDir) == '*Undefined*'">..\..\</SolutionDir>
@@ -64,6 +64,10 @@
     <None Include="app.config" />
   </ItemGroup>
   <ItemGroup>
+    <Reference Include="FsPickler">
+      <HintPath>..\..\packages\FsPickler.0.8.6.2\lib\net45\FsPickler.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
     <Reference Include="mscorlib" />
     <Reference Include="FSharp.Core, Version=$(TargetFSharpCoreVersion), Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a">
       <Private>True</Private>
@@ -74,10 +78,16 @@
     </Reference>
     <Reference Include="System" />
     <Reference Include="System.Core" />
+    <Reference Include="System.Data" />
     <Reference Include="System.Net" />
     <Reference Include="System.Numerics" />
   </ItemGroup>
   <ItemGroup>
+    <ProjectReference Include="..\..\src\Fredis.CS\Fredis.Persistence.csproj">
+      <Name>Fredis.Persistence</Name>
+      <Project>{6780d11c-42ad-46dc-b49d-95912164bb23}</Project>
+      <Private>True</Private>
+    </ProjectReference>
     <ProjectReference Include="..\..\src\Fredis\Fredis.fsproj">
       <Name>Fredis</Name>
       <Project>{b9be31bf-f410-4c05-8f1f-b61716c59652}</Project>
