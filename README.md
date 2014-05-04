@@ -22,8 +22,8 @@ worker nodes will not affect the system in any way. This setup gives an elastic,
 "A Fredis is a man/woman who likes to party hard. He/she is the life of the party even though they 
 would not remember it." The goal of Fredis library is to become a life of a moderately-sized server
 application where a developer knows in advance that a single box will choke but there is not enough
- resources to invest into "proper" infrastructure. Fredis will buy time and limit design of the
- application to very simple data objects and persistence patterns. And while the applications growths,
+ resources to invest into "proper" infrastructure. Fredis will buy time and limit (for good!) design of the
+ application to very simple data objects and persistence patterns. And while the application grows,
 Fredis will grow as well and will become mature and robust for its stated tasks at a larger scale.
 
 **Fredis.Persistence** is a collection of APIs for POCOs and blobs persistence and a strongly typed Redis
