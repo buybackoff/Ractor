@@ -29,13 +29,12 @@ type Fredis(connectionString : string) =
         actor
     
     member this.CreateActor<'Tin, 'Tout>(id : string, computation : Func<'Tin, Task<'Tout>>) = 
-        let comp msg = async { return !!computation.Invoke(msg) }
+        let comp msg = async { return computation.Invoke(msg) |> Async.AwaitTask }
         this.CreateActor(id, comp)
     
     
-    static member GetActor<'Tin, 'Tout>(id : string) : Actor<'Tin, 'Tout> = actors.[id] :?> Actor<'Tin, 'Tout>
-    // instance get members for convience
-    member this.GetActor<'Tin, 'Tout>(id : string) = Fredis.GetActor(id)
+    static member GetActor<'Tin, 'Tout>(id : string) : Actor<'Tin, 'Tout> = 
+        actors.[id] :?> Actor<'Tin, 'Tout>
 
     static member RegisterDB(persistor:IPocoPersistor, ?id:string) =
         let id = defaultArg id ""
@@ -45,9 +44,6 @@ type Fredis(connectionString : string) =
 
 
     static member GetDB(?id : string) = 
-            let id = defaultArg id ""
-            dbs.[id]
-    member this.GetDB(?id : string) = 
             let id = defaultArg id ""
             dbs.[id]
 
@@ -61,9 +57,6 @@ type Fredis(connectionString : string) =
     static member GetBlobStorage(?id : string) = 
             let id = defaultArg id ""
             blobs.[id]
-    member this.GetBlobStorage(?id : string) = 
-            let id = defaultArg id ""
-            blobs.[id]
 
 
     static member RegisterRedis(redis:Redis, ?id:string) =
@@ -75,16 +68,13 @@ type Fredis(connectionString : string) =
     static member GetRedis(?id : string) = 
             let id = defaultArg id ""
             redises.[id]
-    member this.GetRedis(?id : string) = 
-            let id = defaultArg id ""
-            redises.[id]
 
 
 
 [<AutoOpen>]
 module Operators = 
-    let (<--) (id : string) (msg : 'Tin) : unit = Fredis.GetActor(id).Post(msg)
-    let (-->) (msg : 'Tin) (id : string)  : unit = Fredis.GetActor(id).Post(msg)
+    let (<--) (id : string) (msg : 'Tin) : unit = Fredis.GetActor<'Tin, unit>(id).Post(msg)
+    let (-->) (msg : 'Tin) (id : string)  : unit = Fredis.GetActor<'Tin, unit>(id).Post(msg)
 
     let (<-*) (id : string) (msg : 'Tin) : Async<'Tout> = Fredis.GetActor(id).PostAndReply(msg)
     let ( *->) (msg : 'Tin) (id : string)  : Async<'Tout> = Fredis.GetActor(id).PostAndReply(msg)

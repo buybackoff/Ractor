@@ -10,7 +10,13 @@ open Fredis
 type ExceptionInfo<'T> = 
     | ExceptionInfo of string * 'T * Exception
 
-type Actor<'Tin, 'Tout> internal (redis : Redis, id : string, ?computation : 'Tin -> Async<'Tout>) = 
+//[<AbstractClass>]
+//type Actor() =
+//    abstract Post : 'a * ?highPriority:bool -> unit
+//    abstract PostAndReply: 'a * ?highPriority:bool * int option -> 'b
+
+type Actor<'Tin, 'Tout> internal (redis : Redis, id : string, ?computation : 'Tin -> Async<'Tout>) =
+    //inherit Actor()
     let children = Dictionary<string, Actor<'Tout, _>>()
     let mutable started = false
     let mutable cts = Unchecked.defaultof<CancellationTokenSource>
@@ -100,11 +106,11 @@ return result"
         if started then 
             started <- false
             cts.Cancel |> ignore
-    
-    member this.Post(message : 'Tin, ?highPriority : bool) : unit = 
+
+    member this.Post<'Tin>(message : 'Tin, ?highPriority : bool) : unit = 
         let highPriority = defaultArg highPriority false
-        if highPriority then redis.LPushAsync<'Tin * string>(inboxKey, (message, "")) |> ignore
-        else redis.RPushAsync<'Tin * string>(inboxKey, (message, "")) |> ignore
+        if highPriority then redis.RPushAsync<'Tin * string>(inboxKey, (message, "")) |> ignore
+        else redis.LPushAsync<'Tin * string>(inboxKey, (message, "")) |> ignore
         awaitMessageHandle.Set() |> ignore
         redis.PublishAsync<string>(channelKey, "") |> ignore
     
@@ -123,8 +129,8 @@ return result"
             }
         | false -> 
             let resultId = Guid.NewGuid().ToString("N")
-            if highPriority then redis.LPushAsync<'Tin * string>(inboxKey, (message, resultId)) |> ignore
-            else redis.RPushAsync<'Tin * string>(inboxKey, (message, resultId)) |> ignore
+            if highPriority then redis.RPushAsync<'Tin * string>(inboxKey, (message, resultId)) |> ignore
+            else redis.LPushAsync<'Tin * string>(inboxKey, (message, resultId)) |> ignore
             awaitMessageHandle.Set() |> ignore
             redis.PublishAsync<string>(channelKey, "") |> ignore // no resultId here because we notify recievers that in turn will notify callers about results
             let rec awaitResult timeout = 

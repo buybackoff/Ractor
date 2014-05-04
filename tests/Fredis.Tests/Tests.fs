@@ -15,20 +15,22 @@ open NUnit.Framework
 let ``hello, Fredis`` () =
     let fredis = new Fredis("localhost:6379")
 
-    let computation (input:string) : Async<string> =
-        Console.WriteLine("Hello, " + input)
+    let computation (input:string) : Async<unit> =
         async {
-            return "Hello, " + input
+            Console.WriteLine("Hello, " + input)
         }
 
     let firstGreeter = fredis.CreateActor("greeter", computation)
-    //let sameGreeter  = fredis.GetActor<string, string>("greeter")
+    let sameGreeter  = Fredis.GetActor<string, unit>("greeter")
     firstGreeter.Post("First Greeter 1")
     firstGreeter.Post("First Greeter 2")
     firstGreeter.Post("First Greeter 3")
     firstGreeter.Post("First Greeter 4")
+    firstGreeter.Post("First Greeter 5")
+    sameGreeter.Post("First Greeter via same greeter")
+    "greeter" <-- "First Greeter via operator"
+    Console.WriteLine("Not started yet")
     Thread.Sleep(1000)
     firstGreeter.Start()
     Thread.Sleep(1000)
-    //Console.WriteLine(t.Result)
     ()
