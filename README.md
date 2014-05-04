@@ -45,6 +45,33 @@ Install & Usage
 
 Docs & test are work in progress...
 
+Basic usage
+
+    let fredis = new Fredis("localhost")
+
+    let computation (input:string) : Async<unit> =
+        async {
+            Console.WriteLine("Hello, " + input)
+        }
+
+    let greeter = fredis.CreateActor("greeter", computation)
+    // type annotations are required
+    let sameGreeter  = Fredis.GetActor<string, unit>("greeter")
+    greeter.Post("Greeter 1")
+    greeter.Post("Greeter 2")
+    greeter.Post("Greeter 3")
+    greeter.Post("Greeter 4")
+    greeter.Post("Greeter 5")
+
+    sameGreeter.Post("Greeter via instance from Fredis.GetActor")
+
+    // this will fail if computation return not Async<unit>
+    "greeter" <-- "Greeter via operator"
+
+    Console.WriteLine("Not started yet")
+    Thread.Sleep(1000)
+    greeter.Start()
+    Thread.Sleep(1000)
 
 License
 ----------------------
