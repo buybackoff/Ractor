@@ -22,8 +22,9 @@ type Actor<'Tin, 'Tout> internal (redis : Redis, id : string, ?computation : 'Ti
     let channelKey = prefix + ":channel"
     let errorsKey = prefix + ":errors"
     let mutable errorHandler = Unchecked.defaultof<Actor<ExceptionInfo<'Tin>, _>>
-    // global limit for number of tasks
-    static let semaphor = new SemaphoreSlim(256)
+    
+    // global limit for number of concurrent tasks
+    static let semaphor = new SemaphoreSlim(Environment.ProcessorCount * 16)
     
     do 
         redis.Subscribe(channelKey, 
@@ -68,25 +69,27 @@ return result"
         async { 
             while not cts.Token.IsCancellationRequested do
                 do! !~semaphor.WaitAsync(cts.Token)
-                let! msg = await Timeout.Infinite
-                let payload = (fst (fst msg))
-                let messageId = (snd (fst msg))
-                let pipelineId = snd msg
-                async { 
-                    try 
-                        let! result = computation.Value payload
-                        children.Values |> Seq.iter (fun a -> a.Post(result))
-                        redis.HDelAsync(pipelineKey, pipelineId) |> ignore
-                        if messageId <> "" then 
-                            redis.HSet(resultsKey, messageId, result, When.Always, true) |> ignore
-                            redis.PublishAsync<string>(channelKey, messageId) |> ignore
-                    with e -> 
-                        let ei = ExceptionInfo(id, payload, e)
-                        redis.LPush<ExceptionInfo<'Tin>>(errorsKey, ei, When.Always, true) |> ignore
-                        if errorHandler <> Unchecked.defaultof<Actor<ExceptionInfo<'Tin>, _>> then errorHandler.Post(ei)
-                }
-                |> Async.Start
-                semaphor.Release() |> ignore
+                try
+                    let! msg = await Timeout.Infinite
+                    let payload = (fst (fst msg))
+                    let messageId = (snd (fst msg))
+                    let pipelineId = snd msg
+                    async { 
+                        try 
+                            let! result = computation.Value payload
+                            children.Values |> Seq.iter (fun a -> a.Post(result))
+                            redis.HDelAsync(pipelineKey, pipelineId) |> ignore
+                            if messageId <> "" then 
+                                redis.HSet(resultsKey, messageId, result, When.Always, true) |> ignore
+                                redis.PublishAsync<string>(channelKey, messageId) |> ignore
+                        with e -> 
+                            let ei = ExceptionInfo(id, payload, e)
+                            redis.LPush<ExceptionInfo<'Tin>>(errorsKey, ei, When.Always, true) |> ignore
+                            if errorHandler <> Unchecked.defaultof<Actor<ExceptionInfo<'Tin>, _>> then errorHandler.Post(ei)
+                    }
+                    |> Async.Start
+                finally
+                    semaphor.Release() |> ignore
         }
         |> Async.Start
         started <- true
@@ -140,6 +143,10 @@ return result"
 
     member this.Link(actor : Actor<'Tout, _>) = 
         children.Add(actor.Id, actor)
+        this
+
+    member this.Link(actors : seq<Actor<'Tout, _>>) = 
+        Seq.iter (fun (a:Actor<'Tout, _>) -> children.Add(a.Id, a)) actors
         this
 
     member this.UnLink(actor : Actor<'Tout, _>) : bool = children.Remove(actor.Id)

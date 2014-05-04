@@ -4,40 +4,24 @@ open System
 open System.Collections.Generic
 open System.Threading.Tasks
 
-// DO NOT! Include interfaces of IRedis, IPocoPersistor, IBlobPersistor etc in constructor
-// these tool are convenient to work with POCOs, persistence, cache - keep then decoupled
-// Instead provide Redis connection string to Fredis object and use "fredis" namespace
-// also use FsPickler for binary serialization of messages
-// add methods GetRedis("name" = null, default = true), RedisterRedis("name" = null) - with additional Redises for 
-// working set
-// same for GetDBPersistor, GetBlob()
-// from within Fredis Actor system use internal one, but in Actors behaviours use Get...("") methods
-// for manipulating working set data
-// Fredis's redis could deal with references to working set without copying all data
-// limit on workers per application - 64 is in PLINQ but if they all are async and not CPU bound, 
-// should set empirically
-// or could use CPU utilization - do not consume task from Redis if CPU > 90%
-// will have to monitor # of concurrent workers anyway... http://stackoverflow.com/a/2608758/801189
-// actors are named
-// App servers vs fronends
-// Post schedules work somewhere, it could be done on app servers
-// PostGetReply could be also done "somewhere" but it is better to have reply ASAP
-// Receive - every worker does it
-// PostGetReply is automatically high priority
-// need to check if capacity is exhausted and prioritize high priority jobs
-// job without reply could also be high priority, but the same prioritization logics will work on app servers
-// "more of the same things" Pinterest philosofy: app servers are the same as front end
-// but app servers do not get requests, they never do any root post, they only receive from Fredis
-// 
+// TODO System messages & tags
 
 // TODO test high CPU load and many (1000+) IO-like actors
 
 type Fredis(connectionString : string) = 
     let redis = Redis(connectionString, "Fredis")
     do redis.Serializer <- Serialisers.Pickler
+
+    // It could be possible to have several instances of Fredis, via this repo we
+    // could access them by name. We just require unique names accross all Fredis instances
     static let actors = Dictionary<string, obj>()
-    
-    // TODO actors dictionary
+    static let dbs = Dictionary<string, IPocoPersistor>()
+    static let blobs = Dictionary<string, IBlobPersistor>()
+    static let redises = Dictionary<string, Redis>()
+
+    // We intentinally limit Actor creation to instance method of Fredis, not a static method
+    // plus connection string. There is a way to make actors on different redis dbs, but only via
+    // different fredis instances.
     member this.CreateActor<'Tin, 'Tout>(id : string, computation : 'Tin -> Async<'Tout>) = 
         if actors.ContainsKey(id) then raise (InvalidOperationException("Agent with the same id already exists: " + id))
         let actor = new Actor<'Tin, 'Tout>(redis, id, computation)
@@ -48,7 +32,53 @@ type Fredis(connectionString : string) =
         let comp msg = async { return !!computation.Invoke(msg) }
         this.CreateActor(id, comp)
     
+    
     static member GetActor<'Tin, 'Tout>(id : string) : Actor<'Tin, 'Tout> = actors.[id] :?> Actor<'Tin, 'Tout>
+    // instance get members for convience
+    member this.GetActor<'Tin, 'Tout>(id : string) = Fredis.GetActor(id)
+
+    static member RegisterDB(persistor:IPocoPersistor, ?id:string) =
+        let id = defaultArg id ""
+        if dbs.ContainsKey(id) then raise (InvalidOperationException("DB with the same id already exists: " + id))
+        dbs.Add(id, persistor)
+        persistor
+
+
+    static member GetDB(?id : string) = 
+            let id = defaultArg id ""
+            dbs.[id]
+    member this.GetDB(?id : string) = 
+            let id = defaultArg id ""
+            dbs.[id]
+
+    static member RegisterBlobStorage(persistor:IBlobPersistor, ?id:string) =
+        let id = defaultArg id ""
+        if dbs.ContainsKey(id) then raise (InvalidOperationException("Blob Storage with the same id already exists: " + id))
+        blobs.Add(id, persistor)
+        persistor
+
+
+    static member GetBlobStorage(?id : string) = 
+            let id = defaultArg id ""
+            blobs.[id]
+    member this.GetBlobStorage(?id : string) = 
+            let id = defaultArg id ""
+            blobs.[id]
+
+
+    static member RegisterRedis(redis:Redis, ?id:string) =
+        let id = defaultArg id ""
+        if dbs.ContainsKey(id) then raise (InvalidOperationException("Redis with the same id already exists: " + id))
+        redises.Add(id, redis)
+        redis
+
+    static member GetRedis(?id : string) = 
+            let id = defaultArg id ""
+            redises.[id]
+    member this.GetRedis(?id : string) = 
+            let id = defaultArg id ""
+            redises.[id]
+
 
 
 [<AutoOpen>]
@@ -59,8 +89,14 @@ module Operators =
     let (<-*) (id : string) (msg : 'Tin) : Async<'Tout> = Fredis.GetActor(id).PostAndReply(msg)
     let ( *->) (msg : 'Tin) (id : string)  : Async<'Tout> = Fredis.GetActor(id).PostAndReply(msg)
 
-    let (=>>=) (parent : string) (child : string)  = 
+    let (->>-) (parent : string) (child : string)  = 
         Fredis.GetActor(parent).Link(Fredis.GetActor(child))
 
-    let (=<<=) (child : string) (parent : string) = 
+    let (-<<-) (child : string) (parent : string) = 
         Fredis.GetActor(parent).Link(Fredis.GetActor(child))
+
+    let (->>=) (parent : string) (children : seq<string>)  = 
+        let parent = Fredis.GetActor(parent)
+        Seq.iter (fun child -> parent.Link(Fredis.GetActor(child)) |> ignore) children
+        parent
+        

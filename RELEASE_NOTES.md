@@ -1,3 +1,6 @@
+#### 0.0.5 - May 4 2014
+* Actor first draft
+
 #### 0.0.4 - April 28 2014
 * Add perstistence stuff (DB, files, queues) for which redis is cache
 
