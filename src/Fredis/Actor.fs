@@ -8,15 +8,20 @@ open System.Threading.Tasks
 open System.Diagnostics
 open Fredis
 
-// TODO exception handling
+// TODO exception handling: probably add Optional/SuccessValue to be returned from Async and bool for Post?
+// definetly a caller must get ACK to know what to do with a message
+// another option is to provide optional error handler to actors with some default (log/notify)
+// or do both: methods with TryPost and methods with handlers
 // TODO A system actor that periodically checks pipelines and errors of all actors
 // and is subscribed to errors channel as well
+
+// TODO post to children in async parallel and wait all
 
 type internal ExceptionInfo<'T> = 
     | ExceptionInfo of string * 'T * Exception
 
 
-type Actor<'Tin, 'Tout> internal (redis : Redis, id : string, computation : 'Tin -> Async<'Tout>) = 
+type Actor<'Tin, 'Tout> internal (redis : Redis, id : string, computation : 'Tin -> Async<'Tout>, lowPriority:bool) as this = 
     // linking only works on children with computations returning unit
     let children = Dictionary<string, Actor<'Tout, unit>>()
     let mutable started = false
@@ -29,17 +34,27 @@ type Actor<'Tin, 'Tout> internal (redis : Redis, id : string, computation : 'Tin
     let resultsKey = prefix + ":results"
     let channelKey = prefix + ":channel"
     let errorsKey = prefix + ":errors"
-    let mutable errorHandler = Unchecked.defaultof<Actor<ExceptionInfo<'Tin>, _>>
-    // global limit for number of concurrent tasks
-    static let semaphor = new SemaphoreSlim(Environment.ProcessorCount * 16)
-    
-    do 
-        redis.Subscribe(channelKey, 
-                        Action<string, string>(fun channel message -> 
-                            match message with
-                            | "" -> awaitMessageHandle.Set() |> ignore
-                            | x -> awaitResultHandle.Set() |> ignore))
-    
+
+    [<DefaultValue>] val mutable internal errorHandler : Actor<ExceptionInfo<'Tin>, unit> ref
+
+    [<DefaultValue>] val mutable internal semaphor : SemaphoreSlim ref
+
+    // TODO
+    let lowPriority = false
+    // this could be set from outside and block execution of low-priority tasks
+    // could be used to guarantee execution of important task without waiting for autoscale
+    // e.g. simple rule if CPU% > 80% for a minute then suspend low-priority actors
+    // and resume when CPU% falls below 50%. If then we set autoscale rule at 65% 5-min
+    // the autoscale group will grow only when high-priority tasks consume > 65% for several minutes
+    [<DefaultValue>] val mutable internal lowPriorityGate : ManualResetEventSlim ref
+    let waitLowPriorityGateIsOpen = 
+        async {
+            if lowPriority && this.lowPriorityGate.Value <> Unchecked.defaultof<ManualResetEventSlim> then
+                do! Async.AwaitWaitHandle(this.lowPriorityGate.Value.WaitHandle) |> Async.Ignore
+        }
+
+    [<DefaultValue>] val mutable internal counter : int ref
+
     let rec await timeout = 
         async { 
             //let! message = !!redis.RPopAsync("")
@@ -71,18 +86,22 @@ return result"
     
     // public error handling should be C# friendly
     member internal this.ErrorHandler 
-        with get () = errorHandler
-        and set (eh) = errorHandler <- eh
+        with get () = !this.errorHandler
+        and set (eh) = this.errorHandler := eh
     
     member private this.Computation = computation
     
     member this.Start() : unit = 
+        redis.Subscribe(channelKey, 
+            Action<string, string>(fun channel message -> 
+                match message with
+                | "" -> awaitMessageHandle.Set() |> ignore
+                | x -> awaitResultHandle.Set() |> ignore))
         cts <- new CancellationTokenSource()
         async { 
             while (not cts.Token.IsCancellationRequested) do
-                do! semaphor.WaitAsync(cts.Token)
-                    |> Async.AwaitIAsyncResult
-                    |> Async.Ignore
+                do! this.semaphor.Value.WaitAsync(cts.Token) |> Async.AwaitIAsyncResult |> Async.Ignore
+                do! waitLowPriorityGateIsOpen
                 try 
                     let! msg = await Timeout.Infinite
                     let payload = (fst (fst msg))
@@ -99,12 +118,12 @@ return result"
                         with e -> 
                             let ei = ExceptionInfo(id, payload, e)
                             redis.LPush<ExceptionInfo<'Tin>>(errorsKey, ei, When.Always, true) |> ignore
-                            if errorHandler <> Unchecked.defaultof<Actor<ExceptionInfo<'Tin>, _>> then 
-                                errorHandler.Post(ei)
+                            if this.errorHandler.Value <> Unchecked.defaultof<Actor<ExceptionInfo<'Tin>, _>> then 
+                                this.errorHandler.Value.Post(ei)
                     }
                     |> Async.Start
                 finally
-                    semaphor.Release() |> ignore
+                    this.semaphor.Value.Release() |> ignore
         }
         |> Async.Start
         started <- true
@@ -115,41 +134,40 @@ return result"
             cts.Cancel |> ignore
     
 
-    member this.Post<'Tin>(message : 'Tin) : unit =
-        this.Post<'Tin>(message, false)
-
-    member this.Post<'Tin>(message : 'Tin, highPriority : bool) : unit = 
+    member this.Post<'Tin>(message : 'Tin) : unit = 
         // TODO? local execution if started? similar to PostAndReply.
         // that will be good for chained actors - will save one trip to Redis and will have data to process right now, while pipeline is fire-and-forget write
-        if highPriority then redis.RPushAsync<'Tin * string>(inboxKey, (message, "")) |> ignore
-        else redis.LPushAsync<'Tin * string>(inboxKey, (message, "")) |> ignore
+        
+        // must get ACK that message saved before returning
+        // use synchronous method
+        // TODO error handling
+        redis.LPush<'Tin * string>(inboxKey, (message, ""), When.Always, false) |> ignore
         awaitMessageHandle.Set() |> ignore
         redis.Publish<string>(channelKey, "", true) |> ignore
     
     member this.PostAndReply(message : 'Tin) : Async<'Tout> = 
-        this.PostAndReply(message, false, Timeout.Infinite)
-    
-    member this.PostAndReply(message : 'Tin, highPriority : bool) : Async<'Tout> = 
-        this.PostAndReply(message, highPriority, Timeout.Infinite)
+        this.PostAndReply(message, Timeout.Infinite)
 
     member this.PostAndReply(message : 'Tin, millisecondsTimeout) : Async<'Tout> = 
-        this.PostAndReply(message, false, millisecondsTimeout)
-
-    member this.PostAndReply(message : 'Tin, highPriority : bool, millisecondsTimeout) : Async<'Tout> = 
         match started with
         | true -> 
             let pipelineId = Guid.NewGuid().ToString("N")
-            redis.HSet<'Tin>(pipelineKey, pipelineId, message, When.Always, true) |> ignore // save message
+            // PostAndReply on started actor always executes
+            // TODO increment/decrement counters/semaphor
             async { 
+                let! savedTask = 
+                    redis.HSetAsync<'Tin>(pipelineKey, pipelineId, message, When.Always, true) // save message
+                    |> Async.AwaitTask 
+                    |> Async.StartChild 
                 let! result = computation message
+                let! saved = savedTask // TODO error handling
                 children |> Seq.iter (fun a -> a.Value.Post(result))
                 redis.HDel(pipelineKey, pipelineId, true) |> ignore
                 return result
             }
         | false ->  
             let resultId = Guid.NewGuid().ToString("N")
-            if highPriority then redis.RPushAsync<'Tin * string>(inboxKey, (message, resultId)) |> ignore
-            else redis.LPushAsync<'Tin * string>(inboxKey, (message, resultId)) |> ignore
+            redis.LPushAsync<'Tin * string>(inboxKey, (message, resultId)) |> ignore
             awaitMessageHandle.Set() |> ignore
             redis.Publish<string>(channelKey, "", true) |> ignore // no resultId here because we notify recievers that in turn will notify callers about results
             let rec awaitResult timeout = 
@@ -167,18 +185,12 @@ return result"
     
     
     member this.PostAndReplyAsync(message : 'Tin) : Task<'Tout> = 
-        this.PostAndReplyAsync(message, false, Timeout.Infinite)
+        this.PostAndReplyAsync(message, Timeout.Infinite)
     
-    member this.PostAndReplyAsync(message : 'Tin, highPriority : bool) : Task<'Tout> = 
-        this.PostAndReplyAsync(message, highPriority, Timeout.Infinite)
-
-    member this.PostAndReplyAsync(message : 'Tin, millisecondsTimeout) : Task<'Tout> = 
-        this.PostAndReplyAsync(message, false, millisecondsTimeout)
-
     // C# naming style and return type
-    member this.PostAndReplyAsync(message : 'Tin, highPriority : bool, millisecondsTimeout) : Task<'Tout> = 
+    member this.PostAndReplyAsync(message : 'Tin, millisecondsTimeout) : Task<'Tout> = 
         let res : Async<'Tout> = 
-            this.PostAndReply(message, highPriority, millisecondsTimeout)
+            this.PostAndReply(message, millisecondsTimeout)
         res |> Async.StartAsTask
     
     member this.Link(actor : Actor<'Tout, unit>) = 
@@ -196,4 +208,3 @@ return result"
             awaitMessageHandle.Dispose()
             awaitResultHandle.Dispose()
             cts.Dispose()
-            semaphor.Dispose()

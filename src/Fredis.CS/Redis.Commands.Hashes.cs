@@ -44,6 +44,16 @@ namespace Fredis {
             return GetDb().HashSet(k, f, v, wh, ff);
         }
 
+        public async Task<bool> HSetAsync<TValue>(string fullKey, string field, TValue value,
+            When when = When.Always, bool fireAndForget = false) {
+            var k = _nameSpace + fullKey;
+            var f = field ?? GetItemKey(value);
+            var v = PackValueNullable(value);
+            var wh = MapWhen(when);
+            var ff = fireAndForget ? CommandFlags.FireAndForget : CommandFlags.None;
+            return await GetDb().HashSetAsync(k, f, v, wh, ff);
+        }
+
         public TValue HGet<TRoot, TValue>(TRoot root, string field, string hashKey = null) {
             var key = _nameSpace + GetItemFullKey(root) + ":hashes:" + (hashKey ?? GetTypePrefix<TValue>());
             return IsTypeCompressed<TValue>()

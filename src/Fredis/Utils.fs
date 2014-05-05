@@ -27,3 +27,8 @@ module internal Utils =
     [<ObsoleteAttribute>]
     let inline (!!!)  (t: Task<'T>) = t.Result // |> (Async.AwaitTask >> Async.RunSynchronously)
     
+
+type IFredisPerformanceMonitor =
+    abstract AllowLowPriorityActors : unit -> bool
+    abstract FrequencySeconds : int with get
+
