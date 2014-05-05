@@ -73,17 +73,16 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="AssemblyInfo.fs" />
-    <Compile Include="Utils.fs" />
+    <Compile Include="Common.fs" />
     <None Include="app.config" />
     <None Include="packages.config" />
     <Compile Include="Serialization.fs" />
     <Compile Include="Logging.fs" />
     <Compile Include="Actor.fs" />
     <Compile Include="Fredis.fs" />
-    <Compile Include="ActorExtensions.fs" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\Fredis.CS\Fredis.Persistence.csproj">
+    <ProjectReference Include="..\Fredis.Persistence\Fredis.Persistence.csproj">
       <Name>Fredis.Persistence</Name>
       <Project>{6780d11c-42ad-46dc-b49d-95912164bb23}</Project>
       <Private>True</Private>
