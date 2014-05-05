@@ -14,22 +14,23 @@ type Fredis(connectionString : string) =
     
     // It could be possible to have several instances of Fredis, via this repo we
     // could access actors from any one by name. We just require unique names accross all Fredis instances
+
     static let actors = Dictionary<string, obj>()
     static let dbs = Dictionary<string, IPocoPersistor>()
     static let blobs = Dictionary<string, IBlobPersistor>()
     static let redises = Dictionary<string, Redis>()
 
-    static let semaphor = ref (new SemaphoreSlim(Environment.ProcessorCount * 64))
+    static let semaphor = new SemaphoreSlim(Environment.ProcessorCount * 64)
     static let counter = ref 0
-    static let lowPriorityGate = ref (new ManualResetEventSlim(true))
+    static let lowPriorityGate = new ManualResetEventSlim(true)
     static let mutable performanceMonitor = 
         { new IFredisPerformanceMonitor with
               member x.AllowLowPriorityActors() = !counter < Environment.ProcessorCount * 64 
               member x.FrequencySeconds = 60 }
     let rec checkLowPriorityGate() =
         async {
-            if performanceMonitor.AllowLowPriorityActors() then lowPriorityGate.Value.Set()
-            else lowPriorityGate.Value.Reset()
+            if performanceMonitor.AllowLowPriorityActors() then lowPriorityGate.Set()
+            else lowPriorityGate.Reset()
             do! Async.Sleep(performanceMonitor.FrequencySeconds * 1000)
             return! checkLowPriorityGate()
         }
@@ -50,8 +51,9 @@ type Fredis(connectionString : string) =
     member this.CreateActor<'Tin, 'Tout>(id : string, computation : 'Tin -> Async<'Tout>, lowPriority) = 
         if actors.ContainsKey(id) then raise (InvalidOperationException("Agent with the same id already exists: " + id))
         let actor = new Actor<'Tin, 'Tout>(redis, id, computation, lowPriority)
-        actor.semaphor := !semaphor
-        actor.counter := !counter
+        actor.semaphor <- semaphor
+        actor.counter <- counter
+        actor.lowPriorityGate <- lowPriorityGate
         actors.Add(id, actor)
         actor
 

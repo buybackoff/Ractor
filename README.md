@@ -1,6 +1,6 @@
 Fredis
 =======================
-**Fredis** (F# + Redis) is a light distributed actors framework built on top of Redis. Its API is similar to 
+**Fredis** (F# + Redis) is a light distributed actors framework built on top of Redis. Its API is inspired by 
 F#'s [MailboxProcessor](http://msdn.microsoft.com/en-us/library/ee370357.aspx) and [Fsharp.Actor](https://github.com/colinbull/Fsharp.Actor) library. The main difference is that in Fredis actors exist 
 is Redis per se as lists of messages, while a number of ephemeral workers (actors' "incarnations") take messages
 from Redis, process them and post results back.

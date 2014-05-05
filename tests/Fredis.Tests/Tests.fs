@@ -53,7 +53,6 @@ let ``PostAndReply local execution`` () =
 
     let greeter = fredis.CreateActor("greeterReply", computation)
     
-    Console.WriteLine("Local execution")
     greeter.Start()
 
     // type annotations are required

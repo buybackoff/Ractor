@@ -74,7 +74,6 @@
   <ItemGroup>
     <Compile Include="AssemblyInfo.fs" />
     <Compile Include="Common.fs" />
-    <None Include="app.config" />
     <None Include="packages.config" />
     <Compile Include="Serialization.fs" />
     <Compile Include="Logging.fs" />
