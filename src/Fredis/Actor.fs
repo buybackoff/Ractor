@@ -89,20 +89,19 @@ type Actor<'Task, 'TResult> internal (redis : Redis, id : string, computation : 
                         else return raise (TimeoutException("Receive timed out"))
                     else return message, pipelineId
                 }
-        
+            
             let waitLowPriorityGateIsOpen = 
                 async { 
                     if lowPriority && this.lowPriorityGate <> Unchecked.defaultof<ManualResetEventSlim> then 
                         do! Async.AwaitWaitHandle(this.lowPriorityGate.WaitHandle) |> Async.Ignore
                 }
-        
+            
             redis.Subscribe(channelKey, 
                             Action<string, string>(fun channel message -> 
                                 match message with
                                 | "" -> awaitMessageHandle.Set() |> ignore
                                 | resultId -> 
                                     if expectedResultsHandles.ContainsKey(resultId) then 
-                                        Console.WriteLine(resultId)
                                         expectedResultsHandles.[resultId].Set() |> ignore
                                     else failwith "wrong result id"))
             cts <- new CancellationTokenSource()
@@ -162,13 +161,14 @@ type Actor<'Task, 'TResult> internal (redis : Redis, id : string, computation : 
         this.PostAndReply(message, millisecondsTimeout, "", null, "")
     
     // TODO make internal method, resultId and continuation to be used with ContinueWith
-    member this.PostAndReply(message : 'Task, millisecondsTimeout, callerId : string, callerRedis : Redis, 
-                             resultId : string) : Async<'TResult> = 
+    abstract PostAndReply :'Task * int * string *  Redis * string -> Async<'TResult>
+    override this.PostAndReply(message : 'Task, millisecondsTimeout, callerId : string, callerRedis : Redis, 
+                                      resultId : string) : Async<'TResult> = 
         let callId = 
             if String.IsNullOrWhiteSpace(callerId) then ""
             else callerId
         
-        let resId =
+        let resId = 
             if String.IsNullOrWhiteSpace(resultId) then Guid.NewGuid().ToString("N")
             else resultId
         
@@ -197,7 +197,7 @@ type Actor<'Task, 'TResult> internal (redis : Redis, id : string, computation : 
             let rec awaitResult count = 
                 async { 
                     let waitHandle = expectedResultsHandles.[resId]
-
+                    
                     // expect that notification will come for expected result id
                     // do not trust PubSub yet, in Redis docs they say messages could be lost
                     // divide given timeout by 3  to check results set before the given timeout
@@ -209,12 +209,14 @@ type Actor<'Task, 'TResult> internal (redis : Redis, id : string, computation : 
                     if signal then 
                         //Debug.Print("received signal")
                         let! result = redis.HGetAsync<'TResult>(resultsKey, resId) |> Async.AwaitTask
-                        if Object.Equals(result, null) then Debug.Fail("Expected to get the right result after the signal")
+                        if Object.Equals(result, null) then 
+                            Debug.Fail("Expected to get the right result after the signal")
                         expectedResultsHandles.[resId].Dispose()
                         // TODO if there is a continuation, pass to it directly
-                        redis.HDel(resultsKey, resId, true) |> ignore 
+                        redis.HDel(resultsKey, resId, true) |> ignore
                         return result
                     else // timeout
+                         
                         //Debug.Print("didn't received signal")
                         if count > 3 then Debug.Fail("Cannot receive result for PostAndReply")
                         return! awaitResult (count + 1)
@@ -236,14 +238,16 @@ type Actor<'Task, 'TResult> internal (redis : Redis, id : string, computation : 
           // PaR on this and wait
           // PaR on continuation
           new Actor<'Task, 'TResult2>() with
-              member __.PostAndReply(message : 'Task, millisecondsTimeout) : Async<'TResult2> = 
+              member __.PostAndReply(message : 'Task, millisecondsTimeout, callerId : string, callerRedis : Redis, 
+                                      resultId : string) : Async<'TResult2> =
+              //member __.PostAndReply(message : 'Task, millisecondsTimeout) : Async<'TResult2> = 
                   let resultId = Guid.NewGuid().ToString("N")
                   let callerId = continuation.Id
                   let callerRedis = continuation.Redis
                   async { 
                       // reliable TResult exchange happens inside internal PostAndReply
                       let! computation = async { let! result = this.PostAndReply
-                                                                   (message, Timeout.Infinite, callerId, callerRedis, 
+                                                                   (message, millisecondsTimeout, callerId, callerRedis, 
                                                                     resultId)
                                                  return continuation.PostAndReply(result) }
                       let! child = Async.StartChild(computation, millisecondsTimeout)

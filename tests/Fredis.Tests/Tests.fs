@@ -72,39 +72,32 @@ let ``PostAndReply local execution`` () =
 
 
 [<Test>]
-let ``PostAndReply remote execution`` () =
-    // TODO with static repo cannot create another actor in the same process. LOL, that was intended
+let ``Continuation basic`` () =
+     //TODO with static repo cannot create another actor in the same process. LOL, that was intended
     
-//    let fredis = new Fredis("localhost")
-//
-//    let computation (input:string) : Async<string> =
-//        async {
-//            return ("Hello, " + input)
-//        }
-//
-//    async {
-//        let f = new Fredis("localhost")
-//        let g = f.CreateActor("greeter", computation)
-//        g.Start()
-//    } |> Async.Start
-//
-//    let greeter = fredis.CreateActor("greeter", computation)
-//    
-//    Console.WriteLine("Remote execution")
-//    greeter.Start()
-//
-//    // type annotations are required
-//    let sameGreeter  = Fredis.GetActor<string, string>("greeter")
-//    Console.WriteLine(greeter.PostAndReply("Greeter 1") |> Async.RunSynchronously)
-//    Console.WriteLine(greeter.PostAndReply("Greeter 2") |> Async.RunSynchronously)
-//    Console.WriteLine(greeter.PostAndReply("Greeter 3") |> Async.RunSynchronously)
-//    Console.WriteLine(greeter.PostAndReply("Greeter 4") |> Async.RunSynchronously)
-//    Console.WriteLine(greeter.PostAndReply("Greeter 5") |> Async.RunSynchronously)
-//
-//    Console.WriteLine(sameGreeter.PostAndReply("Greeter via instance from Fredis.GetActor") |> Async.RunSynchronously)
-//
-//    // this will fail if computation returns not Async<unit>
-//    let res : string = "greeter" <-* "Greeter via operator"  |> Async.RunSynchronously
-//    Console.WriteLine(res)
+    let fredis = new Fredis("localhost")
+
+    let computation (input:string) : Async<string> =
+        async {
+            return ("Hello, " + input)
+        }
+
+    let computation2 (input:string) : Async<string> =
+        async {
+            return (input + "; this is continuation" )
+        }
+
+    let first = fredis.CreateActor("first", computation)
+    let second = fredis.CreateActor("second", computation2)
+    first.Start()
+    second.Start()
+
+    let actorWithContinuation = first.ContinueWith(second)
     
+    Console.WriteLine("Remote execution")
+    //actorWithContinuation.Start()
+
+    // type annotations are required
+    let res = actorWithContinuation.PostAndReply("Continuation test", 1000) |> Async.RunSynchronously
+    Console.WriteLine(res)
     ()
