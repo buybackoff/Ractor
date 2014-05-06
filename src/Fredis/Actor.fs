@@ -232,26 +232,56 @@ type Actor<'Task, 'TResult> internal (redis : Redis, id : string, computation : 
         res |> Async.StartAsTask
     
     // TODO
-    member this.ContinueWith(continuation : Actor<'TResult, 'TResult2>) : Actor<'Task, 'TResult2> = 
+    member this.ContinueWith(continuation : Actor<'TResult, 'TCResult>) : Actor<'Task, 'TCResult> = 
         { // set resultId 
           // set callerId=continuation.Id
           // PaR on this and wait
           // PaR on continuation
-          new Actor<'Task, 'TResult2>() with
-              member __.PostAndReply(message : 'Task, millisecondsTimeout, callerId : string, callerRedis : Redis, 
-                                      resultId : string) : Async<'TResult2> =
+        new Actor<'Task, 'TCResult>() with
+            member __.PostAndReply(message : 'Task, millisecondsTimeout, callerId : string, callerRedis : Redis, 
+                                      resultId : string) : Async<'TCResult> =
               //member __.PostAndReply(message : 'Task, millisecondsTimeout) : Async<'TResult2> = 
-                  let resultId = Guid.NewGuid().ToString("N")
-                  let callerId = continuation.Id
-                  let callerRedis = continuation.Redis
-                  async { 
-                      // reliable TResult exchange happens inside internal PostAndReply
-                      let! computation = async { let! result = this.PostAndReply
-                                                                   (message, millisecondsTimeout, callerId, callerRedis, 
-                                                                    resultId)
-                                                 return continuation.PostAndReply(result) }
-                      let! child = Async.StartChild(computation, millisecondsTimeout)
-                      return! child } }
+                let resultId = Guid.NewGuid().ToString("N")
+                let callerId = continuation.Id
+                let callerRedis = continuation.Redis
+                // reliable TResult exchange happens inside internal PostAndReply
+                async { 
+                    let! result = this.PostAndReply(message, millisecondsTimeout, callerId, callerRedis, resultId)
+                    return! continuation.PostAndReply(result, millisecondsTimeout)
+                }}
+
+    member this.ContinueWith(continuation1 : Actor<'TResult, 'TCResult1>, continuation2 : Actor<'TResult, 'TCResult2>) : Actor<'Task, 'TCResult1 * 'TCResult2> = 
+        { 
+        new Actor<'Task, 'TCResult1 * 'TCResult2>() with
+            member __.PostAndReply(message : 'Task, millisecondsTimeout, callerId : string, callerRedis : Redis, 
+                                    resultId : string) : Async<'TCResult1 * 'TCResult2> =
+            //member __.PostAndReply(message : 'Task, millisecondsTimeout) : Async<'TResult2> = 
+                let resultId = Guid.NewGuid().ToString("N")
+    //                  let callerId1 = continuation1.Id
+    //                  let callerRedis1 = continuation1.Redis
+                async { 
+                    // without reliability it works
+                    // for reliable messaging need to pass array of pairs callerId * callerRedis
+                    // could make actors repository static here and do not depend on Fredis type
+                    // then could avoid passing Redis references
+                    let! result = this.PostAndReply(message, millisecondsTimeout, callerId, callerRedis, resultId)
+                    let! c1 = Async.StartChild(continuation1.PostAndReply(result, millisecondsTimeout))
+                    let! c2 = Async.StartChild(continuation2.PostAndReply(result, millisecondsTimeout))
+                    let! r1 = c1
+                    let! r2 = c2
+                return r1,r2
+                }
+        }
+
+    // TODO WaitFrom method???
+    // how to relaibly wait result from two+ actors? 
+    // waitor and continuator are both actor
+    // what if we just define some computation that will achieve that?
+    // e.g. Post(..) could accept result id - that means that the result will be claimed later
+    // so we Post(resultId) and then wait when we could claim the result
+    // this will work for waiter and continuators in the same way
+    // and we could avoid passing callerIds, callerRedises - only expected resultId
+    // Huh, invert, always invert!
     
     interface IDisposable with
         member x.Dispose() = 

@@ -84,20 +84,31 @@ let ``Continuation basic`` () =
 
     let computation2 (input:string) : Async<string> =
         async {
-            return (input + "; this is continuation" )
+            return (input + "; this is continuation2" )
+        }
+
+    let computation3 (input:string) : Async<string> =
+        async {
+            return (input + "; this is continuation3" )
         }
 
     let first = fredis.CreateActor("first", computation)
     let second = fredis.CreateActor("second", computation2)
+    let third = fredis.CreateActor("third", computation3)
     first.Start()
     second.Start()
+    third.Start()
 
     let actorWithContinuation = first.ContinueWith(second)
-    
+    let actorWithTwoContinuations = first.ContinueWith(second, third)
+
     Console.WriteLine("Remote execution")
     //actorWithContinuation.Start()
 
     // type annotations are required
     let res = actorWithContinuation.PostAndReply("Continuation test", 1000) |> Async.RunSynchronously
+    let res2 = actorWithTwoContinuations.PostAndReply("Continuation test 2", 1000) |> Async.RunSynchronously
+
     Console.WriteLine(res)
+    Console.WriteLine(fst res2 + ":" + snd res2)
     ()
