@@ -116,10 +116,15 @@ module Operators =
         Fredis.GetActor<'Tin, 'Tout>(id).PostAndReply(msg, Timeout.Infinite)
     let ( *-> ) (msg : 'Tin) (id : string) : Async<'Tout> = 
         Fredis.GetActor<'Tin, 'Tout>(id).PostAndReply(msg, Timeout.Infinite)
-    let (->>-) (parent : string) (child : string) = Fredis.GetActor(parent).Link(Fredis.GetActor(child))
-    let (-<<-) (child : string) (parent : string) = Fredis.GetActor(parent).Link(Fredis.GetActor(child))
     
-    let (->>=) (parent : string) (children : seq<string>) = 
-        let parent = Fredis.GetActor(parent)
-        Seq.iter (fun child -> parent.Link(Fredis.GetActor(child)) |> ignore) children
-        parent
+
+
+
+// TODO
+// ContinueWith
+// ->>- 1-1
+// ->>= 1-many
+// =>>- many - 1
+// =>>= many=many
+// ">>" means wait all, for many seq<'T>
+// should filter unit if that is possible
