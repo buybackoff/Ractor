@@ -44,29 +44,31 @@ type Fredis(connectionString : string) =
         with get () = performanceMonitor
         and set monitor = performanceMonitor <- monitor
 
-
+    member this.CreateActor<'Task, 'TResult>(id : string, computation : 'Task -> Async<'TResult>) = 
+        this.CreateActor<'Task, 'TResult>(id, computation, false)
+    member this.CreateActor<'Task, 'TResult>(id : string, computation : 'Task -> Async<'TResult>, lowPriority) = 
+        this.CreateActor(id, computation, Timeout.Infinite, lowPriority)
     // We intentinally limit Actor creation to instance method of Fredis, not a static method
     // plus connection string. There is a way to make actors on different redis dbs, but only via
     // different fredis instances.
-    member this.CreateActor<'Tin, 'Tout>(id : string, computation : 'Tin -> Async<'Tout>, lowPriority) = 
+    member this.CreateActor<'Task, 'TResult>(id : string, computation : 'Task -> Async<'TResult>, computationTimeout, lowPriority) = 
         if Actor<_,_>.ActorsRepo.ContainsKey(id) then raise (InvalidOperationException("Agent with the same id already exists: " + id))
-        let comp : 'Tin * string -> Async<'Tout> = (fun message -> computation(fst message))
-        let actor = new Actor<'Tin, 'Tout>(redis, id, comp, lowPriority)
+        let comp : 'Task * string -> Async<'TResult> = (fun message -> computation(fst message))
+        let actor = new Actor<'Task, 'TResult>(redis, id, comp, computationTimeout, lowPriority)
         actor.semaphor <- semaphor
         actor.counter <- counter
         actor.lowPriorityGate <- lowPriorityGate
         Actor<_,_>.ActorsRepo.[id] <- actor // TODO move inside Actor constructor
         actor
 
-    member this.CreateActor<'Tin, 'Tout>(id : string, computation : 'Tin -> Async<'Tout>) = 
-        this.CreateActor<'Tin, 'Tout>(id, computation, false)
+    
 
     
-    member this.CreateActor<'Tin, 'Tout>(id : string, computation : Func<'Tin, Task<'Tout>>, lowPriority) = 
+    member this.CreateActor<'Task, 'TResult>(id : string, computation : Func<'Task, Task<'TResult>>, lowPriority) = 
         let comp msg = computation.Invoke(msg) |> Async.AwaitTask
         this.CreateActor(id, comp, lowPriority)
     
-    member this.CreateActor<'Tin, 'Tout>(id : string, computation : Func<'Tin, Task<'Tout>>) = 
+    member this.CreateActor<'Task, 'TResult>(id : string, computation : Func<'Task, Task<'TResult>>) = 
         let comp msg = computation.Invoke(msg) |> Async.AwaitTask
         this.CreateActor(id, comp)
 
@@ -79,7 +81,7 @@ type Fredis(connectionString : string) =
         this.CreateActor(id, comp)
 
 
-    static member GetActor<'Tin, 'Tout>(id : string) : Actor<'Tin, 'Tout> = 
+    static member GetActor<'Task, 'TResult>(id : string) : Actor<'Task, 'TResult> = 
         unbox Actor<_,_>.ActorsRepo.[id]
 
     static member RegisterDB(persistor : IPocoPersistor) = Fredis.RegisterDB(persistor, "")
@@ -113,12 +115,12 @@ type Fredis(connectionString : string) =
 
 [<AutoOpen>]
 module Operators = 
-    let (<--) (id : string) (msg : 'Tin) : unit = Fredis.GetActor<'Tin, unit>(id).Post(msg)
-    let (-->) (msg : 'Tin) (id : string) : unit = Fredis.GetActor<'Tin, unit>(id).Post(msg)
-    let (<-*) (id : string) (msg : 'Tin) : Async<'Tout> = 
-        Fredis.GetActor<'Tin, 'Tout>(id).PostAndGetResult(msg, Timeout.Infinite)
-    let ( *-> ) (msg : 'Tin) (id : string) : Async<'Tout> = 
-        Fredis.GetActor<'Tin, 'Tout>(id).PostAndGetResult(msg, Timeout.Infinite)
+    let (<--) (id : string) (msg : 'Task) : unit = Fredis.GetActor<'Task, unit>(id).Post(msg)
+    let (-->) (msg : 'Task) (id : string) : unit = Fredis.GetActor<'Task, unit>(id).Post(msg)
+    let (<-*) (id : string) (msg : 'Task) : Async<'TResult> = 
+        Fredis.GetActor<'Task, 'TResult>(id).PostAndGetResult(msg, Timeout.Infinite)
+    let ( *-> ) (msg : 'Task) (id : string) : Async<'TResult> = 
+        Fredis.GetActor<'Task, 'TResult>(id).PostAndGetResult(msg, Timeout.Infinite)
     
 
 
@@ -128,6 +130,4 @@ module Operators =
 // ->>- 1-1
 // ->>= 1-many
 // =>>- many - 1
-// =>>= many=many
-// ">>" means wait all, for many seq<'T>
 // should filter unit if that is possible

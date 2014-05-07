@@ -94,10 +94,10 @@ let ``Continuation basic`` () =
 
     let first = fredis.CreateActor("first", computation)
     let second = fredis.CreateActor("second", computation2)
-    let third = fredis.CreateActor("third", computation3)
+    //let third = fredis.CreateActor("third", computation3)
     first.Start()
     second.Start()
-    third.Start()
+    //third.Start()
 
     let actorWithContinuation = first.ContinueWith(second)
     //let actorWithTwoContinuations = first.ContinueWith(second, third)
@@ -106,9 +106,12 @@ let ``Continuation basic`` () =
     actorWithContinuation.Start()
 
     // type annotations are required
-    let res = actorWithContinuation.PostAndGetResult("Continuation test", 5000) |> Async.RunSynchronously
+    let res = actorWithContinuation.PostAndGetResult("Continuation test", 50000) |> Async.RunSynchronously
     //let res2 = actorWithTwoContinuations.PostAndGetResult("Continuation test 2", 1000) |> Async.RunSynchronously
 
     Console.WriteLine(res)
     //Console.WriteLine(fst res2 + ":" + snd res2)
+
+    Thread.Sleep(1000)
+
     ()
