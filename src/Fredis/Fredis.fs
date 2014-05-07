@@ -15,7 +15,7 @@ type Fredis(connectionString : string) =
     // It could be possible to have several instances of Fredis, via this repo we
     // could access actors from any one by name. We just require unique names accross all Fredis instances
 
-    static let actors = Dictionary<string, obj>()
+    
     static let dbs = Dictionary<string, IPocoPersistor>()
     static let blobs = Dictionary<string, IBlobPersistor>()
     static let redises = Dictionary<string, Redis>()
@@ -49,12 +49,12 @@ type Fredis(connectionString : string) =
     // plus connection string. There is a way to make actors on different redis dbs, but only via
     // different fredis instances.
     member this.CreateActor<'Tin, 'Tout>(id : string, computation : 'Tin -> Async<'Tout>, lowPriority) = 
-        if actors.ContainsKey(id) then raise (InvalidOperationException("Agent with the same id already exists: " + id))
+        if Actor<_,_>.ActorsRepo.ContainsKey(id) then raise (InvalidOperationException("Agent with the same id already exists: " + id))
         let actor = new Actor<'Tin, 'Tout>(redis, id, computation, lowPriority)
         actor.semaphor <- semaphor
         actor.counter <- counter
         actor.lowPriorityGate <- lowPriorityGate
-        actors.Add(id, actor)
+        Actor<_,_>.ActorsRepo.[id] <- actor // TODO move inside Actor constructor
         actor
 
     member this.CreateActor<'Tin, 'Tout>(id : string, computation : 'Tin -> Async<'Tout>) = 
@@ -78,7 +78,9 @@ type Fredis(connectionString : string) =
         this.CreateActor(id, comp)
 
 
-    static member GetActor<'Tin, 'Tout>(id : string) : Actor<'Tin, 'Tout> = unbox actors.[id] //:?> Actor<'Tin, 'Tout>
+    static member GetActor<'Tin, 'Tout>(id : string) : Actor<'Tin, 'Tout> = 
+        unbox Actor<_,_>.ActorsRepo.[id]
+
     static member RegisterDB(persistor : IPocoPersistor) = Fredis.RegisterDB(persistor, "")
     
     static member RegisterDB(persistor : IPocoPersistor, id : string) = 
@@ -113,9 +115,9 @@ module Operators =
     let (<--) (id : string) (msg : 'Tin) : unit = Fredis.GetActor<'Tin, unit>(id).Post(msg)
     let (-->) (msg : 'Tin) (id : string) : unit = Fredis.GetActor<'Tin, unit>(id).Post(msg)
     let (<-*) (id : string) (msg : 'Tin) : Async<'Tout> = 
-        Fredis.GetActor<'Tin, 'Tout>(id).PostAndReply(msg, Timeout.Infinite)
+        Fredis.GetActor<'Tin, 'Tout>(id).PostAndGetResult(msg, Timeout.Infinite)
     let ( *-> ) (msg : 'Tin) (id : string) : Async<'Tout> = 
-        Fredis.GetActor<'Tin, 'Tout>(id).PostAndReply(msg, Timeout.Infinite)
+        Fredis.GetActor<'Tin, 'Tout>(id).PostAndGetResult(msg, Timeout.Infinite)
     
 
 
