@@ -50,7 +50,8 @@ type Fredis(connectionString : string) =
     // different fredis instances.
     member this.CreateActor<'Tin, 'Tout>(id : string, computation : 'Tin -> Async<'Tout>, lowPriority) = 
         if Actor<_,_>.ActorsRepo.ContainsKey(id) then raise (InvalidOperationException("Agent with the same id already exists: " + id))
-        let actor = new Actor<'Tin, 'Tout>(redis, id, computation, lowPriority)
+        let comp : 'Tin * string -> Async<'Tout> = (fun message -> computation(fst message))
+        let actor = new Actor<'Tin, 'Tout>(redis, id, comp, lowPriority)
         actor.semaphor <- semaphor
         actor.counter <- counter
         actor.lowPriorityGate <- lowPriorityGate

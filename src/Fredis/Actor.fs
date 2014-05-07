@@ -17,7 +17,7 @@ open Fredis
 // same with Results (+notification and persistence of unclaimed results)
 
 
-type Actor<'Task, 'TResult> internal (redis : Redis, id : string, computation : 'Task -> Async<'TResult>, lowPriority : bool) = 
+type Actor<'Task, 'TResult> internal (redis : Redis, id : string, computation : 'Task * string -> Async<'TResult>, lowPriority : bool) = 
     // linking only works on children with computations returning unit
     // let children = Dictionary<string, Actor<'TResult, unit>>()
     let mutable started = false
@@ -118,11 +118,11 @@ type Actor<'Task, 'TResult> internal (redis : Redis, id : string, computation : 
                             let! (message, resultId), pipelineId = awaitMessage()
                             async {
                                 try 
-                                    let! result = computation message
-                                    // TODO add to local cache with sliding policy for 5 sec
-                                    // trace cache hits and test performance with and without it
+                                    let! result = computation(message, resultId)
                                     if resultId <> "" then // then someone is waiting for the result
-                                        // if started 
+                                        // TODO add to local cache with sliding policy for 5 sec
+                                        // trace cache hits and test performance with and without it
+                                        // should we save result if there is no caller or local PaGR?
                                         redis.HSet(resultsKey, resultId, result, When.Always, false) |> ignore
                                         redis.Publish<string>(channelKey, resultId, true) |> ignore
                                     redis.HDel(pipelineKey, pipelineId, true) |> ignore
@@ -238,12 +238,15 @@ type Actor<'Task, 'TResult> internal (redis : Redis, id : string, computation : 
             let redis = this.Redis
             let lowPriority = false // continuation is cheap by itself
 
-            let computation : 'Task -> Async<'TCResult> =
-                let resulId = Guid.NewGuid().ToString("N")
-                fun task ->
+            let computation : 'Task * string -> Async<'TCResult> =
+                fun message ->
                     async {
-                        this.Post(task, resulId, continuation.Id, continuation.Redis)
-                        let! result = this.GetResult(resulId)
+                        let task, resultId = message
+                        // need resultId of each call on continuation
+                        // cont's Id is stored in pipeline
+                        // if at any stage any actor dies, the id will be the same
+                        this.Post(task, resultId, continuation.Id, continuation.Redis)
+                        let! result = this.GetResult(resultId)
                         return! Unchecked.defaultof<Async<'TCResult>>
                     }
             
