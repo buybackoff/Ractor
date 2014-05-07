@@ -52,7 +52,7 @@ type Actor<'Task, 'TResult> internal (redis : Redis, id : string, computation : 
     static member internal ActorsRepo with get () = actors
     
     static let resultsCache = MemoryCache.Default
-    static let messageQueue = ConcurrentQueue<('Task * string * string[]) * string>()
+    let messageQueue = ConcurrentQueue<('Task * string * string[]) * string>()
 
     member private this.Id = id
     member private this.Redis = redis
@@ -152,7 +152,7 @@ type Actor<'Task, 'TResult> internal (redis : Redis, id : string, computation : 
             started <- false
             cts.Cancel |> ignore
     
-    // then all other methods are jsut combinations of those
+    // then all other methods are just combinations of those
     member this.Post<'Tin>(message : 'Task) : unit = 
         this.Post(message, "", [||])
 
@@ -166,18 +166,18 @@ type Actor<'Task, 'TResult> internal (redis : Redis, id : string, computation : 
         let envelope = message, resultId, callerIds
         let local = started && this.semaphor.CurrentCount > 0
         match local with
-//        | true ->
-//            Debug.Print("Posted local message") 
-//            let pipelineId = Guid.NewGuid().ToString("N")
-//            // 1. if call is from outsider, any error is nonrecoverable since there is no rId
-//            // 2. if last step of continuation, pipeline is set during receive and continuator
-//            // knows how to recover if the last step dies
-//            // result is set with empty caller => means PaGR from outside, the only case
-//            // we need to save message to pipeline here
-//            if (not (String.IsNullOrWhiteSpace(resultId))) && (callerIds.Length = 0) then
-//                redis.HSet<'Task * string * string[]>(pipelineKey, pipelineId, envelope, When.Always, false) |> ignore // save message, wait
-//            messageQueue.Enqueue(envelope, pipelineId)
-//            awaitMessageHandle.Set() |> ignore
+        | true ->
+            Debug.Print("Posted local message") 
+            let pipelineId = Guid.NewGuid().ToString("N")
+            // 1. if call is from outsider, any error is nonrecoverable since there is no rId
+            // 2. if last step of continuation, pipeline is set during receive and continuator
+            // knows how to recover if the last step dies
+            // result is set with empty caller => means PaGR from outside, the only case
+            // we need to save message to pipeline here
+            if (not (String.IsNullOrWhiteSpace(resultId))) && (callerIds.Length = 0) then
+                redis.HSet<'Task * string * string[]>(pipelineKey, pipelineId, envelope, When.Always, false) |> ignore // save message, wait
+            messageQueue.Enqueue(envelope, pipelineId)
+            awaitMessageHandle.Set() |> ignore
         | _ -> // false
             Debug.Print("Posted Redis message") 
             redis.LPush<'Task * string * string[]>(inboxKey, envelope) |> ignore
