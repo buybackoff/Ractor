@@ -4,6 +4,7 @@ open System
 open System.Linq
 open System.Text
 open System.Threading.Tasks
+open System.Collections.Generic
 open Fredis
 open System
 open System.Text
@@ -38,6 +39,40 @@ let ``hello, Fredis`` () =
     "greeter" <-- "Greeter via operator"
     
     Thread.Sleep(1000)
+    ()
+
+[<Test>]
+let ``Iterate`` () =
+    let fredis = new Fredis("localhost")
+
+    let computation (input:string) : Async<string> =
+        async {
+            do! Async.Sleep(1000)
+            return ("Hello, " + input)
+        }
+
+    let greeter = fredis.CreateActor("greeter", computation)
+    greeter.Start()
+
+    let limit = 10001
+    let guids = Array.init limit (fun _ -> Guid.NewGuid())
+    let sw = Stopwatch.StartNew()
+    
+    let res = guids |> Array.Parallel.map (fun g -> greeter.PostAndGetResult("PING")) 
+                    |> Async.Parallel |> Async.RunSynchronously |> Seq.length
+    //guids |> Array.Parallel.map (fun g -> greeter.Post("PING", g)) |> ignore
+
+//    let tasks : List<Async<string>> = List<Async<string>>()
+//    for i in 1..50000 do
+//        tasks.Add(greeter.PostAndGetResult("PING"))
+//    let res = tasks |> Async.Parallel |> Async.RunSynchronously
+
+    sw.Stop()
+
+    Console.WriteLine("Received count: " + res.ToString())
+    Console.WriteLine("Elapsed ms: " + sw.ElapsedMilliseconds.ToString())
+    Thread.Sleep(5000)
+    
     ()
 
 [<Test>]
@@ -94,19 +129,18 @@ let ``Continuation basic`` () =
 
     let first = fredis.CreateActor("first", computation)
     let second = fredis.CreateActor("second", computation2)
-    //let third = fredis.CreateActor("third", computation3)
+    let third = fredis.CreateActor("third", computation3)
     first.Start()
     second.Start()
-    //third.Start()
+    third.Start()
 
-    let actorWithContinuation = first.ContinueWith(second)
+    let actorWithContinuation = first.ContinueWith(second).ContinueWith(third)
     //let actorWithTwoContinuations = first.ContinueWith(second, third)
 
-    Console.WriteLine("Remote execution")
     actorWithContinuation.Start()
 
     // type annotations are required
-    let res = actorWithContinuation.PostAndGetResult("Continuation test", 50000) |> Async.RunSynchronously
+    let res = actorWithContinuation.PostAndGetResult("Continuation test", 5000) |> Async.RunSynchronously
     //let res2 = actorWithTwoContinuations.PostAndGetResult("Continuation test 2", 1000) |> Async.RunSynchronously
 
     Console.WriteLine(res)

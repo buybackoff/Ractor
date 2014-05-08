@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Globalization;
@@ -113,7 +114,7 @@ namespace Fredis {
         /// <summary>
         /// Stores reflected cash info for each type
         /// </summary>
-        private static readonly Dictionary<string, CacheInfo> CacheInfos = new Dictionary<string, CacheInfo>();
+        private static readonly ConcurrentDictionary<string, CacheInfo> CacheInfos = new ConcurrentDictionary<string, CacheInfo>();
 
         /// <summary>
         /// Memoized reflection of cache contract

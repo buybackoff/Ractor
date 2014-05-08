@@ -26,7 +26,7 @@ type Actor<'Task, 'TResult> internal (redis : Redis, id : string, computation : 
     let mutable started = false
     let mutable cts = Unchecked.defaultof<CancellationTokenSource>
     let awaitMessageHandle = new AutoResetEvent(false)
-    let resultWaitHandles = Dictionary<string, AutoResetEvent>()
+    let resultWaitHandles = ConcurrentDictionary<string, AutoResetEvent>()
     let prefix = id + ":Mailbox"
     // list of incoming messages
     let inboxKey = prefix + ":inbox" // TODO message is a tuple of resultId * callerId * payload
@@ -68,6 +68,7 @@ type Actor<'Task, 'TResult> internal (redis : Redis, id : string, computation : 
         if not started then 
             let rec awaitMessage () = 
                 async { 
+                    //Debug.Print("Awaiting message")
                     // atomically move to safe place while processing
                     let lua = @"
                     local result = redis.call('RPOP', KEYS[1])
@@ -77,8 +78,8 @@ type Actor<'Task, 'TResult> internal (redis : Redis, id : string, computation : 
                     return result"
                     let pipelineId = Guid.NewGuid().ToString("N")
                     let hasLocal, localMessage = messageQueue.TryDequeue()
-                    if hasLocal then 
-                        Debug.Print("Took local message")
+                    if hasLocal then
+                        //Debug.Print("Took local message")
                         return localMessage
                     else
                         let! message = redis.EvalAsync<'Task * string * string[]>(lua, 
@@ -87,10 +88,11 @@ type Actor<'Task, 'TResult> internal (redis : Redis, id : string, computation : 
                                                                        pipelineId |])
                                        |> Async.AwaitTask
                         if Object.Equals(message, Unchecked.defaultof<'Task * string>) then
-                            Async.AwaitWaitHandle(awaitMessageHandle, 5000) |> ignore // if PubSub dropped notification, recheck the queue, but not very often
+                            let! signal =  Async.AwaitWaitHandle(awaitMessageHandle, 1000) // if PubSub dropped notification, recheck the queue, but not very often
+                            if not signal then Debug.Print("Timeout in awaitMessage") 
                             return! awaitMessage()
                         else
-                            Debug.Print("Took Redis message") 
+                            //Debug.Print("Took Redis message") 
                             return message, pipelineId
                 }
             
@@ -105,22 +107,30 @@ type Actor<'Task, 'TResult> internal (redis : Redis, id : string, computation : 
                                 match messageNotification with
                                 | "" -> awaitMessageHandle.Set() |> ignore
                                 | resultId -> 
-                                    if resultWaitHandles.ContainsKey(resultId) then 
+                                    if resultWaitHandles.ContainsKey(resultId) then
+                                        //Debug.Print("Setting result handle: " + resultId)
                                         resultWaitHandles.[resultId].Set() |> ignore
                                     else failwith "wrong result id"))
             cts <- new CancellationTokenSource()
             let loop = 
                 async { 
                     while (not cts.Token.IsCancellationRequested) do
+                        // TODO instead of semaphor use dedicated worker threads = number of processors
+                        
+                        //Debug.Print("Before semaphor: " + this.semaphor.CurrentCount.ToString())
                         do! this.semaphor.WaitAsync(cts.Token)
                             |> Async.AwaitIAsyncResult
                             |> Async.Ignore
+                        //Debug.Print("Before gate")
+                        Interlocked.Increment(this.counter) |> ignore
                         do! waitGateIsOpen
-                        try
-                            let! (message, resultId, callerIds), pipelineId = awaitMessage()
-                            async {
+                        let! (message, resultId, callerIds), pipelineId = awaitMessage()
+                        //Debug.Print("Received message: " + resultId)
+                        async {
+                            try
                                 try 
                                     let! result = computation(message, resultId)
+                                    //Debug.Print("Completed computation for: " + resultId)
                                     if resultId <> "" then // then someone is waiting for the result
                                         resultsCache.Add(resultId, result, DateTimeOffset.Now.AddSeconds(10.0)) |> ignore
                                         // TODO trace cache hits and test performance with and without it
@@ -137,12 +147,15 @@ type Actor<'Task, 'TResult> internal (redis : Redis, id : string, computation : 
                                     // TODO rework this
                                     let ei = ExceptionInfo(id, message, e)
                                     redis.LPush<ExceptionInfo<'Task>>(errorsKey, ei, When.Always, true) |> ignore
-                                    if this.errorHandler.Value <> Unchecked.defaultof<Actor<ExceptionInfo<'Task>, _>> then 
-                                        this.errorHandler.Value.Post(ei)
-                            }
-                            |> Async.Start // do as many task as global limits (semaphor, priority gate) alow 
-                        finally
-                            this.semaphor.Release() |> ignore
+                                    //if this.errorHandler <> Unchecked.defaultof<Actor<ExceptionInfo<'Task>, _> ref> then 
+                                    //    this.errorHandler.Value.Post(ei)
+                            finally
+                                Interlocked.Decrement(this.counter) |> ignore
+                                this.semaphor.Release() |> ignore
+                                ()
+                        }
+                        |> Async.Start // do as many task as global limits (semaphor, priority gate) alow 
+                        
                 }
             Async.Start(loop, cts.Token)
             started <- true
@@ -162,12 +175,13 @@ type Actor<'Task, 'TResult> internal (redis : Redis, id : string, computation : 
     // TODO? public with Guid param?
     member internal this.Post<'Task>(message : 'Task, resultId : string, callerIds : string[]) : unit =
         if not (String.IsNullOrWhiteSpace(resultId)) then 
-            resultWaitHandles.Add(resultId, new AutoResetEvent(false))
+            resultWaitHandles.TryAdd(resultId, new AutoResetEvent(false)) |> ignore
         let envelope = message, resultId, callerIds
-        let local = started && this.semaphor.CurrentCount > 0
+        let local = started //&& this.semaphor.CurrentCount > 0
+        //Console.WriteLine(this.semaphor.CurrentCount.ToString())
         match local with
         | true ->
-            Debug.Print("Posted local message") 
+            //Debug.Print("Posted local message") 
             let pipelineId = Guid.NewGuid().ToString("N")
             // 1. if call is from outsider, any error is nonrecoverable since there is no rId
             // 2. if last step of continuation, pipeline is set during receive and continuator
@@ -175,11 +189,11 @@ type Actor<'Task, 'TResult> internal (redis : Redis, id : string, computation : 
             // result is set with empty caller => means PaGR from outside, the only case
             // we need to save message to pipeline here
             if (not (String.IsNullOrWhiteSpace(resultId))) && (callerIds.Length = 0) then
-                redis.HSet<'Task * string * string[]>(pipelineKey, pipelineId, envelope, When.Always, false) |> ignore // save message, wait
+                redis.HSet<'Task * string * string[]>(pipelineKey, pipelineId, envelope, When.Always, false) |> ignore
             messageQueue.Enqueue(envelope, pipelineId)
             awaitMessageHandle.Set() |> ignore
         | _ -> // false
-            Debug.Print("Posted Redis message") 
+            //Debug.Print("Posted Redis message") 
             redis.LPush<'Task * string * string[]>(inboxKey, envelope) |> ignore
             // no resultId here because we notify recievers that in turn will notify callers about results (TODO? could use two channels - jobs and results)
             redis.Publish<string>(channelKey, "", true) |> ignore
@@ -201,6 +215,7 @@ type Actor<'Task, 'TResult> internal (redis : Redis, id : string, computation : 
     // TODO TryGetResult
 
     member internal this.GetResult(resultId : string, millisecondsTimeout, keep:bool) : Async<'TResult> = 
+        //Debug.Print("Getting: " + resultId)
         let cached = resultsCache.Get(resultId)
         if cached <> null then 
             if not keep then this.DeleteResult(resultId)
@@ -215,13 +230,14 @@ type Actor<'Task, 'TResult> internal (redis : Redis, id : string, computation : 
                         if cachedResult <> null then async {return unbox cachedResult}
                         else redis.HGetAsync<'TResult>(resultsKey, resultId) |> Async.AwaitTask
                     if Object.Equals(result, null) then 
-                        let! signal = Async.AwaitWaitHandle(waitHandle, 1000)                        
+                        let! signal = Async.AwaitWaitHandle(waitHandle, 100000)
+                        if not signal then Debug.Print("Timeout in awaitResult") 
                         // TODO sould document that without timeout it is 60 minutes
-                        if tryCount > 10 then Debug.Fail("Cannot receive result for PostAndReply")
+                        if tryCount > 10 then Debug.Fail("Cannot receive result for PostAndReply" + resultId)
                         return! awaitResult (tryCount + 1)
                     else
-                        resultWaitHandles.[resultId].Dispose()
-                        resultWaitHandles.Remove(resultId) |> ignore
+                        //resultWaitHandles.[resultId].Dispose()
+                        resultWaitHandles.TryRemove(resultId) |> ignore
                         if not keep then this.DeleteResult(resultId)
                         return result
                 }
@@ -278,6 +294,7 @@ type Actor<'Task, 'TResult> internal (redis : Redis, id : string, computation : 
             actor.counter <- this.counter
             actor.lowPriorityGate <- this.lowPriorityGate
             Actor<_,_>.ActorsRepo.[id] <- box actor
+            actor.Start()
             actor
 
 
