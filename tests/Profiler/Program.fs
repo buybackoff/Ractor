@@ -24,7 +24,7 @@ let main argv =
     greeter.Start()
     greeter2.Start()
 
-    let limit = 10000 / 2
+    let limit = 100000 / 2
     let guids = Array.init limit (fun _ -> Guid.NewGuid())
     let guids2 = Array.init limit (fun _ -> Guid.NewGuid())
 

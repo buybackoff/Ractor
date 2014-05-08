@@ -47,8 +47,8 @@ let ``Iterate`` () =
 
     let computation (input:string) : Async<string> =
         async {
-            //do! Async.Sleep(1000)
-            return ("Hello, " + input)
+            //do! Async.Sleep(1)
+            return input //("Hello, " + input)
         }
 
     let greeter = fredis.CreateActor("greeter", computation)
@@ -62,6 +62,9 @@ let ``Iterate`` () =
 
     let sw = Stopwatch.StartNew()
     
+//    for i in 0..(limit*2) do
+//        greeter.PostAndGetResult("PING") |> Async.RunSynchronously |> ignore
+
     let t1 = guids |> Array.Parallel.map (fun g -> greeter.PostAndGetResult("PING")) 
                     |> Async.Parallel
     let t2 =  guids2 |> Array.Parallel.map (fun g -> greeter2.PostAndGetResult("PING")) 
@@ -76,7 +79,7 @@ let ``Iterate`` () =
 
     sw.Stop()
 
-    Console.WriteLine("Received count: " + (res).ToString())
+    //Console.WriteLine("Received count: " + (res).ToString())
     Console.WriteLine("Elapsed ms: " + sw.ElapsedMilliseconds.ToString())
     Thread.Sleep(5000)
     

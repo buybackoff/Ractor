@@ -20,7 +20,7 @@ type Fredis(connectionString : string) =
     static let blobs = Dictionary<string, IBlobPersistor>()
     static let redises = Dictionary<string, Redis>()
 
-    static let semaphor = new SemaphoreSlim(Environment.ProcessorCount * 64) // TODO what is the best limit?
+    static let semaphor = new SemaphoreSlim(Environment.ProcessorCount * 64000) // TODO what is the best limit?
     static let counter = ref 0
     static let lowPriorityGate = new ManualResetEventSlim(true)
     static let mutable performanceMonitor = 
