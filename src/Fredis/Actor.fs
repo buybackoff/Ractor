@@ -20,13 +20,15 @@ open Fredis
 // method call should return eventually
 // then we could know how often to check for pipeline and unclaimed results
 
-type Actor<'Task, 'TResult> internal (redis : Redis, id : string, computation : 'Task * string -> Async<'TResult>, computationTimeout:int, lowPriority : bool) = 
+type Actor<'Task, 'TResult> internal (redisConnectionString : string, id : string, computation : 'Task * string -> Async<'TResult>, computationTimeout:int, lowPriority : bool) = 
+    let redis = new Redis(redisConnectionString, "Fredis")
+    
     // linking only works on children with computations returning unit
     // let children = Dictionary<string, Actor<'TResult, unit>>()
     let mutable started = false
-    let mutable cts = Unchecked.defaultof<CancellationTokenSource>
+    let mutable cts = new CancellationTokenSource()
     let awaitMessageHandle = new AutoResetEvent(false)
-    let resultWaitHandles = ConcurrentDictionary<string, AutoResetEvent>()
+    let resultWaitHandles = ConcurrentDictionary<string, AsyncManualResetEvent>()
     let prefix = id + ":Mailbox"
     // list of incoming messages
     let inboxKey = prefix + ":inbox" // TODO message is a tuple of resultId * callerId * payload
@@ -54,9 +56,11 @@ type Actor<'Task, 'TResult> internal (redis : Redis, id : string, computation : 
     static let resultsCache = MemoryCache.Default
     let messageQueue = ConcurrentQueue<('Task * string * string[]) * string>()
 
-    member private this.Id = id
-    member private this.Redis = redis
-    member private this.Computation = computation
+    member internal this.Id = id
+    member internal this.RedisConnectionString = redisConnectionString
+    member internal this.Computation = computation
+    member internal this.ComputationTimeout = computationTimeout
+    member internal this.LowPriority = lowPriority
     member this.QueueLength = (int (redis.LLen(inboxKey))) + messageQueue.Count
     
     // public error handling should be C# friendly
@@ -135,14 +139,16 @@ type Actor<'Task, 'TResult> internal (redis : Redis, id : string, computation : 
                                         resultsCache.Add(resultId, result, DateTimeOffset.Now.AddSeconds(10.0)) |> ignore
                                         // TODO trace cache hits and test performance with and without it
 
-                                        redis.HSet(resultsKey, resultId, result, When.Always, false) |> ignore
+//                                        do! redis.HSetAsync(resultsKey, resultId, result, When.Always, false) 
+//                                            |> Async.AwaitTask |> Async.Ignore
 
                                         if resultWaitHandles.ContainsKey(resultId) then
                                             resultWaitHandles.[resultId].Set() |> ignore
                                         else
-                                            redis.Publish<string>(channelKey, resultId, true) |> ignore
-
-                                    redis.HDel(pipelineKey, pipelineId, true) |> ignore
+                                            redis.Publish<string>(channelKey, resultId, true) |> ignore 
+                                                
+                                    //redis.HDel(pipelineKey, pipelineId, true) |> ignore 
+                                    //    |> Async.AwaitTask |> Async.Ignore
                                 with e -> 
                                     // TODO rework this
                                     let ei = ExceptionInfo(id, message, e)
@@ -175,7 +181,7 @@ type Actor<'Task, 'TResult> internal (redis : Redis, id : string, computation : 
     // TODO? public with Guid param?
     member internal this.Post<'Task>(message : 'Task, resultId : string, callerIds : string[]) : unit =
         if not (String.IsNullOrWhiteSpace(resultId)) then 
-            resultWaitHandles.TryAdd(resultId, new AutoResetEvent(false)) |> ignore
+            resultWaitHandles.TryAdd(resultId, AsyncManualResetEvent()) |> ignore
         let envelope = message, resultId, callerIds
         let local = started //&& this.semaphor.CurrentCount > 0
         //Console.WriteLine(this.semaphor.CurrentCount.ToString())
@@ -188,8 +194,8 @@ type Actor<'Task, 'TResult> internal (redis : Redis, id : string, computation : 
             // knows how to recover if the last step dies
             // result is set with empty caller => means PaGR from outside, the only case
             // we need to save message to pipeline here
-            if (not (String.IsNullOrWhiteSpace(resultId))) && (callerIds.Length = 0) then
-                redis.HSet<'Task * string * string[]>(pipelineKey, pipelineId, envelope, When.Always, false) |> ignore
+//            if (not (String.IsNullOrWhiteSpace(resultId))) && (callerIds.Length = 0) then
+//                redis.HSet<'Task * string * string[]>(pipelineKey, pipelineId, envelope, When.Always, false) |> ignore
             messageQueue.Enqueue(envelope, pipelineId)
             awaitMessageHandle.Set() |> ignore
         | _ -> // false
@@ -230,7 +236,7 @@ type Actor<'Task, 'TResult> internal (redis : Redis, id : string, computation : 
                         if cachedResult <> null then async {return unbox cachedResult}
                         else redis.HGetAsync<'TResult>(resultsKey, resultId) |> Async.AwaitTask
                     if Object.Equals(result, null) then 
-                        let! signal = Async.AwaitWaitHandle(waitHandle, 100000)
+                        let! signal = waitHandle.WaitAsync() |> Async.AwaitTask // Async.AwaitWaitHandle(waitHandle, 100000)
                         if not signal then Debug.Print("Timeout in awaitResult") 
                         // TODO sould document that without timeout it is 60 minutes
                         if tryCount > 10 then Debug.Fail("Cannot receive result for PostAndReply" + resultId)
@@ -270,7 +276,7 @@ type Actor<'Task, 'TResult> internal (redis : Redis, id : string, computation : 
         let id = this.Id + "->>-" + continuation.Id
         if Actor<_,_>.ActorsRepo.ContainsKey(id) then unbox Actor<_,_>.ActorsRepo.[id]
         else
-            let redis = this.Redis
+            let redisConnStr = this.RedisConnectionString
             let lowPriority = false // continuation is cheap by itself
 
             let computation : 'Task * string -> Async<'TCResult> =
@@ -289,7 +295,7 @@ type Actor<'Task, 'TResult> internal (redis : Redis, id : string, computation : 
                         this.DeleteResult(resultId+"_start")
                         return cResult
                     }
-            let actor = new Actor<'Task, 'TCResult>(redis, id, computation, Timeout.Infinite, lowPriority)
+            let actor = new Actor<'Task, 'TCResult>(redisConnStr, id, computation, Timeout.Infinite, lowPriority)
             actor.semaphor <- this.semaphor
             actor.counter <- this.counter
             actor.lowPriorityGate <- this.lowPriorityGate

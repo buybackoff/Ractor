@@ -47,19 +47,26 @@ let ``Iterate`` () =
 
     let computation (input:string) : Async<string> =
         async {
-            do! Async.Sleep(1000)
+            //do! Async.Sleep(1000)
             return ("Hello, " + input)
         }
 
     let greeter = fredis.CreateActor("greeter", computation)
+    let greeter2 = fredis.CloneActor<string,string>("greeter")
     greeter.Start()
+    greeter2.Start()
 
-    let limit = 10001
+    let limit = 10000 / 2
     let guids = Array.init limit (fun _ -> Guid.NewGuid())
+    let guids2 = Array.init limit (fun _ -> Guid.NewGuid())
+
     let sw = Stopwatch.StartNew()
     
-    let res = guids |> Array.Parallel.map (fun g -> greeter.PostAndGetResult("PING")) 
-                    |> Async.Parallel |> Async.RunSynchronously |> Seq.length
+    let t1 = guids |> Array.Parallel.map (fun g -> greeter.PostAndGetResult("PING")) 
+                    |> Async.Parallel
+    let t2 =  guids2 |> Array.Parallel.map (fun g -> greeter2.PostAndGetResult("PING")) 
+                    |> Async.Parallel
+    let res = [|t1; t2|] |> Async.Parallel |> Async.RunSynchronously |> Seq.map Seq.length |> Seq.sum
     //guids |> Array.Parallel.map (fun g -> greeter.Post("PING", g)) |> ignore
 
 //    let tasks : List<Async<string>> = List<Async<string>>()
@@ -69,7 +76,7 @@ let ``Iterate`` () =
 
     sw.Stop()
 
-    Console.WriteLine("Received count: " + res.ToString())
+    Console.WriteLine("Received count: " + (res).ToString())
     Console.WriteLine("Elapsed ms: " + sw.ElapsedMilliseconds.ToString())
     Thread.Sleep(5000)
     

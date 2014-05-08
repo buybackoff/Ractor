@@ -20,7 +20,7 @@ type Fredis(connectionString : string) =
     static let blobs = Dictionary<string, IBlobPersistor>()
     static let redises = Dictionary<string, Redis>()
 
-    static let semaphor = new SemaphoreSlim(Environment.ProcessorCount * 640)
+    static let semaphor = new SemaphoreSlim(Environment.ProcessorCount * 64) // TODO what is the best limit?
     static let counter = ref 0
     static let lowPriorityGate = new ManualResetEventSlim(true)
     static let mutable performanceMonitor = 
@@ -54,12 +54,22 @@ type Fredis(connectionString : string) =
     member this.CreateActor<'Task, 'TResult>(id : string, computation : 'Task -> Async<'TResult>, computationTimeout, lowPriority) = 
         if Actor<_,_>.ActorsRepo.ContainsKey(id) then raise (InvalidOperationException("Agent with the same id already exists: " + id))
         let comp : 'Task * string -> Async<'TResult> = (fun message -> computation(fst message))
-        let actor = new Actor<'Task, 'TResult>(redis, id, comp, computationTimeout, lowPriority)
+        let actor = new Actor<'Task, 'TResult>(connectionString, id, comp, computationTimeout, lowPriority)
         actor.semaphor <- semaphor
         actor.counter <- counter
         actor.lowPriorityGate <- lowPriorityGate
         Actor<_,_>.ActorsRepo.[id] <- actor // TODO move inside Actor constructor
         actor
+
+    // for testing
+    member this.CloneActor<'Task, 'TResult>(id : string)=
+        let actor = Fredis.GetActor(id)
+        let clone = new Actor<'Task, 'TResult>(actor.RedisConnectionString, actor.Id, actor.Computation, 
+                        actor.ComputationTimeout, actor.LowPriority)
+        clone.semaphor <- semaphor
+        clone.counter <- counter
+        clone.lowPriorityGate <- lowPriorityGate
+        clone
 
     
 

@@ -45,6 +45,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Fredis.Persistence.Tests", 
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Fredis.CS.Tests", "tests\Fredis.CS.Tests\Fredis.CS.Tests.csproj", "{1DE3B85A-3932-4D95-B87A-E6EDF7367D62}"
 EndProject
+Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "Profiler", "tests\Profiler\Profiler.fsproj", "{83AEA85D-E3FC-4E94-94AD-8D1A51EAAEF4}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -71,6 +73,10 @@ Global
 		{1DE3B85A-3932-4D95-B87A-E6EDF7367D62}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{1DE3B85A-3932-4D95-B87A-E6EDF7367D62}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{1DE3B85A-3932-4D95-B87A-E6EDF7367D62}.Release|Any CPU.Build.0 = Release|Any CPU
+		{83AEA85D-E3FC-4E94-94AD-8D1A51EAAEF4}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{83AEA85D-E3FC-4E94-94AD-8D1A51EAAEF4}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{83AEA85D-E3FC-4E94-94AD-8D1A51EAAEF4}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{83AEA85D-E3FC-4E94-94AD-8D1A51EAAEF4}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -81,6 +87,7 @@ Global
 		{E789C72A-5CFD-436B-8EF1-61AA2852A89F} = {ED8079DD-2B06-4030-9F0F-DC548F98E1C4}
 		{3842EBE5-E76E-40DE-A375-905970DD0F30} = {ED8079DD-2B06-4030-9F0F-DC548F98E1C4}
 		{1DE3B85A-3932-4D95-B87A-E6EDF7367D62} = {ED8079DD-2B06-4030-9F0F-DC548F98E1C4}
+		{83AEA85D-E3FC-4E94-94AD-8D1A51EAAEF4} = {ED8079DD-2B06-4030-9F0F-DC548F98E1C4}
 	EndGlobalSection
 	GlobalSection(Performance) = preSolution
 		HasPerformanceSessions = true
