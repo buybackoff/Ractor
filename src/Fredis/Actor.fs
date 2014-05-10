@@ -8,6 +8,7 @@ open System.Threading
 open System.Threading.Tasks
 open System.Diagnostics
 open System.Runtime.Caching
+open System.Web.Hosting
 open Fredis
 
 // TODO A system actor that periodically checks pipelines and errors of all actors
@@ -19,6 +20,7 @@ open Fredis
 // computation, not message - it is computationTimeout (retry after timeout)
 // method call should return eventually
 // then we could know how often to check for pipeline and unclaimed results
+
 
 type Actor<'Task, 'TResult> internal (redisConnectionString : string, id : string, computation : 'Task * string -> Async<'TResult>, computationTimeout:int, lowPriority : bool) = 
     let redis = new Redis(redisConnectionString, "Fredis")
@@ -70,6 +72,7 @@ type Actor<'Task, 'TResult> internal (redisConnectionString : string, id : strin
     
     member this.Start() : unit = 
         if not started then 
+            HostingEnvironment.RegisterObject(this)
             let rec awaitMessage () = 
                 async { 
                     //Debug.Print("Awaiting message")
@@ -166,6 +169,7 @@ type Actor<'Task, 'TResult> internal (redisConnectionString : string, id : strin
         if started then 
             started <- false
             cts.Cancel |> ignore
+        HostingEnvironment.UnregisterObject(this)
     
     // then all other methods are just combinations of those
     member this.Post<'Tin>(message : 'Task) : unit = 
@@ -334,4 +338,6 @@ type Actor<'Task, 'TResult> internal (redisConnectionString : string, id : strin
             cts.Cancel |> ignore
             cts.Dispose()
 
+    interface IRegisteredObject with
+        member x.Stop(immediate:bool) = x.Stop()
 
