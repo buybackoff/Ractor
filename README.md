@@ -1,3 +1,4 @@
+![Travis CI status](https://travis-ci.org/buybackoff/Fredis.svg?branch=master)
 Fredis
 =======================
 **Fredis** (F# + Redis) is a light distributed actors framework built on top of Redis. Its API is inspired by 
