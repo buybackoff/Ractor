@@ -99,7 +99,7 @@ type Fredis(connectionString : string) =
         let comp msg = async { computation.Invoke(msg) }
         this.CreateActor(id, comp)
 
-
+    // TODO they could be different for same types, e.g. sting/string
     static member GetActor<'Task, 'TResult>(id : string) : Actor<'Task, 'TResult> = 
         let id = id.ToLowerInvariant()
         unbox Actor<_,_>.ActorsRepo.[id]
