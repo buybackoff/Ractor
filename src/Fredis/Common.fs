@@ -6,8 +6,9 @@ open System.Threading
 open System.Threading.Tasks
 
 type IFredisPerformanceMonitor =
+    abstract AllowHighPriorityActors : unit -> bool
     abstract AllowLowPriorityActors : unit -> bool
-    abstract FrequencySeconds : int with get
+    abstract PeriodMilliseconds : int with get
 
 
 type internal ExceptionInfo<'T> = 

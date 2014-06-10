@@ -8,7 +8,7 @@
     <ProjectGuid>e789c72a-5cfd-436b-8ef1-61aa2852a89f</ProjectGuid>
     <OutputType>Library</OutputType>
     <RootNamespace>FSharp.ProjectTemplate.Tests</RootNamespace>
-    <AssemblyName>FSharp.ProjectTemplate.Tests</AssemblyName>
+    <AssemblyName>Fredis.Tests</AssemblyName>
     <TargetFrameworkVersion>v4.5.1</TargetFrameworkVersion>
     <TargetFSharpCoreVersion>4.3.1.0</TargetFSharpCoreVersion>
     <Name>Fredis.Tests</Name>
@@ -81,6 +81,7 @@
     <Reference Include="System.Data" />
     <Reference Include="System.Net" />
     <Reference Include="System.Numerics" />
+    <Reference Include="System.Web" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\..\src\Fredis.Persistence\Fredis.Persistence.csproj">
