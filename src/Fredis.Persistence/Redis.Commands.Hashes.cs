@@ -15,7 +15,8 @@ namespace Fredis {
 
         public bool HSet<TRoot, TValue>(TRoot root, TValue valueWithKey, string hashKey = null,
             When when = When.Always, bool fireAndForget = false)
-        where TValue : IDataObject {
+        where TValue : IDataObject // where  TRoot : new()  // issue #18
+        {
             var key = _nameSpace + GetItemFullKey(root) + ":hashes:" + (hashKey ?? GetTypePrefix<TValue>());
             var f = GetItemKey(valueWithKey);
             var v = PackValueNullable(valueWithKey);
@@ -25,7 +26,9 @@ namespace Fredis {
         }
 
         public bool HSet<TRoot, TValue>(TRoot root, string field, TValue value, string hashKey = null,
-            When when = When.Always, bool fireAndForget = false) {
+            When when = When.Always, bool fireAndForget = false)
+            //where TRoot : new() // not a string issue #18
+        {
             var key = _nameSpace + GetItemFullKey(root) + ":hashes:" + (hashKey ?? GetTypePrefix<TValue>());
             var f = field ?? GetItemKey(value);
             var v = PackValueNullable(value);

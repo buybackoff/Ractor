@@ -49,7 +49,7 @@ type AsyncAutoResetEvent () =
             else
                 let ct = new CancellationTokenSource(timeout)
                 let tcs = new TaskCompletionSource<bool>()
-                ct.Token.Register(Action(fun _ -> tcs.SetResult(false))) |> ignore
+                ct.Token.Register(Action(fun _ -> tcs.TrySetResult(false) |> ignore)) |> ignore
                 m_waits.Enqueue(tcs)
                 tcs.Task
         finally
@@ -63,7 +63,7 @@ type AsyncAutoResetEvent () =
                 toRelease <- m_waits.Dequeue() 
             else 
                 if not m_signaled then m_signaled <- true
-            if toRelease <> null then toRelease.SetResult(true)
+            if toRelease <> null then toRelease.TrySetResult(true) |> ignore
         finally
             Monitor.Exit(m_waits)
 
@@ -90,7 +90,7 @@ type AsyncAutoResultWaiter<'TResult> () =
             else
                 let ct = new CancellationTokenSource(timeout)
                 let tcs = new TaskCompletionSource<'TResult>()
-                ct.Token.Register(Action(fun _ -> tcs.SetResult(defaultValue))) |> ignore
+                ct.Token.Register(Action(fun _ -> tcs.TrySetResult(defaultValue) |> ignore)) |> ignore
                 m_waits.Enqueue(tcs)
                 tcs.Task
         finally
@@ -104,6 +104,49 @@ type AsyncAutoResultWaiter<'TResult> () =
                 toRelease <- m_waits.Dequeue() 
             else 
                 if not (Object.Equals(m_signaled, defaultValue)) then m_signaled <- result
-            if toRelease <> null then toRelease.SetResult(result)
+            if toRelease <> null then toRelease.TrySetResult(result) |> ignore
         finally
             Monitor.Exit(m_waits)
+
+
+[<AutoOpenAttribute>]
+module Helpers =
+    let isSubclassOfRawGeneric(generic: Type, toCheck: Type) : bool =
+        let mutable toCheck = toCheck
+        let mutable res = false
+        while (toCheck <> null && toCheck <> typedefof<obj>) do
+            let cur = if toCheck.IsGenericType then toCheck.GetGenericTypeDefinition() else toCheck
+            if generic = cur then
+                res <- true
+            toCheck <- toCheck.BaseType
+        res
+
+    let inline deleteRepeatingItemsInHSET (redis:Redis, hkey:string) =
+        // self-containig script from params
+        // set current items
+        // if previous items exist, take intersect
+        let lua = 
+            @"  local previousKey = KEYS[1]..':previousKeys'
+                local currentKey = KEYS[1]..':currentKeys'
+                local currentItems = redis.call('HKEYS', KEYS[1])
+                local res = 0
+                redis.call('DEL', currentKey)
+                if redis.call('HLEN', KEYS[1]) > 0 then
+                   redis.call('SADD', currentKey, unpack(currentItems))
+                   local intersect
+                   if redis.call('SCARD', previousKey) > 0 then
+                       intersect = redis.call('SINTER', previousKey, currentKey)
+                       if #intersect > 0 then
+                            redis.call('HDEL', KEYS[1], unpack(intersect))
+                            res = #intersect
+                       end
+                   end
+                end
+                redis.call('DEL', previousKey)
+                if #currentItems > 0 then
+                    redis.call('SADD', previousKey, unpack(currentItems))
+                end
+                return res
+            "
+        Console.WriteLine("Before eval")
+        redis.EvalAsync<int>(lua, [|hkey|]).Result

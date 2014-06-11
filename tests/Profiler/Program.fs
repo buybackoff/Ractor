@@ -11,42 +11,31 @@ open System.Threading
 
 [<EntryPoint>]
 let main argv = 
-    let fredis = new Fredis("localhost")
 
-    let computation (input:string) : Async<string> =
-        async {
-            //do! Async.Sleep(1000)
-            return ("Hello, " + input)
-        }
+    let hp =
+        MailboxProcessor.Start(fun inbox ->
+            let rec loop n =
+                async { do printfn "n = %d, HP waiting..." n
+                        do! Async.Sleep(100)
+                        let! msg = inbox.Receive()
+                        return! loop(msg) }
+            loop 0)
 
-    let greeter = fredis.CreateActor("greeter", computation)
-    let greeter2 = fredis.CloneActor<string,string>("greeter")
-    greeter.Start()
-    greeter2.Start()
+    let lp =
+        MailboxProcessor.Start(fun inbox ->
+            let rec loop n =
+                
+                async { do printfn "n = %d, LP waiting..." n
+                        do! Async.Sleep(100)
+                        Thread.CurrentThread.Priority <- ThreadPriority.BelowNormal
+                        let! msg = inbox.Receive()
+                        return! loop(msg) }
+            loop 0)
 
-    let limit = 100000 / 2
-    let guids = Array.init limit (fun _ -> Guid.NewGuid())
-    let guids2 = Array.init limit (fun _ -> Guid.NewGuid())
-
-    let sw = Stopwatch.StartNew()
-    
-    let t1 = guids |> Array.Parallel.map (fun g -> greeter.PostAndGetResult("PING")) 
-                    |> Async.Parallel
-    let t2 =  guids2 |> Array.Parallel.map (fun g -> greeter2.PostAndGetResult("PING")) 
-                    |> Async.Parallel
-    let res = [|t1; t2|] |> Async.Parallel |> Async.RunSynchronously |> Seq.map Seq.length |> Seq.sum
-    //guids |> Array.Parallel.map (fun g -> greeter.Post("PING", g)) |> ignore
-
-//    let tasks : List<Async<string>> = List<Async<string>>()
-//    for i in 1..50000 do
-//        tasks.Add(greeter.PostAndGetResult("PING"))
-//    let res = tasks |> Async.Parallel |> Async.RunSynchronously
-
-    sw.Stop()
-
-    Console.WriteLine("Received count: " + (res).ToString())
-    Console.WriteLine("Elapsed ms: " + sw.ElapsedMilliseconds.ToString())
+    for i in 1..100 do
+        hp.Post i
+        lp.Post i
     
     Console.ReadLine() |> ignore
-    
+
     0

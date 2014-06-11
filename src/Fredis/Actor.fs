@@ -2,26 +2,27 @@
 
 
 namespace Fredis.FSharp
-open System
+// TODO PreserveOrder option is possible
+// need to lock inbox while executing a computation
+// and unlock upon returning its result
 [<AbstractClassAttribute>]
-type ActorDefinition<'Task, 'TResult>() = 
-    abstract RedisConnectionString : string
-    override this.RedisConnectionString = ""
+type Actor<'Task, 'TResult>() = 
+    abstract Redis : string
+    override this.Redis = ""
     abstract Computation : 'Task -> Async<'TResult>
     override this.Computation(input) = 
         async { return Unchecked.defaultof<'TResult>}
     /// <summary>
     /// Time in milliseconds to wait for computation to finish and to wait before discarding unclaimed results.
     /// </summary>
-    abstract ResultTimeout : int
-    override this.ResultTimeout = 60000
-    abstract LowPriority : bool
-    override this.LowPriority = false
-    abstract AutoStart : bool
-    override this.AutoStart = true
-    //TODO explain this option later with full implications
-    abstract Optimistic : bool
-    override this.Optimistic = false
+    abstract ResultTimeout : int with get
+    override this.ResultTimeout with get() =  60000
+    abstract LowPriority : bool with get
+    override this.LowPriority with get() =  false
+    abstract AutoStart : bool with get
+    override this.AutoStart with get() = true
+    abstract Optimistic : bool with get
+    override this.Optimistic with get() = false
 
 namespace Fredis
 
@@ -48,12 +49,14 @@ open Fredis
 // method call should return eventually
 // then we could know how often to check for pipeline and unclaimed results
 
+type internal Envelope<'Task> = 'Task * string * string []
+
 
 // TODO make it internal and use only extension methods on definitions
-[<AbstractClassAttribute>]
-type ActorDefinition<'Task, 'TResult>() = 
-    abstract RedisConnectionString : string
-    override this.RedisConnectionString = ""
+//[<AbstractClassAttribute>]
+type Actor<'Task, 'TResult>() = 
+    abstract Redis : string with get
+    override this.Redis with get() =  ""
     abstract Computation : 'Task -> Task<'TResult>
     override this.Computation(input) = 
         let tcs = TaskCompletionSource()
@@ -62,24 +65,23 @@ type ActorDefinition<'Task, 'TResult>() =
     /// <summary>
     /// Time in milliseconds to wait for computation to finish and to wait before discarding unclaimed results.
     /// </summary>
-    abstract ResultTimeout : int
-    override this.ResultTimeout = 60000
-    abstract LowPriority : bool
-    override this.LowPriority = false
-    abstract AutoStart : bool
-    override this.AutoStart = true
-    abstract Optimistic : bool
-    override this.Optimistic = false
+    abstract ResultTimeout : int with get
+    override this.ResultTimeout with get() =  60000
+    abstract LowPriority : bool with get
+    override this.LowPriority with get() =  false
+    abstract AutoStart : bool with get
+    override this.AutoStart with get() = true
+    abstract Optimistic : bool with get
+    override this.Optimistic with get() = false
 
+    
 
-type internal Envelope<'Task> = 'Task * string * string []
-
-
-type internal Actor<'Task, 'TResult> 
+type internal ActorImpl<'Task, 'TResult> 
     internal (redisConnectionString : string, id : string, 
                 computation : 'Task * string -> Async<'TResult>, resultTimeout : int, 
                 lowPriority : bool, optimistic : bool) = 
     let redis = new Redis(redisConnectionString, "Fredis")
+    let garbageCollectionPeriod = resultTimeout
     let mutable started = false
     let mutable cts = new CancellationTokenSource()
     let messageWaiter = new AsyncAutoResetEvent()
@@ -93,8 +95,9 @@ type internal Actor<'Task, 'TResult>
     let resultsKey = prefix + ":results" // TODO results must have "for" property
     let channelKey = prefix + ":channel"
     let errorsKey = prefix + ":errors"
+    let lockKey = prefix + ":lock"
     // TODO
-    [<DefaultValue>] val mutable internal errorHandler : Actor<ExceptionInfo<'Task>, unit> ref
+    [<DefaultValue>] val mutable internal errorHandler : ActorImpl<ExceptionInfo<'Task>, unit> ref
 
     // this could be set from outside and block execution of low-priority tasks
     // could be used to guarantee execution of important task without waiting for autoscale
@@ -131,11 +134,58 @@ type internal Actor<'Task, 'TResult>
             return hp && lp
         }
     let messageQueue = ConcurrentQueue<Envelope<'Task> * string>()
-    static let actors = Dictionary<string, obj>()
+    static let actors = Dictionary<obj, obj>()
     static let resultsCache = MemoryCache.Default
 
+    let collectGarbage() =
+        let lua = 
+            @"  local previousKey = KEYS[1]..':previousKeys'
+                local currentKey = KEYS[1]..':currentKeys'
+                local currentItems = redis.call('HKEYS', KEYS[1])
+                local res = 0
+                redis.call('DEL', currentKey)
+                if redis.call('HLEN', KEYS[1]) > 0 then
+                   redis.call('SADD', currentKey, unpack(currentItems))
+                   local intersect
+                   if redis.call('SCARD', previousKey) > 0 then
+                       intersect = redis.call('SINTER', previousKey, currentKey)
+                       if #intersect > 0 then
+                            redis.call('HDEL', KEYS[1], unpack(intersect))
+                            res = #intersect
+                       end
+                   end
+                end
+                redis.call('DEL', previousKey)
+                if #currentItems > 0 then
+                    redis.call('SADD', previousKey, unpack(currentItems))
+                end
+                return res
+            "
+        while true do
+            //Console.WriteLine("GC started")
+            let expiry = Nullable<TimeSpan>(TimeSpan.FromMilliseconds(float garbageCollectionPeriod))
+            let entered = redis.Set<string>(lockKey, "collecting garbage", 
+                            expiry, When.NotExists, false)
+            //Console.WriteLine("checking if entered: " + entered.ToString())
+            let counts  =
+                if entered then
+                    //Console.WriteLine("GC entered: " + redis.KeyNameSpace + ":" + resultsKey)
+                    let res = redis.Eval(lua, [|redis.KeyNameSpace + ":" + resultsKey|])
+                    //Console.WriteLine("Collected results: " + res.ToString() )
+                    let pipel =
+                        if started then
+                             redis.Eval(lua, [|redis.KeyNameSpace + ":" + pipelineKey|])
+                        else ()
+                    //Console.WriteLine("Collected pipelines: " + pipel.ToString() )
+                    res, pipel
+                else (),()
+            //do! Async.Sleep(garbageCollectionPeriod)
+            Thread.Sleep(garbageCollectionPeriod)
+            ()
+    let gcTask = Task.Run(Action(collectGarbage))
+
     do
-        redis.Serializer <- Serialisers.Pickler
+        redis.Serializer <-  Serialisers.Pickler
         checkGates() |> Async.Start
 
     static member LoadMonitor
@@ -143,34 +193,38 @@ type internal Actor<'Task, 'TResult>
         and set monitor = loadMonitor <- monitor
     static member val DefaultRedisConnectionString = "" with get, set
     static member ActorsRepo with get () = actors
-    static member Instance<'Task, 'TResult>(definition:obj) : Actor<'Task, 'TResult> = 
-        let name = definition.GetType().FullName
-        if Actor<_,_>.ActorsRepo.ContainsKey(name) then 
-                Actor<_,_>.ActorsRepo.[name] :?> Actor<'Task, 'TResult>
+    static member Instance<'Task, 'TResult>(definition:obj) : ActorImpl<'Task, 'TResult> = 
+        let key = definition.GetType()
+        if ActorImpl<_,_>.ActorsRepo.ContainsKey(key) then 
+                ActorImpl<_,_>.ActorsRepo.[key] :?> ActorImpl<'Task, 'TResult>
         else
             // code duplication is OK here, otherwise will need interface, etc... and still type matching
-            match definition with
-            | :? ActorDefinition<'Task, 'TResult> as taskDefinition -> 
-                let conn = 
-                    if String.IsNullOrWhiteSpace(taskDefinition.RedisConnectionString) then
-                        if String.IsNullOrWhiteSpace(Actor<_,_>.DefaultRedisConnectionString) then
-                            raise (new ArgumentException("Redis connection string is not set"))
-                        else
-                            Actor<_,_>.DefaultRedisConnectionString
-                    else taskDefinition.RedisConnectionString
-                let comp (msg:'Task * string) : Async<'TResult> = taskDefinition.Computation(fst msg) |> Async.AwaitTask
-                Actor(conn, definition.GetType().Name, comp, taskDefinition.ResultTimeout, taskDefinition.LowPriority, taskDefinition.Optimistic)
-            | :? Fredis.FSharp.ActorDefinition<'Task, 'TResult> as asyncDefinition ->
-                let conn = 
-                    if String.IsNullOrWhiteSpace(asyncDefinition.RedisConnectionString) then
-                        if String.IsNullOrWhiteSpace(Actor<_,_>.DefaultRedisConnectionString) then
-                            raise (new ArgumentException("Redis connection string is not set"))
-                        else
-                            Actor<_,_>.DefaultRedisConnectionString
-                    else asyncDefinition.RedisConnectionString
-                let comp (msg:'Task * string) : Async<'TResult> = asyncDefinition.Computation(fst msg)
-                Actor(conn, definition.GetType().Name, comp, asyncDefinition.ResultTimeout, asyncDefinition.LowPriority, asyncDefinition.Optimistic)
-            | _ -> failwith "wrong definition type"
+            let actor = 
+                match definition with
+                | x when isSubclassOfRawGeneric(typedefof<Actor<'Task, 'TResult>>, x.GetType()) -> // :? Actor<'Task, 'TResult> as taskDefinition -> 
+                    let taskDefinition = x :?> Actor<'Task, 'TResult>
+                    let conn = 
+                        if String.IsNullOrWhiteSpace(taskDefinition.Redis) then
+                            if String.IsNullOrWhiteSpace(ActorImpl<_,_>.DefaultRedisConnectionString) then
+                                raise (new ArgumentException("Redis connection string is not set"))
+                            else
+                                ActorImpl<_,_>.DefaultRedisConnectionString
+                        else taskDefinition.Redis
+                    let comp (msg:'Task * string) : Async<'TResult> = taskDefinition.Computation(fst msg) |> Async.AwaitTask
+                    ActorImpl(conn, definition.GetType().Name, comp, taskDefinition.ResultTimeout, taskDefinition.LowPriority, taskDefinition.Optimistic)
+                | :? Fredis.FSharp.Actor<'Task, 'TResult> as asyncDefinition ->
+                    let conn = 
+                        if String.IsNullOrWhiteSpace(asyncDefinition.Redis) then
+                            if String.IsNullOrWhiteSpace(ActorImpl<_,_>.DefaultRedisConnectionString) then
+                                raise (new ArgumentException("Redis connection string is not set"))
+                            else
+                                ActorImpl<_,_>.DefaultRedisConnectionString
+                        else asyncDefinition.Redis
+                    let comp (msg:'Task * string) : Async<'TResult> = asyncDefinition.Computation(fst msg)
+                    ActorImpl(conn, definition.GetType().Name, comp, asyncDefinition.ResultTimeout, asyncDefinition.LowPriority, asyncDefinition.Optimistic)
+                | _ -> failwith "wrong definition type"
+            ActorImpl<_,_>.ActorsRepo.[key] <- actor
+            actor
     
 
     member internal this.Id = id
@@ -297,19 +351,22 @@ type internal Actor<'Task, 'TResult>
     /// </summary>
     /// <param name="message">Payload</param>
     member this.Post<'Task>(message : 'Task) : Guid = 
-        this.Post(message)
+        this.PostAsync(message) |> Async.RunSynchronously
     member this.TryPost<'Task>(message : 'Task, [<Out>] resultGuid : byref<Guid>) : bool = 
-        this.TryPost(message, &resultGuid)
+        let ok, guid = this.TryPostAsync(message) |> Async.RunSynchronously
+        if ok then resultGuid <- guid
+        ok
+
     /// <summary>
     /// Post message and get its assigned result Guid after the message was saved in Redis.
     /// </summary>
     /// <param name="message">Payload</param>
     member this.PostTask<'Task>(message : 'Task) : Task<Guid> = 
-        this.PostTask(message)
+        this.PostAsync(message) |> Async.StartAsTask
     member this.TryPostTask<'Task>(message : 'Task) : Task<bool*Guid> = 
-        this.TryPostTask(message)
+        this.TryPostAsync(message) |> Async.StartAsTask
     member this.PostAsync<'Task>(message : 'Task) : Async<Guid> = 
-        this.PostAsync(message)
+        this.Post(message, Guid.NewGuid(), [||])
     member this.TryPostAsync<'Task>(message : 'Task) : Async<bool*Guid> = 
         async {
             try
@@ -324,8 +381,8 @@ type internal Actor<'Task, 'TResult>
     member private this.Post<'Task>(message : 'Task, resultGuid : Guid, callerIds : string []) : Async<Guid> = 
         let resultId = resultGuid.ToString("N")
         let envelope : Envelope<'Task> = message, resultId, callerIds
-        let remotePost = 
-            //Debug.Print("Posted Redis message") 
+        let remotePost() = 
+            Console.WriteLine("Posted Redis message") 
             let res = 
                 async {
                     do! redis.LPushAsync<Envelope<'Task>>(inboxKey, envelope, When.Always, this.Optimistic) 
@@ -336,8 +393,8 @@ type internal Actor<'Task, 'TResult>
             // callers about results
             redis.Publish<string>(channelKey, "", this.Optimistic) |> ignore
             res
-        let localPost = 
-            //Debug.Print("Posted local message")
+        let localPost() = 
+            Console.WriteLine("Posted local message")
             localResultWaiters.TryAdd(resultId, ManualResetEventSlim()) |> ignore 
             let pipelineId = Guid.NewGuid().ToString("N")
             if not this.Optimistic then 
@@ -349,10 +406,10 @@ type internal Actor<'Task, 'TResult>
         | true -> 
             async {
                 let! opened = waitForOpenGates 0
-                if opened then return! localPost
-                else return! remotePost
+                if opened then return! localPost()
+                else return! remotePost()
             }    
-        | _ -> remotePost
+        | _ -> remotePost()
             
 
     
@@ -432,11 +489,11 @@ type internal Actor<'Task, 'TResult>
     member private this.PostAndGetResult(message : 'Task, resultGuid : Guid, callerIds : string array) : Async<'TResult> = 
         let resultId =  resultGuid.ToString("N")
         //let envelope : Envelope<'Task> = message, resultId, callerIds
-        let standardCall = async {
+        let standardCall() = async {
                 do! this.Post(message, resultGuid, callerIds) |> Async.Ignore
                 return! this.GetResultAsync(resultGuid)
             }
-        let shortcutCall = // avoid most of the async machinery
+        let shortcutCall() = // avoid most of the async machinery
             async {
                 try 
                     Interlocked.Increment(counter) |> ignore
@@ -455,10 +512,10 @@ type internal Actor<'Task, 'TResult>
         | true -> 
             async {
                 let! opened = waitForOpenGates 0
-                if opened then return! shortcutCall
-                else return! standardCall
+                if opened then return! shortcutCall()
+                else return! standardCall()
             }           
-        | _ -> standardCall    
+        | _ -> standardCall()
 
     
     // TODO
@@ -516,32 +573,48 @@ type internal Actor<'Task, 'TResult>
 // TODO continuation extensions
 // TODO copy docs comments from Actors
 [<Extension>]
-type ActorDefinitionExtension<'Task, 'TResult> () =
+type ActorExtension() =
     [<Extension>]
-    static member Post<'Task>(this : ActorDefinition<'Task, 'TResult>, message : 'Task) : Guid =
-        let actor = Actor<_,_>.Instance(this)
+    static member Start(this : Actor<'Task, 'TResult>) : unit = 
+        let actor = ActorImpl<'Task, 'TResult>.Instance(this)
+        actor.Start()
+    [<Extension>]
+    static member Stop(this : Actor<'Task, 'TResult>) : unit = 
+        let actor = ActorImpl<'Task, 'TResult>.Instance(this)
+        actor.Stop()
+    [<Extension>]
+    static member Post<'Task, 'TResult>(this : Actor<'Task, 'TResult>, message : 'Task) : Guid =
+        let actor = ActorImpl<'Task, 'TResult>.Instance(this)
         actor.Post(message)
     [<Extension>]
-    static member Post<'Task>(this : ActorDefinition<'Task, 'TResult>, message : 'Task, fireAndForget : bool) : Guid = 
-        let actor = Actor<_,_>.Instance(this)
-        actor.Post(message, fireAndForget)
-    [<Extension>]
-    static member PostAsync<'Task>(this : ActorDefinition<'Task, 'TResult>, message : 'Task) : Task<Guid> =
-        let actor = Actor<_,_>.Instance(this)
+    static member PostAsync<'Task, 'TResult>(this : Actor<'Task, 'TResult>, message : 'Task) : Task<Guid> =
+        let actor = ActorImpl<'Task, 'TResult>.Instance(this)
         actor.PostTask(message)
     [<Extension>]
-    static member PostAsync<'Task>(this : ActorDefinition<'Task, 'TResult>, message : 'Task, fireAndForget : bool) : Task<Guid> = 
-        let actor = Actor<_,_>.Instance(this)
-        actor.PostTask(message, fireAndForget)
-//    [<Extension>]
-//    static member GetResult(this : ActorDefinition<'Task, 'TResult>, resultId : Guid) : Async<'TResult> = 
-//        let actor = Actor<_,_>.Instance(this)
-//        actor.GetResult(resultId.ToString("N"), Timeout.Infinite, false)
-//    [<Extension>]
-//    static member GetResult(this : ActorDefinition<'Task, 'TResult>, resultId : Guid, millisecondsTimeout) : Async<'TResult> = 
-//        let actor = Actor<_,_>.Instance(this)
-//        actor.GetResult(resultId.ToString("N"), millisecondsTimeout, false)
+    static member TryPost<'Task, 'TResult>(this : Actor<'Task, 'TResult>, message : 'Task, [<Out>] resultGuid : byref<Guid>) =
+        let actor = ActorImpl<'Task, 'TResult>.Instance(this)
+        actor.TryPost(message, &resultGuid)
+    [<Extension>]
+    static member TryPostAsync<'Task, 'TResult>(this : Actor<'Task, 'TResult>, message : 'Task) =
+        let actor = ActorImpl<'Task, 'TResult>.Instance(this)
+        actor.TryPostTask(message)
+    [<Extension>]
 
+    static member GetResult(this : Actor<'Task, 'TResult>, resultGuid : Guid) : 'TResult = 
+        let actor = ActorImpl<'Task, 'TResult>.Instance(this)
+        actor.GetResult(resultGuid)
+    [<Extension>]
+    static member TryGetResult(this : Actor<'Task, 'TResult>, resultGuid : Guid, [<Out>] result : byref<'TResult>) : bool = 
+        let actor = ActorImpl<'Task, 'TResult>.Instance(this)
+        actor.TryGetResult(resultGuid, &result)
+    [<Extension>]
+    static member GetResultAsync(this : Actor<'Task, 'TResult>, resultGuid : Guid) : Task<'TResult> = 
+        let actor = ActorImpl<'Task, 'TResult>.Instance(this)
+        actor.GetResultTask(resultGuid)
+    [<Extension>]
+    static member TryGetResultAsync(this : Actor<'Task, 'TResult>, resultGuid : Guid, [<Out>] result : byref<'TResult>) : Task<bool*'TResult> = 
+        let actor = ActorImpl<'Task, 'TResult>.Instance(this)
+        actor.TryGetResultTask(resultGuid)
 
 
 namespace Fredis.FSharp
@@ -552,31 +625,23 @@ open System.Threading
 open System.Runtime.CompilerServices
 
 [<Extension>]
-type ActorDefinitionExtension<'Task, 'TResult> () =
+type ActorExtension<'Task, 'TResult> () =
     [<Extension>]
-    static member Post<'Task>(this : ActorDefinition<'Task, 'TResult>, message : 'Task) : Guid =
-        let actor = Actor<_,_>.Instance(this)
+    static member Start(this : Actor<'Task, 'TResult>) : unit = 
+        let actor = ActorImpl<_,_>.Instance(this)
+        actor.Start()
+    [<Extension>]
+    static member Stop(this : Actor<'Task, 'TResult>) : unit = 
+        let actor = ActorImpl<_,_>.Instance(this)
+        actor.Stop()
+    [<Extension>]
+    static member Post<'Task>(this : Actor<'Task, 'TResult>, message : 'Task) : Guid =
+        let actor = ActorImpl<_,_>.Instance(this)
         actor.Post(message)
     [<Extension>]
-    static member Post<'Task>(this : ActorDefinition<'Task, 'TResult>, message : 'Task, fireAndForget : bool) : Guid = 
-        let actor = Actor<_,_>.Instance(this)
-        actor.Post(message, fireAndForget)
-//    [<Extension>]
-//    static member PostAsync<'Task>(this : ActorDefinition<'Task, 'TResult>, message : 'Task) : Async<Guid> =
-//        let actor = Actor<_,_>.Instance(this)
-//        let resultGuid = Guid.NewGuid()
-//        actor.Post(message, resultGuid, [||], false)
-//    [<Extension>]
-//    static member PostAsync<'Task>(this : ActorDefinition<'Task, 'TResult>, message : 'Task, fireAndForget : bool) : Async<Guid> = 
-//        let actor = Actor<_,_>.Instance(this)
-//        let resultGuid = Guid.NewGuid()
-//        actor.Post(message, resultGuid, [||], fireAndForget)
-//
-//    [<Extension>]
-//    static member GetResult(this : ActorDefinition<'Task, 'TResult>, resultId : Guid) : Async<'TResult> = 
-//        let actor = Actor<_,_>.Instance(this)
-//        actor.GetResult(resultId.ToString("N"), Timeout.Infinite, false)
-//    [<Extension>]
-//    static member GetResult(this : ActorDefinition<'Task, 'TResult>, resultId : Guid, millisecondsTimeout) : Async<'TResult> = 
-//        let actor = Actor<_,_>.Instance(this)
-//        actor.GetResult(resultId.ToString("N"), millisecondsTimeout, false)
+    static member PostAsync<'Task>(this : Actor<'Task, 'TResult>, message : 'Task, fireAndForget : bool) : Async<Guid> = 
+        let actor = ActorImpl<_,_>.Instance(this)
+        actor.PostAsync(message, fireAndForget)
+    
+
+

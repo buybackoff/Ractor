@@ -52,12 +52,23 @@ namespace Fredis {
             return await GetDb().KeyDeleteAsync(ks);
         }
 
+
+        // TODO Eval deserialization works only for previously serialized values!
+        // TODO should add an option to avoid deserialization!
+
         //Eval now doesn't prefixes keys, should use redis.KeyNameSpace + ":" + key to access a key.
         public TResult Eval<TResult>(string script, string[] keys = null, object[] values = null) {
             var result = GetDb().ScriptEvaluate(script,
                 keys == null ? null : keys.Select(k => (RedisKey)(k)).ToArray(),
                 values == null ? null : values.Select(PackValueNullable).ToArray());
             return UnpackResultNullable<TResult>((RedisValue)result);
+        }
+
+        public void Eval(string script, string[] keys = null, object[] values = null) {
+            var result = GetDb().ScriptEvaluate(script,
+                keys == null ? null : keys.Select(k => (RedisKey)(k)).ToArray(),
+                values == null ? null : values.Select(PackValueNullable).ToArray());
+            return;
         }
 
         //Eval now doesn't prefixes keys, should use redis.KeyNameSpace + ":" + key to access a key.
