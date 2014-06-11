@@ -62,59 +62,59 @@ namespace Fredis.CS.Tests {
         }
 
         private static async Task<bool> Benchmark(int factor) {
-            const long repeat = 1000L;
-            const long totalMessagesReceived = repeat * 2;
-            //times 2 since the client and the destination both send messages
+            //const long repeat = 1000L;
+            //const long totalMessagesReceived = repeat * 2;
+            ////times 2 since the client and the destination both send messages
 
-            long repeatsPerClient = repeat / factor;
+            //long repeatsPerClient = repeat / factor;
 
-            var tasks = new List<Task>();
+            //var tasks = new List<Task>();
 
-            var fredis = new Fredis("localhost");
+            //var fredis = new Fredis("localhost");
 
-            var ping = fredis.CreateActor<string, string>("ping", x => {
-                if (x == "PING") {
-                    var t = new TaskCompletionSource<string>();
-                    t.SetResult("PONG");
-                    return t.Task;
-                }
-                throw new ApplicationException();
-            });
+            //var ping = fredis.CreateActor<string, string>("ping", x => {
+            //    if (x == "PING") {
+            //        var t = new TaskCompletionSource<string>();
+            //        t.SetResult("PONG");
+            //        return t.Task;
+            //    }
+            //    throw new ApplicationException();
+            //});
 
-            ping.Start();
+            //ping.Start();
 
 
-            Stopwatch sw = Stopwatch.StartNew();
+            //Stopwatch sw = Stopwatch.StartNew();
 
-            for (int i = 0; i < factor; i++) {
+            //for (int i = 0; i < factor; i++) {
 
-                var t = Task.Run(
-                    () => {
-                        for (int j = 0; j < repeatsPerClient; j++) {
-                            var pong = ping.PostAndGetResultAsync("PING").Result;
-                            if(pong != "PONG") throw new ApplicationException();
-                        }
-                    });
-                tasks.Add(t);
-            }
+            //    var t = Task.Run(
+            //        () => {
+            //            for (int j = 0; j < repeatsPerClient; j++) {
+            //                var pong = ping.PostAndGetResultAsync("PING").Result;
+            //                if(pong != "PONG") throw new ApplicationException();
+            //            }
+            //        });
+            //    tasks.Add(t);
+            //}
 
-            await Task.WhenAll(tasks.ToArray());
-            sw.Stop();
+            //await Task.WhenAll(tasks.ToArray());
+            //sw.Stop();
 
-            long throughput = totalMessagesReceived / sw.ElapsedMilliseconds * 1000;
-            if (throughput > _bestThroughput) {
-                Console.ForegroundColor = ConsoleColor.Green;
-                _bestThroughput = throughput;
-                _redCount = 0;
-            } else {
-                _redCount++;
-                Console.ForegroundColor = ConsoleColor.Red;
-            }
+            //long throughput = totalMessagesReceived / sw.ElapsedMilliseconds * 1000;
+            //if (throughput > _bestThroughput) {
+            //    Console.ForegroundColor = ConsoleColor.Green;
+            //    _bestThroughput = throughput;
+            //    _redCount = 0;
+            //} else {
+            //    _redCount++;
+            //    Console.ForegroundColor = ConsoleColor.Red;
+            //}
 
-            Console.WriteLine("{0}, {1} messages/s, {2}", factor, throughput, totalMessagesReceived);
+            //Console.WriteLine("{0}, {1} messages/s, {2}", factor, throughput, totalMessagesReceived);
 
-            if (_redCount > 3)
-                return false;
+            //if (_redCount > 3)
+            //    return false;
 
             return true;
         }
