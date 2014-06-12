@@ -65,10 +65,9 @@ namespace Fredis {
         }
 
         public void Eval(string script, string[] keys = null, object[] values = null) {
-            var result = GetDb().ScriptEvaluate(script,
+            GetDb().ScriptEvaluate(script,
                 keys == null ? null : keys.Select(k => (RedisKey)(k)).ToArray(),
                 values == null ? null : values.Select(PackValueNullable).ToArray());
-            return;
         }
 
         //Eval now doesn't prefixes keys, should use redis.KeyNameSpace + ":" + key to access a key.

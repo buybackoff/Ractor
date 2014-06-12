@@ -137,32 +137,54 @@ type internal ActorImpl<'Task, 'TResult>
     static let actors = Dictionary<obj, obj>()
     static let resultsCache = MemoryCache.Default
 
-    let collectGarbage() =
-        let lua = 
-            @"  local previousKey = KEYS[1]..':previousKeys'
-                local currentKey = KEYS[1]..':currentKeys'
-                local currentItems = redis.call('HKEYS', KEYS[1])
-                local res = 0
-                redis.call('DEL', currentKey)
-                if redis.call('HLEN', KEYS[1]) > 0 then
-                   redis.call('SADD', currentKey, unpack(currentItems))
-                   local intersect
-                   if redis.call('SCARD', previousKey) > 0 then
-                       intersect = redis.call('SINTER', previousKey, currentKey)
-                       if #intersect > 0 then
-                            redis.call('HDEL', KEYS[1], unpack(intersect))
-                            res = #intersect
+    let rec collectGarbage() =
+        async {
+            let resultsScript = 
+                @"  local previousKey = KEYS[1]..':previousKeys'
+                    local currentKey = KEYS[1]..':currentKeys'
+                    local currentItems = redis.call('HKEYS', KEYS[1])
+                    local res = 0
+                    redis.call('DEL', currentKey)
+                    if redis.call('HLEN', KEYS[1]) > 0 then
+                       redis.call('SADD', currentKey, unpack(currentItems))
+                       local intersect
+                       if redis.call('SCARD', previousKey) > 0 then
+                           intersect = redis.call('SINTER', previousKey, currentKey)
+                           if #intersect > 0 then
+                                redis.call('HDEL', KEYS[1], unpack(intersect))
+                                res = #intersect
+                           end
                        end
-                   end
-                end
-                redis.call('DEL', previousKey)
-                if #currentItems > 0 then
-                    redis.call('SADD', previousKey, unpack(currentItems))
-                end
-                return res
-            "
-        while true do
-            //Console.WriteLine("GC started")
+                    end
+                    redis.call('DEL', previousKey)
+                    if #currentItems > 0 then
+                        redis.call('SADD', previousKey, unpack(currentItems))
+                    end
+                    return res
+                "
+            let pipelineScript = 
+                @"  local previousKey = KEYS[1]..':previousKeys'
+                    local currentKey = KEYS[1]..':currentKeys'
+                    local currentItems = redis.call('HKEYS', KEYS[1])
+                    local res = 0
+                    redis.call('DEL', currentKey)
+                    if redis.call('HLEN', KEYS[1]) > 0 then
+                       redis.call('SADD', currentKey, unpack(currentItems))
+                       local intersect
+                       if redis.call('SCARD', previousKey) > 0 then
+                           intersect = redis.call('SINTER', previousKey, currentKey)
+                           if #intersect > 0 then
+                                redis.call('LPUSH', KEYS[2], unpack(intersect))
+                                res = #intersect
+                           end
+                       end
+                    end
+                    redis.call('DEL', previousKey)
+                    if #currentItems > 0 then
+                        redis.call('SADD', previousKey, unpack(currentItems))
+                    end
+                    return res
+                "
             let expiry = Nullable<TimeSpan>(TimeSpan.FromMilliseconds(float garbageCollectionPeriod))
             let entered = redis.Set<string>(lockKey, "collecting garbage", 
                             expiry, When.NotExists, false)
@@ -170,23 +192,24 @@ type internal ActorImpl<'Task, 'TResult>
             let counts  =
                 if entered then
                     //Console.WriteLine("GC entered: " + redis.KeyNameSpace + ":" + resultsKey)
-                    let res = redis.Eval(lua, [|redis.KeyNameSpace + ":" + resultsKey|])
+                    let r = redis.Eval(resultsScript, [|redis.KeyNameSpace + ":" + resultsKey|])
                     //Console.WriteLine("Collected results: " + res.ToString() )
-                    let pipel =
+                    let p =
                         if started then
-                             redis.Eval(lua, [|redis.KeyNameSpace + ":" + pipelineKey|])
+                                redis.Eval(pipelineScript, [|redis.KeyNameSpace + ":" + pipelineKey; inboxKey|])
                         else ()
                     //Console.WriteLine("Collected pipelines: " + pipel.ToString() )
-                    res, pipel
+                    r, p
                 else (),()
             //do! Async.Sleep(garbageCollectionPeriod)
-            Thread.Sleep(garbageCollectionPeriod)
-            ()
-    let gcTask = Task.Run(Action(collectGarbage))
+            do! Async.Sleep garbageCollectionPeriod
+            return! collectGarbage()
+            }
 
     do
         redis.Serializer <-  Serialisers.Pickler
         checkGates() |> Async.Start
+        collectGarbage() |> Async.Start
 
     static member LoadMonitor
         with get () = loadMonitor
