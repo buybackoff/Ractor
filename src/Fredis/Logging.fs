@@ -1,10 +1,16 @@
 ﻿// from http://colinbull.github.io/Fsharp.Actor/Actor.html
 namespace Fredis
 
+// TODO examine the behavior of ConditionalAttribute - never used it before.
+
 open System
+open System.Diagnostics
 
 type internal ILogger = 
+    
+    [<Conditional("DEBUG")>] 
     abstract Debug : string * exn option -> unit
+
     abstract Info : string * exn option -> unit
     abstract Warning : string * exn option -> unit
     abstract Error : string * exn option -> unit
@@ -28,14 +34,20 @@ module internal Logging =
             Console.WriteLine(msg)
             Console.ForegroundColor <- ConsoleColor.White
         { new ILogger with
+              
+              [<Conditional("DEBUG")>]
               member x.Debug(msg, exn) = write "debug" (msg, exn)
+              
               member x.Info(msg, exn) = write "info" (msg, exn)
               member x.Warning(msg, exn) = write "warn" (msg, exn)
               member x.Error(msg, exn) = write "error" (msg, exn) }
     
     let Silent = 
         { new ILogger with
+              
+              [<Conditional("DEBUG")>]
               member x.Debug(msg, exn) = () |> ignore
+              
               member x.Info(msg, exn) = () |> ignore
               member x.Warning(msg, exn) = () |> ignore
               member x.Error(msg, exn) = () |> ignore }

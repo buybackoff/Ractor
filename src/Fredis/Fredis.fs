@@ -6,43 +6,37 @@ open System.Threading
 open System.Threading.Tasks
 open Fredis
 
-// TODO System messages & tags
+// TODO System messages
+// TODO tags for conditional execution - start only if some tags in environment are set
+// e.g. AWS tags for crawlers, app servers, front ends - the deployment code should be 
+// identical everywhere but the actor behavior should depend on the tags in the environment
 // TODO test high CPU load and many (1000+) IO-like actors
-// TODO on Fredis creatin check if static Actor.DefaultRedisConnection is set - if not, set it to Fredis's one
 
-type Fredis(connectionString : string) = 
-    let redis = Redis(connectionString, "Fredis")
-    
-    // It could be possible to have several instances of Fredis, via this repo we
-    // could access actors from any one by name. We just require unique names accross all Fredis instances
-    
+type Fredis(redisConnectionString : string) = 
+    let redis = Redis(redisConnectionString, "Fredis")
+       
     static let dbs = Dictionary<string, IPocoPersistor>()
     static let blobs = Dictionary<string, IBlobPersistor>()
     static let redises = Dictionary<string, Redis>()  
 
     do
         redis.Serializer <- Serialisers.Pickler
-        // TODO if redis with id "" is not set yet set it to the first one created
-        // TODO on Fredis creatin check if static Actor.DefaultRedisConnection is set - if not, set it to Fredis's one
+
+        if String.IsNullOrEmpty(ActorImpl<_,_>.DefaultRedisConnectionString) then
+            ActorImpl<_,_>.DefaultRedisConnectionString <- redisConnectionString
 
     // for testing
     member internal this.CloneActor<'Task, 'TResult>(def : Actor<'Task, 'TResult>)=
         let actor = ActorImpl.Instance(def)
         let clone = new ActorImpl<_,_>(actor.RedisConnectionString, actor.Id, actor.Computation, 
                         actor.ResultTimeout, actor.LowPriority, actor.Optimistic)
-        //clone.semaphor <- semaphor
         clone
 
     member internal this.CloneActor<'Task, 'TResult>(def : Fredis.FSharp.Actor<'Task, 'TResult>)=
         let actor = ActorImpl.Instance(def)
         let clone = new ActorImpl<_,_>(actor.RedisConnectionString, actor.Id, actor.Computation, 
                         actor.ResultTimeout, actor.LowPriority, actor.Optimistic)
-        //clone.semaphor <- semaphor
         clone
-
-
-//    static member Actor<'Task, 'TResult>(definition: Actor<'Task, 'TResult>) = 
-//        ActorImpl<_,_>.Instance(definition)
 
 
     static member RegisterDB(persistor : IPocoPersistor) = Fredis.RegisterDB(persistor, "")
@@ -83,9 +77,11 @@ type Fredis(connectionString : string) =
         redises.[id]
     static member GetRedis() = redises.[""]
 
-
+// erased by compiler, convenient to use from F#
 type F = Fredis
 
+
+// TODO uncomment and rethink operators
 //[<AutoOpen>]
 //module Operators = 
 //    let (<--) (id : string) (msg : 'Task) : unit = Fredis.GetActor<'Task, unit>(id).Post(msg)
@@ -98,7 +94,11 @@ type F = Fredis
 
 
 
-// TODO
+// TODO do we really need 1-to-many and many-to-1 continuations as a separate methods,
+// or it is good enough to call one actor from another... 
+// we need to store a reference (Guid) as a part of message to continuator so that
+// it could retry on power shutdown etc. Same issue as with 1-to-1.
+// 
 // ContinueWith
 // ->>- 1-1
 // ->>= 1-many

@@ -16,9 +16,7 @@ type internal ExceptionInfo<'T> =
 
 
 type AsyncManualResetEvent () =
-    
     //http://blogs.msdn.com/b/pfxteam/archive/2012/02/11/10266920.aspx
-
     [<VolatileFieldAttribute>]
     let mutable m_tcs = TaskCompletionSource<bool>()
 
@@ -69,46 +67,6 @@ type AsyncAutoResetEvent () =
 
 
 
-[<Obsolete>] // this is not for auto, but for manual when return result only once + reset
-//TODO manual
-// here in Set should use queue because multiple sets will overwrite result
-type AsyncAutoResultWaiter<'TResult> () =
-    
-    //http://blogs.msdn.com/b/pfxteam/archive/2012/02/11/10266923.aspx
-
-    let defaultValue:'TResult = Unchecked.defaultof<'TResult>
-    let m_waits = new Queue<TaskCompletionSource<'TResult>>()
-    let mutable m_signaled = defaultValue
-
-    member this.WaitAsync(timeout:int) = 
-        Monitor.Enter(m_waits)
-        try
-            if not (Object.Equals(m_signaled, defaultValue)) then
-                let result = m_signaled
-                m_signaled <- defaultValue
-                Task.FromResult(result)
-            else
-                let ct = new CancellationTokenSource(timeout)
-                let tcs = new TaskCompletionSource<'TResult>()
-                ct.Token.Register(Action(fun _ -> tcs.TrySetResult(defaultValue) |> ignore)) |> ignore
-                m_waits.Enqueue(tcs)
-                tcs.Task
-        finally
-            Monitor.Exit(m_waits)
-
-    member this.Set(result:'TResult) = 
-        let mutable toRelease = Unchecked.defaultof<TaskCompletionSource<'TResult>>
-        Monitor.Enter(m_waits)
-        try
-            if m_waits.Count > 0 then
-                toRelease <- m_waits.Dequeue() 
-            else 
-                if not (Object.Equals(m_signaled, defaultValue)) then m_signaled <- result
-            if toRelease <> null then toRelease.TrySetResult(result) |> ignore
-        finally
-            Monitor.Exit(m_waits)
-
-
 [<AutoOpenAttribute>]
 module Helpers =
     let isSubclassOfRawGeneric(generic: Type, toCheck: Type) : bool =
@@ -121,6 +79,7 @@ module Helpers =
             toCheck <- toCheck.BaseType
         res
 
+    [<ObsoleteAttribute>]
     let inline deleteRepeatingItemsInHSET (redis:Redis, hkey:string) =
         // self-containig script from params
         // set current items
