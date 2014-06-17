@@ -69,7 +69,6 @@ wraps around ServiceStack.ORMLite.v3, however there is no binary dependency and 
 in. Blob persistor saves large data objects to files or S3. """
 let tagsPersistence = "persistence DB database shards"
 
-
 // --------------------------------------------------------------------------------------
 // END TODO: The rest of the file includes standard build steps 
 // --------------------------------------------------------------------------------------
@@ -86,7 +85,10 @@ Target "AssemblyInfo" (fun _ ->
         Attribute.Product project
         Attribute.Description summary
         Attribute.Version release.AssemblyVersion
-        Attribute.FileVersion release.AssemblyVersion ] 
+        Attribute.FileVersion release.AssemblyVersion 
+        Attribute.InternalsVisibleTo "Fredis.CS.Tests"
+        Attribute.InternalsVisibleTo "Fredis.Tests"
+        Attribute.InternalsVisibleTo "Fredis.Profiler"] 
 )
 
 // --------------------------------------------------------------------------------------
