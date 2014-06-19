@@ -25,19 +25,6 @@ type Fredis(redisConnectionString : string) =
         if String.IsNullOrEmpty(ActorImpl<_,_>.DefaultRedisConnectionString) then
             ActorImpl<_,_>.DefaultRedisConnectionString <- redisConnectionString
 
-    // for testing
-    member internal this.CloneActor<'Task, 'TResult>(def : Actor<'Task, 'TResult>)=
-        let actor = ActorImpl.Instance(def)
-        let clone = new ActorImpl<_,_>(actor.RedisConnectionString, actor.Id, actor.Computation, 
-                        actor.ResultTimeout, actor.LowPriority, actor.Optimistic)
-        clone
-
-    member internal this.CloneActor<'Task, 'TResult>(def : Fredis.FSharp.Actor<'Task, 'TResult>)=
-        let actor = ActorImpl.Instance(def)
-        let clone = new ActorImpl<_,_>(actor.RedisConnectionString, actor.Id, actor.Computation, 
-                        actor.ResultTimeout, actor.LowPriority, actor.Optimistic)
-        clone
-
 
     static member RegisterDB(persistor : IPocoPersistor) = Fredis.RegisterDB(persistor, "")
     

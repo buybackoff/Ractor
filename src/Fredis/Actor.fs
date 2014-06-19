@@ -2,11 +2,14 @@
 
 
 namespace Fredis.FSharp
+open System
 // TODO PreserveOrder option is possible
 // need to lock inbox while executing a computation
 // and unlock upon returning its result
 [<AbstractClassAttribute>]
-type Actor<'Task, 'TResult>() = 
+type Actor<'Task, 'TResult>() as this = 
+    let mutable computationWithResultId : 'Task * string -> Async<'TResult> = 
+        fun (t,_) -> this.Computation(t)
     abstract Redis : string
     override this.Redis = ""
     /// <summary>
@@ -28,6 +31,11 @@ type Actor<'Task, 'TResult>() =
     override this.AutoStart with get() = true
     abstract Optimistic : bool with get
     override this.Optimistic with get() = false
+    member internal this.GetKey() = this.GetType().FullName + (if String.IsNullOrEmpty(this.InstanceId) then "" else ":" + this.InstanceId)
+    // extended computation for continuations
+    member internal this.ComputationWithResultId 
+        with get () = computationWithResultId
+        and set v = computationWithResultId <- v
 
 namespace Fredis
 
@@ -47,7 +55,9 @@ open Fredis
 type internal Envelope<'Task> = 'Task * string * string []
 
 [<AbstractClassAttribute>]
-type Actor<'Task, 'TResult>() = 
+type Actor<'Task, 'TResult>() as this = 
+    let mutable computationWithResultId : 'Task * string -> Async<'TResult> = 
+        fun (t,_) -> this.Computation(t) |> Async.AwaitTask
     abstract Redis : string with get
     override this.Redis with get() =  ""
     /// <summary>
@@ -71,14 +81,18 @@ type Actor<'Task, 'TResult>() =
     override this.AutoStart with get() = true
     abstract Optimistic : bool with get
     override this.Optimistic with get() = false
-
-
+    abstract GetKey : unit -> string
+    override this.GetKey() = this.GetType().FullName + (if String.IsNullOrEmpty(this.InstanceId) then "" else ":" + this.InstanceId)
+    // extended computation for continuations
+    member internal this.ComputationWithResultId 
+        with get () = computationWithResultId
+        and set v = computationWithResultId <- v
     
 
 type internal ActorImpl<'Task, 'TResult> 
     internal (redisConnectionString : string, id : string, 
                 computation : 'Task * string -> Async<'TResult>, resultTimeout : int, 
-                lowPriority : bool, optimistic : bool) = 
+                lowPriority : bool, autoStart : bool, optimistic : bool) as this = 
     let redis = new Redis(redisConnectionString, "Fredis")
     let garbageCollectionPeriod = resultTimeout
     let mutable started = false
@@ -213,6 +227,8 @@ type internal ActorImpl<'Task, 'TResult>
         redis.Serializer <-  Serialisers.Pickler
         checkGates() |> Async.Start
         collectGarbage() |> Async.Start
+        if autoStart then this.Start()
+
 
     static member LoadMonitor
         with get () = loadMonitor
@@ -222,37 +238,40 @@ type internal ActorImpl<'Task, 'TResult>
     static member val DefaultRedisConnectionString = "" with get, set
     static member ActorsRepo with get () = actors
     static member Instance<'Task, 'TResult>(definition:obj) : ActorImpl<'Task, 'TResult> = 
-        let mutable key = definition.GetType().FullName
-        if ActorImpl<_,_>.ActorsRepo.ContainsKey(key) then 
-                ActorImpl<_,_>.ActorsRepo.[key] :?> ActorImpl<'Task, 'TResult>
-        else
+            let mutable key = ""
             // code duplication is OK here, otherwise will need interface, etc... and still type matching
             let actor = 
                 match definition with
                 | x when isSubclassOfRawGeneric(typedefof<Actor<'Task, 'TResult>>, x.GetType()) -> // :? Actor<'Task, 'TResult> as taskDefinition -> 
                     let taskDefinition = x :?> Actor<'Task, 'TResult>
-                    key <- key + (if String.IsNullOrEmpty(taskDefinition.InstanceId) then "" else ":" + taskDefinition.InstanceId)
-                    let conn = 
-                        if String.IsNullOrWhiteSpace(taskDefinition.Redis) then
-                            if String.IsNullOrWhiteSpace(ActorImpl<_,_>.DefaultRedisConnectionString) then
-                                raise (new ArgumentException("Redis connection string is not set"))
-                            else
-                                ActorImpl<_,_>.DefaultRedisConnectionString
-                        else taskDefinition.Redis
-                    let comp (msg:'Task * string) : Async<'TResult> = taskDefinition.Computation(fst msg) |> Async.AwaitTask
-                    ActorImpl(conn, key, comp, taskDefinition.ResultTimeout, taskDefinition.LowPriority, taskDefinition.Optimistic)
+                    key <-  taskDefinition.GetKey()
+                    if ActorImpl<_,_>.ActorsRepo.ContainsKey(key) then 
+                            ActorImpl<_,_>.ActorsRepo.[key] :?> ActorImpl<'Task, 'TResult>
+                    else
+                        let conn = 
+                            if String.IsNullOrWhiteSpace(taskDefinition.Redis) then
+                                if String.IsNullOrWhiteSpace(ActorImpl<_,_>.DefaultRedisConnectionString) then
+                                    raise (new ArgumentException("Redis connection string is not set"))
+                                else
+                                    ActorImpl<_,_>.DefaultRedisConnectionString
+                            else taskDefinition.Redis
+                        let comp (msg:'Task * string) : Async<'TResult> = taskDefinition.ComputationWithResultId(msg)
+                        ActorImpl(conn, key, comp, taskDefinition.ResultTimeout, taskDefinition.LowPriority, taskDefinition.AutoStart, taskDefinition.Optimistic)
                 | x when isSubclassOfRawGeneric(typedefof<Fredis.FSharp.Actor<'Task, 'TResult>>, x.GetType()) -> //:? Fredis.FSharp.Actor<'Task, 'TResult> as asyncDefinition ->
                     let asyncDefinition = x :?> Fredis.FSharp.Actor<'Task, 'TResult>
-                    key <- key + (if String.IsNullOrEmpty(asyncDefinition.InstanceId) then "" else ":" + asyncDefinition.InstanceId)
-                    let conn = 
-                        if String.IsNullOrWhiteSpace(asyncDefinition.Redis) then
-                            if String.IsNullOrWhiteSpace(ActorImpl<_,_>.DefaultRedisConnectionString) then
-                                raise (new ArgumentException("Redis connection string is not set"))
-                            else
-                                ActorImpl<_,_>.DefaultRedisConnectionString
-                        else asyncDefinition.Redis
-                    let comp (msg:'Task * string) : Async<'TResult> = asyncDefinition.Computation(fst msg)
-                    ActorImpl(conn, key, comp, asyncDefinition.ResultTimeout, asyncDefinition.LowPriority, asyncDefinition.Optimistic)
+                    key <-  asyncDefinition.GetKey()
+                    if ActorImpl<_,_>.ActorsRepo.ContainsKey(key) then 
+                            ActorImpl<_,_>.ActorsRepo.[key] :?> ActorImpl<'Task, 'TResult>
+                    else
+                        let conn = 
+                            if String.IsNullOrWhiteSpace(asyncDefinition.Redis) then
+                                if String.IsNullOrWhiteSpace(ActorImpl<_,_>.DefaultRedisConnectionString) then
+                                    raise (new ArgumentException("Redis connection string is not set"))
+                                else
+                                    ActorImpl<_,_>.DefaultRedisConnectionString
+                            else asyncDefinition.Redis
+                        let comp (msg:'Task * string) : Async<'TResult> = asyncDefinition.ComputationWithResultId(msg)
+                        ActorImpl(conn, key, comp, asyncDefinition.ResultTimeout, asyncDefinition.LowPriority, asyncDefinition.AutoStart, asyncDefinition.Optimistic)
                 | _ -> failwith "wrong definition type"
             ActorImpl<_,_>.ActorsRepo.[key] <- actor
             actor
@@ -412,7 +431,7 @@ type internal ActorImpl<'Task, 'TResult>
     
     //#endregion
 
-    member private this.Post<'Task>(message : 'Task, resultId : string, callerIds : string []) : Async<string> = 
+    member internal this.Post<'Task>(message : 'Task, resultId : string, callerIds : string []) : Async<string> = 
         let envelope : Envelope<'Task> = message, resultId, callerIds
         let remotePost() = 
             Console.WriteLine("Posted Redis message") 
@@ -505,9 +524,9 @@ type internal ActorImpl<'Task, 'TResult>
     
     // TODO do we need to delete results manually (additional command per each result) or clean stale results
     // in a periodic script - do both, then measure what is gain without manual delete of each item
-    [<ObsoleteAttribute>]
-    member private this.DeleteResult(resultId : string) : unit = 
-        redis.HDel(resultsKey, resultId, true) |> ignore
+//    [<ObsoleteAttribute>]
+//    member private this.DeleteResult(resultId : string) : unit = 
+//        redis.HDel(resultsKey, resultId, true) |> ignore
 
 
     member this.PostAndGetResult(message : 'Task) : 'TResult = 
@@ -537,8 +556,7 @@ type internal ActorImpl<'Task, 'TResult>
         }
         
 
-
-    member private this.PostAndGetResult(message : 'Task, resultId : string, callerIds : string array) : Async<'TResult> = 
+    member internal this.PostAndGetResult(message : 'Task, resultId : string, callerIds : string array) : Async<'TResult> = 
         let resultGuid = Guid.ParseExact(resultId, "N")
         //let envelope : Envelope<'Task> = message, resultId, callerIds
         let standardCall() = async {
@@ -571,6 +589,7 @@ type internal ActorImpl<'Task, 'TResult>
 
     
     // TODO
+    [<ObsoleteAttribute>]
     member this.Continuator(continuation : Actor<'TResult, 'TCResult>) : ActorImpl<'Task, 'TCResult> = 
         let continuation = ActorImpl<_, _>.Instance(continuation)
         let id = this.Id + "->>-" + continuation.Id
@@ -598,7 +617,7 @@ type internal ActorImpl<'Task, 'TResult>
                         return cResult
                     }
             
-            let actor = new ActorImpl<'Task, 'TCResult>(redisConnStr, id, computation, this.ResultTimeout + continuation.ResultTimeout, false, false)
+            let actor = new ActorImpl<'Task, 'TCResult>(redisConnStr, id, computation, this.ResultTimeout + continuation.ResultTimeout, false, true, false)
             ActorImpl<_, _>.ActorsRepo.[id] <- box actor
             actor
     
@@ -687,7 +706,59 @@ type ActorExtension() =
     static member TryPostAndGetResultAsync<'Task, 'TResult>(this : Actor<'Task, 'TResult>, message : 'Task) : Task<bool*'TResult> =
         let actor = ActorImpl<'Task, 'TResult>.Instance(this)
         actor.TryPostAndGetResultTask(message)
+    [<Extension>]
+    static member ContinueWith<'Task, 'TResult1, 'TResult2>
+        (this : Actor<'Task, 'TResult1>, 
+            continuation : Actor<'TResult1, 'TResult2>) : Actor<'Task, 'TResult2> =
+            let actor = ActorImpl<'Task, 'TResult1>.Instance(this)
+            let cActor = ActorImpl<'TResult1, 'TResult2>.Instance(continuation)
+            let computation : 'Task * string -> Async<'TResult2> = 
+                fun message -> 
+                    async { 
+                        let task, resultId  = message
+                        // TODO that will fail because three result listeners will wait for the 
+                        // same id.
+                        // why not just use different ids? because we could lose track of the chain
+                        // use Guid:TypeFullName scheme
+                        actor.Post(task, resultId, [| cActor.Id |]) |> ignore
+                        // do not delete intermediate results untill the final result is saved
+                        let! result = actor.GetResultAsync(Guid.ParseExact(resultId, "N")) // TODO private methods should use string everywhere
+                        Debug.Print("First result: " + result.ToString())
+                        cActor.Post(result, resultId, [||]) |> ignore
+                        // delete final result
+                        let! cResult = cActor.GetResultAsync(Guid.ParseExact(resultId, "N"))
+                        Debug.Print("Second result: " + cResult.ToString())
+                        // delete intemediate result after finishing
+                        return cResult
+                    }
+            // some hardship with continuation
+            // 1. stale pipeline should not be returned to inbox but reported as an error
+            // 2. they should be returned to another list and retried from there
+            // 3. do we need result id as a part of computation if it is a part of envelope,
+            //    for continuations we have callerIds
+            // ... the whole design must have been done for continuations first, then single call as a simpler case
+            // if first actor knows that it must transfer results to callerIds inboxes, we 
+            // GetResult must 
 
+            // Algo:
+            // resultId is created in continuation actor
+            // we get it from cont.actor computation hook
+            // continuator will try till the end as a single actor, its internal computation is to chain 
+            // ... to other actors
+            // Start GetResultsync on second as child task => Post to first => wait for child task 
+            // Passing should be done atomically from 1st to 2nd by callerIds
+            //  - do we need a concept of durable results? what if second actor dies, and then
+            // continuator tries again it will re-run first task
+            let result = 
+                { new Actor<'Task, 'TResult2>() with
+                       override __.Redis with get() = actor.RedisConnectionString
+                       override __.GetKey() = "(" + this.GetKey() + "->>-" + continuation.GetKey() + ")"
+                       override __.ResultTimeout with get() = this.ResultTimeout + continuation.ResultTimeout
+                       //override __.Computation(input) = computation(input)
+                }
+            // overwrite default computation that ignores resultId with the proper one
+            result.ComputationWithResultId <- computation
+            result
 
 namespace Fredis.FSharp
 open System
