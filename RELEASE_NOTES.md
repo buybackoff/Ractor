@@ -1,3 +1,9 @@
+#### 0.0.11 - June 19 2014
+* ServiceStack.ORMLite v4 for POCOs
+
+#### 0.0.10 - June 19 2014
+* June 19 2014 update
+
 #### 0.0.9 - May 5 2014
 * C# methods and added FSharp.Core.dll to NuGet package
 

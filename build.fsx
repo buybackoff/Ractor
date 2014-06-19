@@ -203,4 +203,4 @@ Target "All" DoNothing
   ==> "ReleaseDocs"
   ==> "Release"
 
-RunTargetOrDefault "Build"
+RunTargetOrDefault "NuGet"

@@ -1,6 +1,7 @@
 ﻿using System;
 using System.IO;
 using System.Threading.Tasks;
+using ServiceStack;
 using ServiceStack.Common;
 using ServiceStack.Text;
 
@@ -53,7 +54,7 @@ namespace Fredis {
         }
 
         public bool TryPut<T>(string key, T poco) {
-            Stream stream = new MemoryStream(poco.ToJsv().GZip());
+            Stream stream = new MemoryStream(poco.ToJsv().ToUtf8Bytes().Zip());
             return TryPut(_path, key, stream);
         }
 
@@ -64,7 +65,7 @@ namespace Fredis {
         public async Task<bool> TryPutAsync<T>(string key, T poco) {
             return await Task.Factory.StartNew(() => {
 
-                Stream stream = new MemoryStream(poco.ToJsv().GZip());
+                Stream stream = new MemoryStream(poco.ToJsv().ToUtf8Bytes().Zip());
                 var res = TryPut(_path, key, stream);
                 return res;
             });
@@ -84,7 +85,7 @@ namespace Fredis {
             if (!res) return false;
             var ms = new MemoryStream();
             stream.CopyTo(ms);
-            poco = ms.ToArray().GUnzip().FromJsv<T>();
+            poco = ms.ToArray().UnZip().FromUtf8Bytes().FromJsv<T>();
             return true;
         }
 
@@ -105,7 +106,7 @@ namespace Fredis {
                 MemoryStream ms;
                 var suc = TryGet(key, out ms);
                 if (!suc) return Tuple.Create(false, poco);
-                poco = ms.ToArray().GUnzip().FromJsv<T>();
+                poco = ms.ToArray().UnZip().FromUtf8Bytes().FromJsv<T>();
                 return Tuple.Create(true, poco);
             });
         }

@@ -56,7 +56,7 @@ namespace Fredis {
 
 
     [AttributeUsage(AttributeTargets.Property)]
-    public class ForeignKeyAttribute : ServiceStack.OrmLite.ForeignKeyAttribute {
+    public class ForeignKeyAttribute : ServiceStack.DataAnnotations.ForeignKeyAttribute {
         public ForeignKeyAttribute(Type type) : base(type) { }
     }
 
@@ -153,7 +153,7 @@ namespace Fredis {
 
 
     [AttributeUsage(AttributeTargets.Class)]
-    public class SchemaAttribute : ServiceStack.OrmLite.SchemaAttribute {
+    public class SchemaAttribute : ServiceStack.DataAnnotations.SchemaAttribute {
         public SchemaAttribute(string name) : base(name) { }
     }
 

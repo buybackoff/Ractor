@@ -4,6 +4,7 @@ using System.IO.Compression;
 using System.Linq;
 using System.Security.Cryptography;
 using System.Text;
+using ServiceStack;
 using ServiceStack.Text;
 
 namespace Fredis {

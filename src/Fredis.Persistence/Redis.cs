@@ -5,6 +5,7 @@ using System.Diagnostics;
 using System.Globalization;
 using System.Linq;
 using System.Reflection;
+using ServiceStack;
 using ServiceStack.Common;
 using ServiceStack.Text;
 using StackExchange.Redis;

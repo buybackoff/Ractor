@@ -5,7 +5,7 @@ using System.Diagnostics;
 using System.Globalization;
 using System.Linq;
 using System.Linq.Expressions;
-using ServiceStack.Common.Extensions;
+using ServiceStack;
 using ServiceStack.OrmLite;
 using ServiceStack.Text;
 
@@ -16,9 +16,8 @@ namespace Fredis {
     public class BasePocoPersistor : IPocoPersistor {
         private readonly IOrmLiteDialectProvider _provider;
 
-        // coupling with SSv3.OrmLite only in base implementation, not in interface
-        // should be trivial to change for v4, but avoid interface dependency in Fredis due to the bad license
-        private OrmLiteConnectionFactory DbFactory { get; set; } // TODO? make public??
+        // public to reuse
+        public OrmLiteConnectionFactory DbFactory { get; set; } // TODO? make public??
 
         private readonly Dictionary<ushort, string> _shards = new Dictionary<ushort, string>();
 
@@ -193,7 +192,7 @@ namespace Fredis {
                     try {
                         for (var i = 0; i < length; i++) {
                             db.Insert(items[i]);
-                            var id = db.GetLastInsertId();
+                            var id = db.LastInsertId();
                             items[i].Id = id;
                         }
                         trans.Commit();
@@ -328,7 +327,7 @@ namespace Fredis {
                 using (var db = DbFactory.OpenDbConnection())
                 using (var trans = db.OpenTransaction()) {
                     try {
-                        db.DeleteAll(items);
+                        db.Delete(items);
                         trans.Commit();
                     } catch {
                         trans.Rollback();
@@ -442,7 +441,7 @@ namespace Fredis {
                     .AsParallel()
                     .WithDegreeOfParallelism(_shards.Count)
                     .WithExecutionMode(ParallelExecutionMode.ForceParallelism)
-                    .ForEach(dbName => {
+                    .Each(dbName => {
                         using (var db = DbFactory.OpenDbConnection(dbName.Key.ToString(CultureInfo.InvariantCulture))) {
                             db.ExecuteSql(sql);
                         }
@@ -472,7 +471,7 @@ namespace Fredis {
                     using (var db = DbFactory.OpenDbConnection(lu.Key.ToString(CultureInfo.InvariantCulture))) {
                         return shardedGuids.Count > 1
                             ? db.Select<T>(q => Sql.In(q.Guid, shardedGuids))
-                            : db.Single<T>("Guid = {0} LIMIT 1;", shardedGuids.Single()).ItemAsList();
+                            : db.SingleWhere<T>("Guid", shardedGuids.Single()).ItemAsList();
                         // "LIMIT 1" increases performance 15x in case when Guid index is not unique - same optimisation "stop when found first" as with uniue index
 
                     }
@@ -486,7 +485,7 @@ namespace Fredis {
             var isDistributed = typeof(IDistributedDataObject).IsAssignableFrom(typeof(T));
             if (isDistributed) throw new ApplicationException("Distributed objects should use Guid");
             using (var db = DbFactory.OpenDbConnection()) {
-                return db.GetByIds<T>(ids);
+                return db.SelectByIds<T>(ids);
             }
         }
 

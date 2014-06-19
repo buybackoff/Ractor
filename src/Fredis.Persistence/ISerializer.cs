@@ -1,5 +1,6 @@
 ﻿using System.Collections.Generic;
 using System.Text;
+using ServiceStack;
 using ServiceStack.Text;
 
 namespace Fredis {

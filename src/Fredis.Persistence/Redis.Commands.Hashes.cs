@@ -1,4 +1,5 @@
 ﻿using System.Threading.Tasks;
+using ServiceStack;
 using ServiceStack.Common;
 using ServiceStack.Text;
 using StackExchange.Redis;
@@ -59,9 +60,8 @@ namespace Fredis {
 
         public TValue HGet<TRoot, TValue>(TRoot root, string field, string hashKey = null) {
             var key = _nameSpace + GetItemFullKey(root) + ":hashes:" + (hashKey ?? GetTypePrefix<TValue>());
-            return IsTypeCompressed<TValue>()
-                ? ((byte[])GetDb().HashGet(key, field)).GUnzip().FromJsv<TValue>()
-                : ((string)GetDb().HashGet(key, field)).FromJsv<TValue>();
+            var result = GetDb().HashGet(key, field);
+            return UnpackResultNullable<TValue>(result);
         }
 
 
