@@ -16,9 +16,7 @@
     <tags>@tags@</tags>
     <dependencies>
       <dependency id="StackExchange.Redis" />
-      <dependency id="ServiceStack.Common" version="3.9.71" />
-      <dependency id="ServiceStack.Text" version="3.9.71" />
-      <dependency id="ServiceStack.OrmLite.SqlServer" version="3.9.71" />
+      <dependency id="ServiceStack.OrmLite.SqlServer" />
     </dependencies>
   </metadata>
   <files>

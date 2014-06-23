@@ -104,5 +104,31 @@ return result";
             Console.WriteLine(res);
         }
 
+
+        [Test]
+        public void TestSyncCallFromNestedAsyncs() {
+            // Have seen multiple timeout errors when a sync call to Redis
+            // was done from async Services and Hubs
+            var r = GetRedis();
+            Assert.True(First(r).Result);
+        }
+
+        private async Task<bool> First(Redis r) { return await Second(r); }
+
+        private async Task<bool> Second(Redis r) {
+            return await Third(r);
+        }
+
+        private async Task<bool> Third(Redis r) {
+
+            for (int i = 0; i < 10000; i++) {
+                r.HSet<string>("testKey", "testField", "testValue");
+                r.HGet<string>("testKey", "testField");
+                r.Del("testKey");
+            }
+            await Task.Delay(1);
+            return true;
+        }
+
     }
 }

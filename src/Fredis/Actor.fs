@@ -52,7 +52,7 @@ open System.Runtime.InteropServices
 open System.Runtime.CompilerServices
 open Fredis
 
-type internal Envelope<'Task> = 'Task * string * string []
+type internal Envelope<'Task> = 'Task * string * string [] // * DateTime monitor time from post to get and time for pure computation
 
 [<AbstractClassAttribute>]
 type Actor<'Task, 'TResult>() as this = 
@@ -98,7 +98,7 @@ type internal ActorImpl<'Task, 'TResult>
     let mutable started = false
     let mutable cts = new CancellationTokenSource()
     let messageWaiter = new AsyncAutoResetEvent()
-    let localResultWaiters = ConcurrentDictionary<string, ManualResetEventSlim>()
+    let localResultListeners = ConcurrentDictionary<string, ManualResetEventSlim>()
     let prefix = "{" + id + "}" + ":Mailbox" // braces for Redis cluster, so all objects for an actor are on the same shard
     // list of incoming messages
     let inboxKey = prefix + ":inbox" // TODO message is a tuple of resultId * callerId * payload
@@ -148,7 +148,10 @@ type internal ActorImpl<'Task, 'TResult>
         }
     let messageQueue = ConcurrentQueue<Envelope<'Task> * string>()
     static let actors = Dictionary<string, obj>()
+    // cache of local results
     static let resultsCache = MemoryCache.Default
+    // cache of result ids that we didn't listen to
+    static let resultsIdCache = MemoryCache.Default
 
     let rec collectGarbage() =
         async {
@@ -330,10 +333,20 @@ type internal ActorImpl<'Task, 'TResult>
                                 match messageNotification with
                                 | "" -> messageWaiter.Set() |> ignore
                                 | resultId -> 
-                                    if localResultWaiters.ContainsKey(resultId) then 
+                                    if localResultListeners.ContainsKey(resultId) then 
                                         //Debug.Print("Setting result handle: " + resultId)
-                                        localResultWaiters.[resultId].Set() |> ignore
-                                    else Debug.Print "Unexpected result id" // TODO test this condition
+                                        localResultListeners.[resultId].Set() |> ignore
+                                    else
+                                    // 1. we get all result ids and we must cache
+                                    // all results that we haven't explicitly waited
+                                    // by doing so, we could be safe with the first loop in 
+                                    // the result getter: local execution set MRE explicitly, while the cache 
+                                    // will tell us if there was a notification but we missed it.
+                                    // 2. by caching ids that we waited, we could reclaim a result
+                                    // after a worker death without re-posting a task (TryGetResultImmediate method)
+                                    resultsIdCache.Add(resultId, Object(), 
+                                        DateTimeOffset.Now.AddMilliseconds(float this.ResultTimeout)) 
+                                        |> ignore
                                 )
                             )
 
@@ -355,17 +368,18 @@ type internal ActorImpl<'Task, 'TResult>
                                     //Debug.Print("Completed computation for: " + resultId)
                                     
                                     // notify local waiter
-                                    if localResultWaiters.ContainsKey(resultId) then
+                                    if localResultListeners.ContainsKey(resultId) then
                                         // save trip to redis to get the result
                                         resultsCache.Add(resultId, result, 
                                             DateTimeOffset.Now.AddMilliseconds(float this.ResultTimeout)) 
                                             |> ignore
-                                        // save result even though doing locally    
+                                        // save result and notify others about it even though we are doing job locally 
                                         if not this.Optimistic then // TODO not sure about logic here and in the whole try block
                                             do! redis.HSetAsync(resultsKey, resultId, result, When.Always, false)
                                                 |> Async.AwaitTask
                                                 |> Async.Ignore
-                                        localResultWaiters.[resultId].Set() |> ignore
+                                            redis.Publish<string>(channelKey, resultId, this.Optimistic) |> ignore
+                                        localResultListeners.[resultId].Set() |> ignore
                                         
                                     else
                                         do! redis.HSetAsync(resultsKey, resultId, result, When.Always, false)
@@ -432,7 +446,7 @@ type internal ActorImpl<'Task, 'TResult>
     //#endregion
 
     member internal this.Post<'Task>(message : 'Task, resultId : string, callerIds : string []) : Async<string> = 
-        let envelope : Envelope<'Task> = message, resultId, callerIds
+        let envelope : Envelope<'Task> = message, resultId, callerIds //, DateTime.UtcNow
         let remotePost() = 
             Console.WriteLine("Posted Redis message") 
             let res = 
@@ -447,9 +461,9 @@ type internal ActorImpl<'Task, 'TResult>
             res
         let localPost() = 
             Console.WriteLine("Posted local message")
-            localResultWaiters.TryAdd(resultId, ManualResetEventSlim()) |> ignore 
+            localResultListeners.TryAdd(resultId, ManualResetEventSlim()) |> ignore 
             let pipelineId = Guid.NewGuid().ToString("N")
-            if not this.Optimistic then 
+            if not this.Optimistic then
                 redis.HSet<Envelope<'Task>>(pipelineKey, pipelineId, envelope, When.Always, false) |> ignore
             messageQueue.Enqueue(envelope, pipelineId)
             messageWaiter.Set() |> ignore
@@ -486,31 +500,144 @@ type internal ActorImpl<'Task, 'TResult>
 
     member this.GetResultAsync(resultGuid : Guid) : Async<'TResult> = 
         let resultId = resultGuid.ToString("N")
+        this.GetResultAsync(resultId)
+
+    member internal this.GetResultAsync(resultId : string) : Async<'TResult> = 
         //Debug.Print("Getting: " + resultId)
         let cached = resultsCache.Get(resultId)
-        if cached <> null then 
+        if cached <> null then
             async { return unbox cached }
         else 
-            let rec awaitResult tryCount = 
+            // in local case Post already added MRE and this line does nothing
+            localResultListeners.TryAdd(resultId, ManualResetEventSlim()) |> ignore 
+            let listener = localResultListeners.[resultId] 
+            let rec awaitResult tryCount =
                 async { 
-                    // TODO review timeout logic
-                    localResultWaiters.TryAdd(resultId, ManualResetEventSlim()) |> ignore 
-                    let waiter = localResultWaiters.[resultId]
-                    let cachedResult = resultsCache.Get(resultId)
-                    let! result = if cachedResult <> null then async { return unbox cachedResult }
-                                  else redis.HGetAsync<'TResult>(resultsKey, resultId) |> Async.AwaitTask
-                    if Object.Equals(result, null) then 
-                        let! signal = Async.AwaitWaitHandle(waiter.WaitHandle, 1000) // TODO proper to here
-                        if not signal then Debug.Print("Timeout in awaitResult")
-                        // TODO sould document that without timeout it is 60 minutes
-                        if tryCount > 10 then Debug.Fail("Cannot receive result for PostAndReply" + resultId)
+                    // NEW LOGIC
+                    // Avoid first blank trip to Redis in most cases
+                    // 1. we start waiting on waiter as a child task
+                    let! listenerTask = Async.AwaitWaitHandle(listener.WaitHandle, 1000) |> Async.StartChild
+                    // 2. we check id cache *after* that (otherwise we could lose a notification)
+                    let hasCachedId = resultsIdCache.Get(resultId) <> null
+                    // 3. if id cache doesn't have the target id, we wait on waiter - else we try to get result right away
+                    let signaled = ref false
+                    if not hasCachedId then
+                        // in local case, the MRE should be set ASAP and we should not miss that since no Redis pubsub is included
+                        // in remote case, a notification could have arrived to us before we added listener, if so - try to retrieve result and skip waiting on listener
+                        let! signal = listenerTask
+                        signaled := signal // false if intermediate timeout that is needed just in case Redis PubSub is not 100% reliable
+                    else
+                        signaled := true
+                    // 4. if we do not get result then repeat
+                    if !signaled then
+                        // try get result
+                        let cachedResult = resultsCache.Get(resultId)
+                        let! result =
+                            if cachedResult <> null then async { return unbox cachedResult }
+                            else redis.HGetAsync<'TResult>(resultsKey, resultId) |> Async.AwaitTask
+                        if Object.Equals(result, null) then
+                            Debug.Fail("Could not get result after positive signal!")
+                            if tryCount > Math.Max(this.ResultTimeout / 1000, 1) then Debug.Fail("Cannot get result for: " + resultId)
+                            return! awaitResult (tryCount + 1)
+                        else
+                            return result
+                    else
+                        if tryCount > Math.Max(this.ResultTimeout / 1000, 1) then Debug.Fail("Cannot get result for: " + resultId)
                         return! awaitResult (tryCount + 1)
-                    else 
-                        localResultWaiters.TryRemove(resultId) |> ignore
-                        return result
+
+                    // OLD LOGIC
+//                    let cachedResult = resultsCache.Get(resultId)
+//                    let! result = 
+//                        if cachedResult <> null then async { return unbox cachedResult }
+//                        else redis.HGetAsync<'TResult>(resultsKey, resultId) |> Async.AwaitTask
+//                    if Object.Equals(result, null) then
+//                        if firstLoopCheker.IsSome then 
+//                            (fst firstLoopCheker.Value).Set() |> ignore
+//                            (snd firstLoopCheker.Value) := false
+//                        let! signal = Async.AwaitWaitHandle(listener.WaitHandle, 1000) // need looping if lost a subscription message
+//                        if not signal then Debug.Print("Timeout in awaitResult")
+//                        // TODO sould document that without timeout it is 24 hours
+//                        if tryCount > 60*60*24 then Debug.Fail("Cannot receive result for PostAndReply" + resultId)
+//                        return! awaitResult (tryCount + 1)
+//                    else 
+//                        localResultListeners.TryRemove(resultId) |> ignore
+//                        if firstLoopCheker.IsSome then 
+//                            (fst firstLoopCheker.Value).Set() |> ignore
+//                            (snd firstLoopCheker.Value) := true
+//                        return result
                 }
-            async { let! t = Async.StartChild(awaitResult 1, this.ResultTimeout)
+            async { let! t = Async.StartChild(awaitResult 0, this.ResultTimeout)
                     return! t }
+
+    // TODO rewrite GetResult as WaitResult+TryGetResultImmediate
+    
+    member internal this.WaitResultAsync(resultId : string) : Async<bool> = 
+        //Debug.Print("Getting: " + resultId)
+        let cached = resultsCache.Get(resultId)
+        if cached <> null then
+            async { return true }
+        else 
+            // in local case Post already added MRE and this line does nothing
+            localResultListeners.TryAdd(resultId, ManualResetEventSlim()) |> ignore 
+            let listener = localResultListeners.[resultId] 
+            let rec awaitResult tryCount =
+                async { 
+                    let! listenerTask = Async.AwaitWaitHandle(listener.WaitHandle, 1000) |> Async.StartChild
+                    let hasCachedId = resultsIdCache.Get(resultId) <> null
+                    let signaled = ref false
+                    if not hasCachedId then
+                        let! signal = listenerTask
+                        signaled := signal // false if intermediate timeout that is needed just in case Redis PubSub is not 100% reliable
+                    else
+                        signaled := true
+                    if !signaled then
+                        let cachedResult = resultsCache.Get(resultId)
+                        let result =
+                            if cachedResult <> null then true
+                            else 
+                                not (Object.Equals(redis.HGet<'TResult>(resultsKey, resultId), null))
+                        if not result then
+                            Debug.Fail("Could not get result after positive signal!")
+                            if tryCount > Math.Max(this.ResultTimeout / 1000, 1) then Debug.Fail("Cannot get result for: " + resultId)
+                            return! awaitResult (tryCount + 1)
+                        else
+                            return result
+                    else
+                        if tryCount > Math.Max(this.ResultTimeout / 1000 + 1, 1) then Debug.Fail("Cannot get result for: " + resultId)
+                        return! awaitResult (tryCount + 1)
+                }
+            async { let! t = Async.StartChild(awaitResult 0, this.ResultTimeout)
+                    return! t }
+
+    // if we have a result id in resultIdCache then we could probably get it, if not avoid a blank trip to Redis
+    member internal this.TryGetResultImmediate(resultId : string, [<Out>] result : byref<'TResult>) : bool = 
+        let hasCachedId = resultsIdCache.Get(resultId) <> null
+        if hasCachedId then
+            let cachedResult = resultsCache.Get(resultId)
+            let result' : 'TResult =
+                if cachedResult <> null then unbox cachedResult
+                else redis.HGet<'TResult>(resultsKey, resultId)
+            if Object.Equals(result', null) then
+                false
+            else
+                result <- result'
+                true
+        else false
+        
+    // false doesn't mean that result doesn't exist, but true 100% mean that we have a result
+    member internal this.ResultDefinitelyExists<'TResult>(resultId : string) : bool = 
+        let hasCachedId = resultsIdCache.Get(resultId) <> null
+        if hasCachedId then
+            let cachedResult = resultsCache.Get(resultId)
+            let result' =
+                if cachedResult <> null then true
+                else 
+                    // TODO replace with HEXISTS when implemented in .Persistence
+                    if Object.Equals(redis.HGet<'TResult>(resultsKey, resultId), null) then false 
+                    else true
+            result'
+        else false
+
 
     member this.TryGetResultAsync(resultGuid : Guid) : Async<bool*'TResult> = 
         async {
@@ -561,6 +688,12 @@ type internal ActorImpl<'Task, 'TResult>
         //let envelope : Envelope<'Task> = message, resultId, callerIds
         let standardCall() = async {
                 do! this.Post(message, resultId, callerIds) |> Async.Ignore
+                // TODO(premature optimization) first trip to Redis is almost alway without result
+                // this is not justified here (ok with separate GetResult because 
+                // the expected usage is that GetRes. is called sometime later)
+                // here should first start listening on result id, then post
+                // to make trip to Redis only when needed
+                // since we Post after starting to wait, we *mormally* won't miss a message
                 return! this.GetResultAsync(resultGuid)
             }
         let shortcutCall() = // avoid most of the async machinery
@@ -607,7 +740,8 @@ type internal ActorImpl<'Task, 'TResult>
                         // use Guid:TypeFullName scheme
                         this.Post(task, resultId, [| continuation.Id |]) |> ignore
                         // do not delete intermediate results untill the final result is saved
-                        let! result = this.GetResultAsync(Guid.ParseExact(resultId, "N")) // TODO private methods should use string everywhere
+                        let! result = this.GetResultAsync(resultId) |> Async.StartChildAsTask // TODO private methods should use string everywhere
+                        result.IsCompleted
                         Debug.Print("First result: " + result.ToString())
                         continuation.Post(result, resultId, [||]) |> ignore
                         // delete final result
@@ -716,15 +850,56 @@ type ActorExtension() =
                 fun message -> 
                     async { 
                         let task, resultId  = message
-                        // TODO that will fail because three result listeners will wait for the 
-                        // same id.
-                        // why not just use different ids? because we could lose track of the chain
-                        // use Guid:TypeFullName scheme
-                        actor.Post(task, resultId, [| cActor.Id |]) |> ignore
-                        // do not delete intermediate results untill the final result is saved
-                        let! result = actor.GetResultAsync(Guid.ParseExact(resultId, "N")) // TODO private methods should use string everywhere
-                        Debug.Print("First result: " + result.ToString())
-                        cActor.Post(result, resultId, [||]) |> ignore
+                        // each actor listens on its own channel, therefore we could reuse
+                        // the same result id for all actors
+
+                        // Just in case check if we already have a result from the first, 
+                        // and if so do not post to both the first and the second actor
+                        // because the first is done and the second *MUST* have that result in its inbox
+                        // (when the first actor was called with non-empty caller id, the result of the first
+                        // call is atomically added to the second actor inbox. (atomically means 
+                        // that if actor.GetResultAsync() returned then the intermediate result
+                        // is already in cActor inbox). That is cheap call and we a subscribed to the whole result channel anyway.
+                        // (Such a situation when firstIsDone is more likely with continuations that could be chained mutiple times.)
+                        let result = ref Unchecked.defaultof<'TResult1>
+                        let firstIsDone = actor.ResultDefinitelyExists(resultId)
+                        if not firstIsDone then
+                            // here the task message is sent to the first actor and 
+                            // it will arrive to the results list and stay there
+                            // before the results timeout
+                            actor.Post(task, resultId, [| cActor.Id |]) |> ignore
+                        
+                            // TODO? do not delete intermediate results until the final result is saved?
+                        
+                            // we must wait for result to ensure first timeout and not total timeout
+                            // TODO? is that needed?
+                            // TODO better to use MRE result listener with timeout to avoid transfer of a result that is not used?
+                            // on timeout 
+                            
+                            let! result' = actor.GetResultAsync(resultId) // TODO refactor to private wuth string for Guid
+                            result := result'
+                            Debug.Print("First result: " + result.ToString())
+                        else
+                            // TODO this is not needed when we implement atomic result passing from 1st to 2nd
+                            let ok, r = actor.TryGetResultImmediate(resultId)
+                            Debug.Assert(ok)
+                            result := r
+
+                        // TODO this call is not needed because first worker
+                        // adds its result to the second's inbox before finishing
+                        cActor.Post(!result, resultId, [||]) |> ignore
+
+                        
+
+                        // TODO general idea about timeout is that it should be quite long
+                        // and much longer than an inbox turnover period. It should be only 
+                        // as a cleanup and every discarded result or returned pipeline item
+                        // should be a warning/exception with appropriate notifications/logs
+                        // 10x slowest expected inbox turnover should be good starting point.
+                        // actors should not die due to errors (probably should do TryCatch
+                        // with proper handling of exceptions). Actors sould die only due to
+                        // environmental factors
+
                         // delete final result
                         let! cResult = cActor.GetResultAsync(Guid.ParseExact(resultId, "N"))
                         Debug.Print("Second result: " + cResult.ToString())
@@ -754,7 +929,7 @@ type ActorExtension() =
                        override __.Redis with get() = actor.RedisConnectionString
                        override __.GetKey() = "(" + this.GetKey() + "->>-" + continuation.GetKey() + ")"
                        override __.ResultTimeout with get() = this.ResultTimeout + continuation.ResultTimeout
-                       //override __.Computation(input) = computation(input)
+                       //override __.Computation(input) = ... assign internal computation directly
                 }
             // overwrite default computation that ignores resultId with the proper one
             result.ComputationWithResultId <- computation

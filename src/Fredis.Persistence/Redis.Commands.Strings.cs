@@ -122,6 +122,8 @@ namespace Fredis {
             return UnpackResultNullable<TValue>(result);
         }
 
+
+        // TODO isFullKey is counter-intuitive
         public T Get<T>(string key, bool isFullKey = false) {
             var k = _nameSpace + (!isFullKey
                 ? GetTypePrefix<T>() + ":i:" + key

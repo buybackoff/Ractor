@@ -1,4 +1,4 @@
-#### 0.0.11 - June 19 2014
+#### 0.0.12 - June 19 2014
 * ServiceStack.ORMLite v4 for POCOs
 
 #### 0.0.10 - June 19 2014

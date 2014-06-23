@@ -52,7 +52,28 @@ namespace Fredis {
             _provider = provider;
             DbFactory = CreateDbFactory(connectionString);
             // check and register shards
+            using (var db = DbFactory.OpenDbConnection()) {
+                db.SqlScalar<int>("SELECT 1+1");
+            }
             CheckShardsAndSetEpoch(shardConnectionStrings);
+        }
+
+        public BasePocoPersistor(IOrmLiteDialectProvider provider, string connectionString, string shardsConnectionStrings) 
+        {
+            // check and register shards
+            var shards = shardsConnectionStrings
+                    .Split(new[] { Environment.NewLine }, StringSplitOptions.RemoveEmptyEntries)
+                    .ToDictionary(line => {
+                        var pair = line.Split(new[] { "=>" }, StringSplitOptions.RemoveEmptyEntries);
+                        return new KeyValuePair<ushort, string>(ushort.Parse(pair[0].Trim()), pair[1].Trim());
+                    });
+            _provider = provider;
+            DbFactory = CreateDbFactory(connectionString);
+            // check and register shards
+            using (var db = DbFactory.OpenDbConnection()) {
+                db.SqlScalar<int>("SELECT 1+1");
+            }
+            CheckShardsAndSetEpoch(shards);
         }
 
         private OrmLiteConnectionFactory CreateDbFactory(string connectionString) {
