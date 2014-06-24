@@ -201,142 +201,7 @@ type internal ActorImpl<'Task, 'TResult>
 
     static let actors = Dictionary<string, obj>()
 
-    let rec collectGarbage() =
-        async {
-            let resultsScript = 
-                @"  local previousKey = KEYS[1]..':previousKeys'
-                    local currentKey = KEYS[1]..':currentKeys'
-                    local currentItems = redis.call('HKEYS', KEYS[1])
-                    local res = 0
-                    redis.call('DEL', currentKey)
-                    if redis.call('HLEN', KEYS[1]) > 0 then
-                       redis.call('SADD', currentKey, unpack(currentItems))
-                       local intersect
-                       if redis.call('SCARD', previousKey) > 0 then
-                           intersect = redis.call('SINTER', previousKey, currentKey)
-                           if #intersect > 0 then
-                                redis.call('HDEL', KEYS[1], unpack(intersect))
-                                res = #intersect
-                           end
-                       end
-                    end
-                    redis.call('DEL', previousKey)
-                    if #currentItems > 0 then
-                        redis.call('SADD', previousKey, unpack(currentItems))
-                    end
-                    return res
-                "
-
-            // TODO test that a message is returned to inbox
-            // Using RPUSH so that task will be returned to the front of the queue
-            let pipelineScript = 
-                @"  local previousKey = KEYS[1]..':previousKeys'
-                    local currentKey = KEYS[1]..':currentKeys'
-                    local currentItems = redis.call('HKEYS', KEYS[1])
-                    local res = 0
-                    redis.call('DEL', currentKey)
-                    if redis.call('HLEN', KEYS[1]) > 0 then
-                       redis.call('SADD', currentKey, unpack(currentItems))
-                       local intersect
-                       if redis.call('SCARD', previousKey) > 0 then
-                           intersect = redis.call('SINTER', previousKey, currentKey)
-                           if #intersect > 0 then
-                                local values = redis.call('HMGET', KEYS[1], unpack(intersect))
-                                redis.call('RPUSH', KEYS[2], unpack(values))
-                                redis.call('HDEL', KEYS[1], unpack(intersect))
-                                res = #intersect
-                           end
-                       end
-                    end
-                    redis.call('DEL', previousKey)
-                    if #currentItems > 0 then
-                        redis.call('SADD', previousKey, unpack(currentItems))
-                    end
-                    return res
-                "
-            let expiry = Nullable<TimeSpan>(TimeSpan.FromMilliseconds(float garbageCollectionPeriod))
-            let entered = redis.Set<string>(lockKey, "collecting garbage", 
-                            expiry, When.NotExists, false)
-            //Console.WriteLine("checking if entered: " + entered.ToString())
-            let counts  =
-                if entered then
-                    //Console.WriteLine("GC entered: " + redis.KeyNameSpace + ":" + resultsKey)
-                    let r = redis.Eval(resultsScript, [|redis.KeyNameSpace + ":" + resultsKey|])
-                    //Console.WriteLine("Collected results: " + res.ToString() )
-                    let p =
-                        if started then
-                                redis.Eval(pipelineScript, [|redis.KeyNameSpace + ":" + pipelineKey; inboxKey|])
-                        else ()
-                    //Console.WriteLine("Collected pipelines: " + pipel.ToString() )
-                    r, p
-                else (),()
-            //do! Async.Sleep(garbageCollectionPeriod)
-            do! Async.Sleep garbageCollectionPeriod
-            return! collectGarbage()
-            }
-
-    do
-        // Pickler is fast and almost v.1.0
-        redis.Serializer <- Serialisers.Pickler
-        checkGates() |> Async.Start
-        collectGarbage() |> Async.Start
-        if autoStart then this.Start()
-
-    static member LoadMonitor
-        with get () = performanceMonitor
-        and set monitor = performanceMonitor <- monitor
-    static member Counter with get () = !counter
-    static member val DefaultRedisConnectionString = "" with get, set
-    static member ActorsRepo with get () = actors
-    static member Instance<'Task, 'TResult>(definition:obj) : ActorImpl<'Task, 'TResult> = 
-            let mutable key = ""
-            // code duplication is OK here, otherwise will need interface, etc... and still type matching
-            let actor =
-                match definition with
-                | x when isSubclassOfRawGeneric(typedefof<Actor<'Task, 'TResult>>, x.GetType()) -> // :? Actor<'Task, 'TResult> as taskDefinition -> 
-                    let taskDefinition = x :?> Actor<'Task, 'TResult>
-                    key <-  taskDefinition.GetKey()
-                    if ActorImpl<_,_>.ActorsRepo.ContainsKey(key) then 
-                            ActorImpl<_,_>.ActorsRepo.[key] :?> ActorImpl<'Task, 'TResult>
-                    else
-                        let conn = 
-                            if String.IsNullOrWhiteSpace(taskDefinition.Redis) then
-                                if String.IsNullOrWhiteSpace(ActorImpl<_,_>.DefaultRedisConnectionString) then
-                                    raise (new ArgumentException("Redis connection string is not set"))
-                                else
-                                    ActorImpl<_,_>.DefaultRedisConnectionString
-                            else taskDefinition.Redis
-                        let comp (msg:Message<'Task> * string) : Async<Message<'TResult>> = taskDefinition.ExtendedComputation(msg)
-                        ActorImpl(conn, key, comp, taskDefinition.ResultTimeout, taskDefinition.LowPriority, taskDefinition.AutoStart, taskDefinition.Optimistic)
-                | x when isSubclassOfRawGeneric(typedefof<Fredis.FSharp.Actor<'Task, 'TResult>>, x.GetType()) -> //:? Fredis.FSharp.Actor<'Task, 'TResult> as asyncDefinition ->
-                    let asyncDefinition = x :?> Fredis.FSharp.Actor<'Task, 'TResult>
-                    key <-  asyncDefinition.GetKey()
-                    if ActorImpl<_,_>.ActorsRepo.ContainsKey(key) then 
-                            ActorImpl<_,_>.ActorsRepo.[key] :?> ActorImpl<'Task, 'TResult>
-                    else
-                        let conn = 
-                            if String.IsNullOrWhiteSpace(asyncDefinition.Redis) then
-                                if String.IsNullOrWhiteSpace(ActorImpl<_,_>.DefaultRedisConnectionString) then
-                                    raise (new ArgumentException("Redis connection string is not set"))
-                                else
-                                    ActorImpl<_,_>.DefaultRedisConnectionString
-                            else asyncDefinition.Redis
-                        let comp (msg:Message<'Task> * string) : Async<Message<'TResult>> = asyncDefinition.ExtendedComputation(msg)
-                        ActorImpl(conn, key, comp, asyncDefinition.ResultTimeout, asyncDefinition.LowPriority, asyncDefinition.AutoStart, asyncDefinition.Optimistic)
-                | _ -> failwith "wrong definition type"
-            ActorImpl<_,_>.ActorsRepo.[key] <- actor
-            actor
-    
-    member internal this.Id = id
-    member internal this.RedisConnectionString = redisConnectionString
-    member internal this.Computation = computation
-    member internal this.ResultTimeout = resultTimeout
-    member internal this.LowPriority = lowPriority
-    member internal this.Optimistic = optimistic
-
-    member this.QueueLength = (int (redis.LLen(inboxKey))) + messageQueue.Count
-    
-    member this.Start() : unit = 
+    let start() =
         if not started then 
             HostingEnvironment.RegisterObject(this)
             let rec awaitMessage() = 
@@ -449,6 +314,144 @@ type internal ActorImpl<'Task, 'TResult>
                 }
             Async.Start(loop, cts.Token)
             started <- true
+
+    let rec collectGarbage() =
+        async {
+            let resultsScript = 
+                @"  local previousKey = KEYS[1]..':previousKeys'
+                    local currentKey = KEYS[1]..':currentKeys'
+                    local currentItems = redis.call('HKEYS', KEYS[1])
+                    local res = 0
+                    redis.call('DEL', currentKey)
+                    if redis.call('HLEN', KEYS[1]) > 0 then
+                       redis.call('SADD', currentKey, unpack(currentItems))
+                       local intersect
+                       if redis.call('SCARD', previousKey) > 0 then
+                           intersect = redis.call('SINTER', previousKey, currentKey)
+                           if #intersect > 0 then
+                                redis.call('HDEL', KEYS[1], unpack(intersect))
+                                res = #intersect
+                           end
+                       end
+                    end
+                    redis.call('DEL', previousKey)
+                    if #currentItems > 0 then
+                        redis.call('SADD', previousKey, unpack(currentItems))
+                    end
+                    return res
+                "
+
+            // TODO test that a message is returned to inbox
+            // Using RPUSH so that task will be returned to the front of the queue
+            let pipelineScript = 
+                @"  local previousKey = KEYS[1]..':previousKeys'
+                    local currentKey = KEYS[1]..':currentKeys'
+                    local currentItems = redis.call('HKEYS', KEYS[1])
+                    local res = 0
+                    redis.call('DEL', currentKey)
+                    if redis.call('HLEN', KEYS[1]) > 0 then
+                       redis.call('SADD', currentKey, unpack(currentItems))
+                       local intersect
+                       if redis.call('SCARD', previousKey) > 0 then
+                           intersect = redis.call('SINTER', previousKey, currentKey)
+                           if #intersect > 0 then
+                                local values = redis.call('HMGET', KEYS[1], unpack(intersect))
+                                redis.call('RPUSH', KEYS[2], unpack(values))
+                                redis.call('HDEL', KEYS[1], unpack(intersect))
+                                res = #intersect
+                           end
+                       end
+                    end
+                    redis.call('DEL', previousKey)
+                    if #currentItems > 0 then
+                        redis.call('SADD', previousKey, unpack(currentItems))
+                    end
+                    return res
+                "
+            let expiry = Nullable<TimeSpan>(TimeSpan.FromMilliseconds(float garbageCollectionPeriod))
+            let entered = redis.Set<string>(lockKey, "collecting garbage", 
+                            expiry, When.NotExists, false)
+            //Console.WriteLine("checking if entered: " + entered.ToString())
+            let counts  =
+                if entered then
+                    //Console.WriteLine("GC entered: " + redis.KeyNameSpace + ":" + resultsKey)
+                    let r = redis.Eval(resultsScript, [|redis.KeyNameSpace + ":" + resultsKey|])
+                    //Console.WriteLine("Collected results: " + res.ToString() )
+                    let p =
+                        if started then
+                                redis.Eval(pipelineScript, [|redis.KeyNameSpace + ":" + pipelineKey; inboxKey|])
+                        else ()
+                    //Console.WriteLine("Collected pipelines: " + pipel.ToString() )
+                    r, p
+                else (),()
+            //do! Async.Sleep(garbageCollectionPeriod)
+            do! Async.Sleep garbageCollectionPeriod
+            return! collectGarbage()
+            }
+
+    do
+        // Pickler is fast and almost v.1.0
+        redis.Serializer <- Serialisers.Pickler
+        checkGates() |> Async.Start
+        collectGarbage() |> Async.Start
+        if autoStart then start()
+
+    static member LoadMonitor
+        with get () = performanceMonitor
+        and set monitor = performanceMonitor <- monitor
+    static member Counter with get () = !counter
+    static member val DefaultRedisConnectionString = "" with get, set
+    static member ActorsRepo with get () = actors
+    static member Instance<'Task, 'TResult>(definition:obj) : ActorImpl<'Task, 'TResult> = 
+            let mutable key = ""
+            // code duplication is OK here, otherwise will need interface, etc... and still type matching
+            let actor =
+                match definition with
+                | x when isSubclassOfRawGeneric(typedefof<Actor<'Task, 'TResult>>, x.GetType()) -> // :? Actor<'Task, 'TResult> as taskDefinition -> 
+                    let taskDefinition = x :?> Actor<'Task, 'TResult>
+                    key <-  taskDefinition.GetKey()
+                    if ActorImpl<_,_>.ActorsRepo.ContainsKey(key) then 
+                            ActorImpl<_,_>.ActorsRepo.[key] :?> ActorImpl<'Task, 'TResult>
+                    else
+                        let conn = 
+                            if String.IsNullOrWhiteSpace(taskDefinition.Redis) then
+                                if String.IsNullOrWhiteSpace(ActorImpl<_,_>.DefaultRedisConnectionString) then
+                                    raise (new ArgumentException("Redis connection string is not set"))
+                                else
+                                    ActorImpl<_,_>.DefaultRedisConnectionString
+                            else taskDefinition.Redis
+                        let comp (msg:Message<'Task> * string) : Async<Message<'TResult>> = taskDefinition.ExtendedComputation(msg)
+                        ActorImpl(conn, key, comp, taskDefinition.ResultTimeout, taskDefinition.LowPriority, taskDefinition.AutoStart, taskDefinition.Optimistic)
+                | x when isSubclassOfRawGeneric(typedefof<Fredis.FSharp.Actor<'Task, 'TResult>>, x.GetType()) -> //:? Fredis.FSharp.Actor<'Task, 'TResult> as asyncDefinition ->
+                    let asyncDefinition = x :?> Fredis.FSharp.Actor<'Task, 'TResult>
+                    key <-  asyncDefinition.GetKey()
+                    if ActorImpl<_,_>.ActorsRepo.ContainsKey(key) then 
+                            ActorImpl<_,_>.ActorsRepo.[key] :?> ActorImpl<'Task, 'TResult>
+                    else
+                        let conn = 
+                            if String.IsNullOrWhiteSpace(asyncDefinition.Redis) then
+                                if String.IsNullOrWhiteSpace(ActorImpl<_,_>.DefaultRedisConnectionString) then
+                                    raise (new ArgumentException("Redis connection string is not set"))
+                                else
+                                    ActorImpl<_,_>.DefaultRedisConnectionString
+                            else asyncDefinition.Redis
+                        let comp (msg:Message<'Task> * string) : Async<Message<'TResult>> = asyncDefinition.ExtendedComputation(msg)
+                        ActorImpl(conn, key, comp, asyncDefinition.ResultTimeout, asyncDefinition.LowPriority, asyncDefinition.AutoStart, asyncDefinition.Optimistic)
+                | _ -> failwith "wrong definition type"
+            ActorImpl<_,_>.ActorsRepo.[key] <- actor
+            actor
+    
+    member internal this.Id = id
+    member internal this.RedisConnectionString = redisConnectionString
+    member internal this.Computation = computation
+    member internal this.ResultTimeout = resultTimeout
+    member internal this.LowPriority = lowPriority
+    member internal this.Optimistic = optimistic
+
+    member this.QueueLength = (int (redis.LLen(inboxKey))) + messageQueue.Count
+    
+    member this.Start() : unit = start()
+    
     
     member this.Stop() = 
         if started then 
