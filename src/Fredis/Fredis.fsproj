@@ -37,38 +37,6 @@
     <OtherFlags>
     </OtherFlags>
   </PropertyGroup>
-  <ItemGroup>
-    <Reference Include="FsPickler">
-      <HintPath>..\..\packages\FsPickler.0.8.6.2\lib\net45\FsPickler.dll</HintPath>
-      <Private>True</Private>
-    </Reference>
-    <Reference Include="mscorlib" />
-    <Reference Include="FSharp.Core, Version=$(TargetFSharpCoreVersion), Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a">
-      <Private>True</Private>
-    </Reference>
-    <Reference Include="System" />
-    <Reference Include="System.Core" />
-    <Reference Include="System.Net" />
-    <Reference Include="System.Numerics" />
-    <Reference Include="System.Runtime.Caching" />
-    <Reference Include="System.Web" />
-  </ItemGroup>
-  <ItemGroup>
-    <Compile Include="AssemblyInfo.fs" />
-    <Compile Include="Common.fs" />
-    <None Include="packages.config" />
-    <Compile Include="Serialization.fs" />
-    <Compile Include="Logging.fs" />
-    <Compile Include="Actor.fs" />
-    <Compile Include="Fredis.fs" />
-  </ItemGroup>
-  <ItemGroup>
-    <ProjectReference Include="..\Fredis.Persistence\Fredis.Persistence.csproj">
-      <Name>Fredis.Persistence</Name>
-      <Project>{6780d11c-42ad-46dc-b49d-95912164bb23}</Project>
-      <Private>True</Private>
-    </ProjectReference>
-  </ItemGroup>
   <PropertyGroup>
     <MinimumVisualStudioVersion Condition="'$(MinimumVisualStudioVersion)' == ''">11</MinimumVisualStudioVersion>
   </PropertyGroup>
@@ -86,6 +54,36 @@
   </Choose>
   <Import Project="$(FSharpTargetsPath)" />
   <Import Project="$(SolutionDir)\.nuget\NuGet.targets" Condition="Exists('$(SolutionDir)\.nuget\NuGet.targets')" />
+  <ItemGroup>
+    <Compile Include="AssemblyInfo.fs" />
+    <Compile Include="Common.fs" />
+    <Compile Include="Serialization.fs" />
+    <Compile Include="Logging.fs" />
+    <Compile Include="Actor.fs" />
+    <Compile Include="Fredis.fs" />
+    <None Include="packages.config" />
+  </ItemGroup>
+  <ItemGroup>
+    <Reference Include="FsPickler">
+      <HintPath>..\..\packages\FsPickler.0.9.5-alpha\lib\net45\FsPickler.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
+    <Reference Include="mscorlib" />
+    <Reference Include="FSharp.Core, Version=$(TargetFSharpCoreVersion), Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a">
+      <Private>True</Private>
+    </Reference>
+    <Reference Include="System" />
+    <Reference Include="System.Core" />
+    <Reference Include="System.Net" />
+    <Reference Include="System.Numerics" />
+    <Reference Include="System.Runtime.Caching" />
+    <Reference Include="System.Web" />
+    <ProjectReference Include="..\Fredis.Persistence\Fredis.Persistence.csproj">
+      <Name>Fredis.Persistence</Name>
+      <Project>{6780d11c-42ad-46dc-b49d-95912164bb23}</Project>
+      <Private>True</Private>
+    </ProjectReference>
+  </ItemGroup>
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
        Other similar extension points exist, see Microsoft.Common.targets.
   <Target Name="BeforeBuild">

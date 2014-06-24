@@ -31,8 +31,7 @@ module internal Serialisers =
         }
 
     let Pickler =
-        let fsp = new FsPickler()
-
+        let fsp = FsPickler.CreateBinary()
         { new ISerializer with
             member x.Serialize(payload) = 
                 let memoryStream = new MemoryStream()
