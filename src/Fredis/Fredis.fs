@@ -25,6 +25,18 @@ type Fredis(redisConnectionString : string) =
         if String.IsNullOrEmpty(ActorImpl<_,_>.DefaultRedisConnectionString) then
             ActorImpl<_,_>.DefaultRedisConnectionString <- redisConnectionString
 
+    static let mutable logger = 
+#if DEBUG
+        Logging.Console
+#else
+        Logging.Silent
+#endif
+
+    static member Logger 
+        with get () = logger
+        and set newLogger = 
+            ActorBase.Logger <- newLogger
+            logger <- newLogger
 
     static member RegisterDB(persistor : IPocoPersistor) = Fredis.RegisterDB(persistor, "")
     

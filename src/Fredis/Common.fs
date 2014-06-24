@@ -5,14 +5,20 @@ open System.Collections.Generic
 open System.Threading
 open System.Threading.Tasks
 
+
+type internal Message<'T>=
+| Value of 'T
+| Error of Exception
+
+type internal Envelope<'Task> = Message<'Task> * string * string [] // * DateTime monitor time from post to get and time for pure computation
+
+
+
 type IFredisPerformanceMonitor =
     abstract AllowHighPriorityActors : unit -> bool
     abstract AllowLowPriorityActors : unit -> bool
     abstract PeriodMilliseconds : int with get
 
-
-type internal ExceptionInfo<'T> = 
-    | ExceptionInfo of string * 'T * Exception
 
 
 type AsyncManualResetEvent () =
@@ -69,6 +75,7 @@ type AsyncAutoResetEvent () =
 
 [<AutoOpenAttribute>]
 module Helpers =
+    
     let isSubclassOfRawGeneric(generic: Type, toCheck: Type) : bool =
         let mutable toCheck = toCheck
         let mutable res = false

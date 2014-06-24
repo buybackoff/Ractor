@@ -6,7 +6,7 @@ namespace Fredis
 open System
 open System.Diagnostics
 
-type internal ILogger = 
+type ILogger = 
     
     [<Conditional("DEBUG")>] 
     abstract Debug : string * exn option -> unit
@@ -15,7 +15,7 @@ type internal ILogger =
     abstract Warning : string * exn option -> unit
     abstract Error : string * exn option -> unit
 
-module internal Logging = 
+module Logging = 
     let Console = 
         let write level (msg, exn : exn option) = 
             let msg = 
