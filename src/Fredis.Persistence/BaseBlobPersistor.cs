@@ -1,18 +1,17 @@
 ﻿using System;
 using System.IO;
 using System.Threading.Tasks;
-using ServiceStack;
-using ServiceStack.Common;
-using ServiceStack.Text;
 
 namespace Fredis {
 
     
     /// <summary>
-    /// File based persistor on blobs
+    /// File based persistor of blobs
     /// </summary>
     public class FileBlobPersistor : IBlobPersistor {
         private readonly string _path;
+
+        public ISerializer Serializer { get; set; }
 
         /// <summary>
         /// File based persistor on blobs
@@ -20,7 +19,7 @@ namespace Fredis {
         /// <param name="path">Directory to store blobs</param>
         public FileBlobPersistor(string path) {
             _path = path;
-            //Serializer = new BaseBinarySerializer();
+            Serializer = new JsonSerializer();
         }
 
         /// <summary>
@@ -54,7 +53,7 @@ namespace Fredis {
         }
 
         public bool TryPut<T>(string key, T poco) {
-            Stream stream = new MemoryStream(poco.ToJsv().ToUtf8Bytes().Zip());
+            Stream stream = new MemoryStream(Serializer.Serialize(poco).Zip());
             return TryPut(_path, key, stream);
         }
 
@@ -65,7 +64,7 @@ namespace Fredis {
         public async Task<bool> TryPutAsync<T>(string key, T poco) {
             return await Task.Factory.StartNew(() => {
 
-                Stream stream = new MemoryStream(poco.ToJsv().ToUtf8Bytes().Zip());
+                Stream stream = new MemoryStream(Serializer.Serialize(poco).Zip());
                 var res = TryPut(_path, key, stream);
                 return res;
             });
@@ -85,7 +84,7 @@ namespace Fredis {
             if (!res) return false;
             var ms = new MemoryStream();
             stream.CopyTo(ms);
-            poco = ms.ToArray().UnZip().FromUtf8Bytes().FromJsv<T>();
+            poco = Serializer.Deserialize<T>(ms.ToArray().UnZip());
             return true;
         }
 
@@ -106,7 +105,7 @@ namespace Fredis {
                 MemoryStream ms;
                 var suc = TryGet(key, out ms);
                 if (!suc) return Tuple.Create(false, poco);
-                poco = ms.ToArray().UnZip().FromUtf8Bytes().FromJsv<T>();
+                poco = Serializer.Deserialize<T>(ms.ToArray().UnZip());
                 return Tuple.Create(true, poco);
             });
         }

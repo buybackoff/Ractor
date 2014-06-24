@@ -5,12 +5,12 @@ open System.Runtime.CompilerServices
 [<assembly: AssemblyTitleAttribute("Fredis")>]
 [<assembly: AssemblyProductAttribute("Fredis")>]
 [<assembly: AssemblyDescriptionAttribute("Fredis (F#+Redis) is dead simple collection of APIs for POCOs cache/persistence + redis based distributed actors")>]
-[<assembly: AssemblyVersionAttribute("0.0.12")>]
-[<assembly: AssemblyFileVersionAttribute("0.0.12")>]
+[<assembly: AssemblyVersionAttribute("0.1.0")>]
+[<assembly: AssemblyFileVersionAttribute("0.1.0")>]
 [<assembly: InternalsVisibleToAttribute("Fredis.CS.Tests")>]
 [<assembly: InternalsVisibleToAttribute("Fredis.Tests")>]
 [<assembly: InternalsVisibleToAttribute("Fredis.Profiler")>]
 do ()
 
 module internal AssemblyVersionInformation =
-    let [<Literal>] Version = "0.0.12"
+    let [<Literal>] Version = "0.1.0"

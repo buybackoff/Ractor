@@ -25,6 +25,7 @@ namespace Fredis {
     }
 
     public interface IRedis {
+        ISerializer Serializer { get; set; }
         //bool Set<T>(T item, TimeSpan? expiry = null, When when = When.Always, bool fireAndForget = false);
     }
 }

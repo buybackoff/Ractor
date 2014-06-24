@@ -1,3 +1,8 @@
+#### 0.1.0 - June 24 2014
+* Stabilized public API - no more methods expected unless I cannot live without them
+* Added Fredis.Persistence.AWS project with S3 IBlobPersistor and SQS IQueue implementations
+* NOT TESTED, MANY REDIS METHODS ARE MISSING
+
 #### 0.0.12 - June 19 2014
 * ServiceStack.ORMLite v4 for POCOs
 

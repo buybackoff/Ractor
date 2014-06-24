@@ -5,11 +5,11 @@ using System.Runtime.InteropServices;
 // General Information about an assembly is controlled through the following 
 // set of attributes. Change these attribute values to modify the information
 // associated with an assembly.
-[assembly: AssemblyTitle("Fredis.CS")]
+[assembly: AssemblyTitle("Fredis.Persistence.AWS")]
 [assembly: AssemblyDescription("")]
 [assembly: AssemblyConfiguration("")]
 [assembly: AssemblyCompany("")]
-[assembly: AssemblyProduct("Fredis.Persistence")]
+[assembly: AssemblyProduct("Fredis.Persistence.AWS")]
 [assembly: AssemblyCopyright("Copyright ©  2014")]
 [assembly: AssemblyTrademark("")]
 [assembly: AssemblyCulture("")]
@@ -20,7 +20,7 @@ using System.Runtime.InteropServices;
 [assembly: ComVisible(false)]
 
 // The following GUID is for the ID of the typelib if this project is exposed to COM
-[assembly: Guid("8691290f-347f-4230-9215-0c89058b190b")]
+[assembly: Guid("38c12f6f-02b6-4206-8693-910c0a109a33")]
 
 // Version information for an assembly consists of the following four values:
 //

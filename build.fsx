@@ -70,6 +70,17 @@ in. Blob persistor saves large data objects to files or S3. """
 let tagsPersistence = "persistence DB database shards"
 
 // --------------------------------------------------------------------------------------
+// Fredis.Persistence
+// --------------------------------------------------------------------------------------
+
+let projectPersistenceAWS = "Fredis.Persistence.AWS"
+let summaryPersistenceAWS = "Fredis.Persistence is a collection of APIs for POCOs and blobs persistence and a strongly typed Redis
+client based on excellent Stackexchange.Redis library."
+let descriptionPersistenceAWS = summaryPersistence + """
+Fredis.Persistence.AWS has some interface implementations for AWS platform."""
+let tagsPersistenceAWS = "AWS S3 persistence queue cloud"
+
+// --------------------------------------------------------------------------------------
 // END TODO: The rest of the file includes standard build steps 
 // --------------------------------------------------------------------------------------
 
@@ -158,6 +169,21 @@ Target "NuGet" (fun _ ->
             Publish = hasBuildParam "nugetkey" 
             Dependencies = [] })
         ("nuget/Fredis.Persistence.nuspec")
+
+    NuGet (fun p -> 
+        { p with   
+            Authors = authors
+            Project = projectPersistenceAWS
+            Summary = summaryPersistenceAWS
+            Description = descriptionPersistenceAWS
+            Version = release.NugetVersion
+            ReleaseNotes = String.concat " " release.Notes
+            Tags = tagsPersistenceAWS
+            OutputPath = "bin"
+            AccessKey = getBuildParamOrDefault "nugetkey" ""
+            Publish = hasBuildParam "nugetkey" 
+            Dependencies = [] })
+        ("nuget/Fredis.Persistence.AWS.nuspec")
 )
 
 // --------------------------------------------------------------------------------------

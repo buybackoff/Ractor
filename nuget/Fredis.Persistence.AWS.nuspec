@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="utf-8"?>
+<package xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+  <metadata xmlns="http://schemas.microsoft.com/packaging/2010/07/nuspec.xsd">
+    <id>@project@</id>
+    <version>@build.number@</version>
+    <authors>@authors@</authors>
+    <owners>@authors@</owners>
+    <licenseUrl>http://github.com/buybackoff/Fredis/blob/master/LICENSE.txt</licenseUrl>
+    <projectUrl>http://buybackoff.github.com/Fredis</projectUrl>
+    <iconUrl>http://buybackoff.github.io/Fredis/img/logo.png</iconUrl>
+    <requireLicenseAcceptance>false</requireLicenseAcceptance>
+    <summary>@summary@</summary>
+    <description>@description@</description>
+    <releaseNotes>@releaseNotes@</releaseNotes>
+    <copyright>Copyright 2014</copyright>
+    <tags>@tags@</tags>
+    <dependencies>
+      <dependency id="Fredis.Persistence" />
+      <dependency id="AWSSDK" />
+    </dependencies>
+  </metadata>
+  <files>
+    <file src="..\bin\Fredis.Persistence.AWS.dll" target="lib/net40" />
+    <file src="..\bin\Fredis.Persistence.AWS.pdb" target="lib/net40" />
+  </files>
+</package>

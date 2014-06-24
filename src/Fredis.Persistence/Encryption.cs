@@ -122,7 +122,7 @@ namespace Fredis {
 
 
 
-    static class CryptoExtentions {
+    public static class CryptoExtentions {
 
         public static string GetMD5Hash(this Stream input) {
             var position = input.Position;

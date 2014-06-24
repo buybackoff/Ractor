@@ -7,7 +7,6 @@ using System.Linq;
 using System.Linq.Expressions;
 using ServiceStack;
 using ServiceStack.OrmLite;
-using ServiceStack.Text;
 
 namespace Fredis {
     /// <summary>

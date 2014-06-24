@@ -4,6 +4,7 @@ using System.Threading.Tasks;
 
 namespace Fredis {
     public interface IBlobPersistor {
+        ISerializer Serializer { get; set; }
         bool TryPut(Stream stream, out string key);
         Task<Tuple<bool, string>> TryPutAsync(Stream stream);
         bool TryPut(string key, Stream stream);

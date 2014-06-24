@@ -17,6 +17,7 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "project", "project", "{BF60
 		.travis.yml = .travis.yml
 		build.fsx = build.fsx
 		nuget\Fredis.nuspec = nuget\Fredis.nuspec
+		nuget\Fredis.Persistence.AWS.nuspec = nuget\Fredis.Persistence.AWS.nuspec
 		nuget\Fredis.Persistence.nuspec = nuget\Fredis.Persistence.nuspec
 		README.md = README.md
 		RELEASE_NOTES.md = RELEASE_NOTES.md
@@ -48,6 +49,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Fredis.CS.Tests", "tests\Fr
 EndProject
 Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "Profiler", "tests\Profiler\Profiler.fsproj", "{83AEA85D-E3FC-4E94-94AD-8D1A51EAAEF4}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Fredis.Persistence.AWS", "src\Fredis.Persistence.AWS\Fredis.Persistence.AWS.csproj", "{A9877785-2F07-405F-AF69-496C1315030C}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -78,6 +81,10 @@ Global
 		{83AEA85D-E3FC-4E94-94AD-8D1A51EAAEF4}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{83AEA85D-E3FC-4E94-94AD-8D1A51EAAEF4}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{83AEA85D-E3FC-4E94-94AD-8D1A51EAAEF4}.Release|Any CPU.Build.0 = Release|Any CPU
+		{A9877785-2F07-405F-AF69-496C1315030C}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{A9877785-2F07-405F-AF69-496C1315030C}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{A9877785-2F07-405F-AF69-496C1315030C}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{A9877785-2F07-405F-AF69-496C1315030C}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

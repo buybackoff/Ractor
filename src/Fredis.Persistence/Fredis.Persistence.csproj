@@ -84,6 +84,9 @@
     <Compile Include="IBlobPersistor.cs">
       <DependentUpon>Interfaces.cs</DependentUpon>
     </Compile>
+    <Compile Include="IQueue.cs">
+      <DependentUpon>Interfaces.cs</DependentUpon>
+    </Compile>
     <Compile Include="IRedis.cs">
       <DependentUpon>Interfaces.cs</DependentUpon>
     </Compile>
@@ -101,6 +104,7 @@
     <Compile Include="ISerializer.cs">
       <DependentUpon>Interfaces.cs</DependentUpon>
     </Compile>
+    <Compile Include="JsonSerializer.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Redis.Commands.Keys.cs">
       <DependentUpon>Redis.cs</DependentUpon>
