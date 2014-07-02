@@ -37,8 +37,8 @@ in. Blob persistor saves large data objects to files or S3 (TODO).
 
 Process-oriented programming
 ----------------------
-Fredis uses [process-oriented programming](http://en.wikipedia.org/wiki/Process-oriented_programming) paradigm 
-- it separates the concerns of data structures and the concurrent processes that act upon them. Data structures
+Fredis uses [process-oriented programming](http://en.wikipedia.org/wiki/Process-oriented_programming) 
+paradigm - it separates the concerns of data structures and the concurrent processes that act upon them. Data structures
 reside in Redis cluster and persistent storage (RDBMS/S3/etc) which logically extend single-box memory
 model to distributed scenario. Fredis actors are the concurrent processes that act upon the data.
 
