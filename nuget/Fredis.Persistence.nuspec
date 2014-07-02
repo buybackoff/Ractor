@@ -17,6 +17,8 @@
     <dependencies>
       <dependency id="StackExchange.Redis" />
       <dependency id="ServiceStack.OrmLite.SqlServer" />
+      <dependency id="FSharp.Core.Microsoft.Signed" />
+      <dependency id="FsPickler" />
     </dependencies>
   </metadata>
   <files>

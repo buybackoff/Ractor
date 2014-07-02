@@ -7,9 +7,9 @@ using NUnit.Framework;
 
 namespace Fredis.Persistence.Tests {
 
-    [CacheContract(Name = "pp", Compressed = false)]
+    [Redis(Name = "pp", Compressed = false)]
     public class PurePoco {
-        [CacheKey]
+        [RedisKey]
         public string Key { get; set; }
         public string Value { get; set; }
     }

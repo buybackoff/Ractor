@@ -16,6 +16,8 @@
     <tags>@tags@</tags>
     <dependencies>
       <dependency id="Fredis.Persistence" />
+      <dependency id="FSharp.Core.Microsoft.Signed" />
+      <dependency id="FsPickler" />
       <dependency id="AWSSDK" />
     </dependencies>
   </metadata>

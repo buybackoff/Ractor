@@ -38,6 +38,14 @@
     <Prefer32Bit>false</Prefer32Bit>
   </PropertyGroup>
   <ItemGroup>
+    <Reference Include="FSharp.Core, Version=4.3.1.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, processorArchitecture=MSIL">
+      <Private>True</Private>
+      <HintPath>..\..\packages\FSharp.Core.Microsoft.Signed.0.0.1-beta1\lib\net45\FSharp.Core.dll</HintPath>
+    </Reference>
+    <Reference Include="FsPickler, Version=0.9.5.1, Culture=neutral, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\..\packages\FsPickler.0.9.5.1-alpha\lib\net45\FsPickler.dll</HintPath>
+    </Reference>
     <Reference Include="ServiceStack.Common, Version=4.0.22.0, Culture=neutral, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
       <HintPath>..\..\packages\ServiceStack.Common.4.0.22\lib\net40\ServiceStack.Common.dll</HintPath>
@@ -63,6 +71,7 @@
     <Reference Include="System.Configuration" />
     <Reference Include="System.Core" />
     <Reference Include="System.Net" />
+    <Reference Include="System.Runtime.Caching" />
     <Reference Include="System.Runtime.Serialization" />
     <Reference Include="System.Xml.Linq" />
     <Reference Include="System.Data.DataSetExtensions" />
@@ -104,7 +113,7 @@
     <Compile Include="ISerializer.cs">
       <DependentUpon>Interfaces.cs</DependentUpon>
     </Compile>
-    <Compile Include="JsonSerializer.cs" />
+    <Compile Include="Serializers.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Redis.Commands.Keys.cs">
       <DependentUpon>Redis.cs</DependentUpon>

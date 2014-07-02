@@ -5,14 +5,18 @@ using System.Diagnostics;
 using System.Globalization;
 using System.Linq;
 using System.Reflection;
+using System.Runtime.Caching;
 using ServiceStack;
-using ServiceStack.Common;
-using ServiceStack.Text;
 using StackExchange.Redis;
 
 namespace Fredis {
 
     public partial class Redis : IRedis {
+
+        /// <summary>
+        /// MemoryCache instance for all Redis-related needs with "Redis" config name.
+        /// </summary>
+        public static MemoryCache Cache = new MemoryCache("Redis");
 
         // all non-commands stuff here
 
@@ -25,7 +29,7 @@ namespace Fredis {
             ConnectionMultiplexer = ConnectionMultiplexer.Connect(connectionString);
             KeyNameSpace = keyNameSpace ?? ""; // just if null is provided
             _nameSpace = KeyNameSpace.IsNullOrEmpty() ? "" : KeyNameSpace + ":";
-            Serializer = new JsonSerializer();
+            Serializer = new PicklerBinarySerializer();
         }
 
         private ConnectionMultiplexer ConnectionMultiplexer { get; set; }
@@ -96,9 +100,10 @@ namespace Fredis {
 
         private T UnpackResultNullable<T>(RedisValue result) {
             if (result.IsNull) return default(T);
-            var bytes = IsTypeCompressed<T>()
+            var bytes =
+                IsTypeCompressed<T>()
                 ? ((byte[])result).UnZip()
-                : ((byte[])result);
+                :  ((byte[])result);
             return Serializer.Deserialize<T>(bytes);
         }
 
@@ -130,15 +135,15 @@ namespace Fredis {
         }
 
         private class CacheInfo {
-            public CacheContractAttribute CacheContract { get; private set; }
+            public RedisAttribute CacheContract { get; private set; }
 
             private PropertyInfo CacheKeyProperty { get; set; }
             private PropertyInfo PrimaryKeyProperty { get; set; }
             public CacheInfo(Type type) {
 
-                CacheContract = type.HasAttribute<CacheContractAttribute>()
-                    ? type.FirstAttribute<CacheContractAttribute>()
-                    : new CacheContractAttribute {
+                CacheContract = type.HasAttribute<RedisAttribute>()
+                    ? type.FirstAttribute<RedisAttribute>()
+                    : new RedisAttribute {
                         Compressed = false,
                         Expiry = null,
                         Name = type.Name
@@ -148,7 +153,7 @@ namespace Fredis {
 
                 CacheKeyProperty = (type).GetProperties(BindingFlags.Public | BindingFlags.Instance)
                     .SingleOrDefault(p =>
-                        p.GetCustomAttributes(typeof(CacheKeyAttribute), false).Count() == 1);
+                        p.GetCustomAttributes(typeof(RedisKeyAttribute), false).Count() == 1);
 
                 PrimaryKeyProperty = (type).GetProperties(BindingFlags.Public | BindingFlags.Instance)
                     .SingleOrDefault(p =>

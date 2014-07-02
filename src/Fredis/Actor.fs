@@ -14,6 +14,15 @@
 
 // TODO attributes instead of abstract methods + ActorBase, keep all properties but assign in constructor according to attrs
 
+
+// NOTE: one of actor's property (from wiki) is behavior specified as a mathematical function to 
+// express what an Actor does when it processes a message including specifying a new 
+// behavior to process the next message that arrives.
+// The last part basically means state - that could be done by directly accessing Redis 
+// inside actors (e.g. counters) or use static distributed data structures in actor definition 
+// (the same stuff, but more abstracted).
+
+
 namespace Fredis
 open System
 [<AbstractClassAttribute>]
@@ -151,7 +160,7 @@ type internal ActorImpl<'Task, 'TResult>
     let inboxKey = prefix + ":inbox" // TODO message is a tuple of resultId * callerId * payload
     // hash of messages being processed
     let pipelineKey = prefix + ":pipeline"
-    // hash of results not yet claimed by callers
+    // prefix of results not yet claimed by callers
     let resultsKey = prefix + ":results" // TODO results must have "for" property
     let channelKey = prefix + ":channel"
     let errorsKey = prefix + ":errors"
@@ -194,10 +203,12 @@ type internal ActorImpl<'Task, 'TResult>
     let messageQueue = ConcurrentQueue<Envelope<'Task> * string>()
 
     // CACHES ARE NOT STATIC BUT INSTANCE, otherwise continuations will fight for the same caches entries with different resuls
+    // TODO!!! Important: we need only one MemoryCache instance per app. Use Redis.Cache and apply some key naming scheme instead of 
+    // creating an instance per Actor
     // cache of local results
-    let resultsCache = MemoryCache.Default
+    let resultsCache = MemoryCache("results")
     // cache of result ids that we didn't listen to
-    let resultsIdCache = MemoryCache.Default
+    let resultsIdCache = MemoryCache("resultIds")
 
     static let actors = Dictionary<string, obj>()
 
@@ -282,13 +293,15 @@ type internal ActorImpl<'Task, 'TResult>
                                         |> ignore
                                     // save result and notify others about it even though we are doing job locally 
                                     if not this.Optimistic then // TODO not sure about logic here and in the whole try block
-                                        do! redis.HSetAsync(resultsKey, resultId, outMessage, When.Always, false)
+                                        do! 
+                                            redis.SetAsync(resultsKey + ":" + resultId, outMessage, Nullable(TimeSpan.FromMilliseconds(double resultTimeout)), When.Always, false)
                                             |> Async.AwaitTask |> Async.Ignore
                                         redis.Publish<string>(channelKey, resultId, this.Optimistic) |> ignore
                                     localResultListeners.[resultId].Set() |> ignore
                                 else
-                                    do! redis.HSetAsync(resultsKey, resultId, outMessage, When.Always, false)
-                                            |> Async.AwaitTask |> Async.Ignore
+                                    do! 
+                                        redis.SetAsync(resultsKey + ":" + resultId, outMessage, Nullable(TimeSpan.FromMilliseconds(double resultTimeout)), When.Always, false)
+                                        |> Async.AwaitTask |> Async.Ignore
                                     redis.Publish<string>(channelKey, resultId, this.Optimistic) |> ignore
 
                                 // CONTINUATION LOGIC - 
@@ -315,32 +328,8 @@ type internal ActorImpl<'Task, 'TResult>
             Async.Start(loop, cts.Token)
             started <- true
 
-    let rec collectGarbage() =
+    let rec replayStalePipeline() =
         async {
-            let resultsScript = 
-                @"  local previousKey = KEYS[1]..':previousKeys'
-                    local currentKey = KEYS[1]..':currentKeys'
-                    local currentItems = redis.call('HKEYS', KEYS[1])
-                    local res = 0
-                    redis.call('DEL', currentKey)
-                    if redis.call('HLEN', KEYS[1]) > 0 then
-                       redis.call('SADD', currentKey, unpack(currentItems))
-                       local intersect
-                       if redis.call('SCARD', previousKey) > 0 then
-                           intersect = redis.call('SINTER', previousKey, currentKey)
-                           if #intersect > 0 then
-                                redis.call('HDEL', KEYS[1], unpack(intersect))
-                                res = #intersect
-                           end
-                       end
-                    end
-                    redis.call('DEL', previousKey)
-                    if #currentItems > 0 then
-                        redis.call('SADD', previousKey, unpack(currentItems))
-                    end
-                    return res
-                "
-
             // TODO test that a message is returned to inbox
             // Using RPUSH so that task will be returned to the front of the queue
             let pipelineScript = 
@@ -374,26 +363,22 @@ type internal ActorImpl<'Task, 'TResult>
             //Console.WriteLine("checking if entered: " + entered.ToString())
             let counts  =
                 if entered then
-                    //Console.WriteLine("GC entered: " + redis.KeyNameSpace + ":" + resultsKey)
-                    let r = redis.Eval(resultsScript, [|redis.KeyNameSpace + ":" + resultsKey|])
-                    //Console.WriteLine("Collected results: " + res.ToString() )
                     let p =
                         if started then
                                 redis.Eval(pipelineScript, [|redis.KeyNameSpace + ":" + pipelineKey; inboxKey|])
                         else ()
                     //Console.WriteLine("Collected pipelines: " + pipel.ToString() )
-                    r, p
-                else (),()
+                    p
+                else ()
             //do! Async.Sleep(garbageCollectionPeriod)
             do! Async.Sleep garbageCollectionPeriod
-            return! collectGarbage()
+            return! replayStalePipeline()
             }
 
     do
-        // Pickler is fast and almost v.1.0
-        redis.Serializer <- Serialisers.Pickler
+        redis.Serializer <- PicklerBinarySerializer()
         checkGates() |> Async.Start
-        collectGarbage() |> Async.Start
+        replayStalePipeline() |> Async.Start
         if autoStart then start()
 
     static member LoadMonitor
@@ -600,7 +585,7 @@ type internal ActorImpl<'Task, 'TResult>
                             if cachedResult <> null then true
                             else
                                 // TODO HEXISTS!
-                                not (Object.Equals(redis.HGet<'TResult>(resultsKey, resultId), null))
+                                not (redis.Exists(resultsKey + ":" + resultId))
                         if not result then
                             if tryCount > 2 then Debug.Fail("Cannot get result for: " + resultId)
                             // in release mode we will get timeout from the outer async
@@ -618,7 +603,7 @@ type internal ActorImpl<'Task, 'TResult>
         let cachedResult = resultsCache.Get(resultId)
         let result' : Message<'TResult> =
             if cachedResult <> null then unbox cachedResult
-            else redis.HGet<Message<'TResult>>(resultsKey, resultId)
+            else redis.Get<Message<'TResult>>(resultsKey + ":" + resultId)
         if Object.Equals(result', null) then
             false
         else
@@ -636,7 +621,7 @@ type internal ActorImpl<'Task, 'TResult>
             let cachedResult = resultsCache.Get(resultId)
             let result' : Message<'TResult> =
                 if cachedResult <> null then unbox cachedResult
-                else redis.HGet<Message<'TResult>>(resultsKey, resultId)
+                else redis.Get<Message<'TResult>>(resultsKey + ":" + resultId)
             if Object.Equals(result', null) then
                 false
             else

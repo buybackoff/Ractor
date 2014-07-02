@@ -5,13 +5,13 @@ namespace Fredis {
     /// Sets default expiration time span, name and compression option for a type
     /// </summary>
     [AttributeUsage(AttributeTargets.Class | AttributeTargets.Struct, AllowMultiple = false)]
-    public class CacheContractAttribute : Attribute {
+    public class RedisAttribute : Attribute {
         public TimeSpan? Expiry { get; set; }
         public string Name { get; set; }
         public bool Compressed { get; set; }
-        //public bool StoreAsHash { get; set; } // TODO
+        //public bool StoreAsHash { get; set; } // TODO??
 
-        public CacheContractAttribute() {
+        public RedisAttribute() {
             Expiry = null;
             Name = null;
             Compressed = false;
@@ -23,7 +23,7 @@ namespace Fredis {
     /// Use this property as cache key. Takes precedence over other options (IDataObject keys and PrimaryKey attributes)
     /// </summary>
     [AttributeUsage(AttributeTargets.Property, AllowMultiple = false)]
-    public class CacheKeyAttribute : Attribute {
+    public class RedisKeyAttribute : Attribute {
     }
 
 

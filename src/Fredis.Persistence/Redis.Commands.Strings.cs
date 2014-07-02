@@ -27,7 +27,6 @@ namespace Fredis {
     /// </summary>
     public partial class Redis {
 
-
         #region Append
 
         public long Append<TRoot>(TRoot root, string stringKey, string value, bool fireAndForget = false) {
@@ -60,8 +59,7 @@ namespace Fredis {
         }
 
         #endregion
-
-
+        
         #region Decr
 
         public long Decr<TRoot>(TRoot root, string stringKey, bool fireAndForget = false) {
@@ -121,8 +119,7 @@ namespace Fredis {
 
 
         #endregion
-
-
+        
         #region Get
 
         public TValue Get<TRoot, TValue>(TRoot root, string stringKey) {
@@ -158,8 +155,7 @@ namespace Fredis {
         }
 
         #endregion
-
-
+        
         #region GetSet
 
         public TValue GetSet<TValue>(TValue valueWithKey, bool fireAndForget = false)
@@ -223,8 +219,7 @@ namespace Fredis {
         }
 
         #endregion
-
-
+        
         #region Incr
 
         public long Incr<TRoot>(TRoot root, string stringKey, bool fireAndForget = false) {
@@ -310,8 +305,7 @@ namespace Fredis {
         }
 
         #endregion
-
-
+        
         #region MGet
 
         public TValue[] MGet<TRoot, TValue>(TRoot root, string[] stringKeys) {
@@ -347,7 +341,6 @@ namespace Fredis {
         }
 
         #endregion
-
 
         #region MSet
 
@@ -439,7 +432,6 @@ namespace Fredis {
 
         #endregion
 
-
         #region Set
 
         public bool Set<TValue>(TValue valueWithKey, TimeSpan? expiry = null,
@@ -530,7 +522,6 @@ namespace Fredis {
 
         #endregion
 
-
         #region StrLen
 
         public long StrLen<TRoot>(TRoot root, string stringKey) {
@@ -562,7 +553,6 @@ namespace Fredis {
         }
 
         #endregion
-
-
+        
     }
 }

@@ -19,7 +19,7 @@ namespace Fredis {
         /// <param name="path">Directory to store blobs</param>
         public FileBlobPersistor(string path) {
             _path = path;
-            Serializer = new JsonSerializer();
+            Serializer = new PicklerBinarySerializer();
         }
 
         /// <summary>

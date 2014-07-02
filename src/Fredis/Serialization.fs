@@ -6,6 +6,7 @@ open System.Runtime.Serialization.Formatters.Binary
 open Nessos.FsPickler
 open Fredis
 
+[<ObsoleteAttribute>]
 module internal Serialisers = 
     
     let Binary = 
@@ -30,17 +31,6 @@ module internal Serialisers =
               member x.Deserialize<'a>(body) = deserialise body :?> 'a
         }
 
-    let Pickler =
-        let fsp = FsPickler.CreateBinary()
-        { new ISerializer with
-            member x.Serialize(payload) = 
-                let memoryStream = new MemoryStream()
-                fsp.Serialize(memoryStream, payload)
-                memoryStream.ToArray()
-
-            member x.Deserialize<'a>(body) =
-                fsp.Deserialize<'a>(new MemoryStream(body))
-        }
 
 
 

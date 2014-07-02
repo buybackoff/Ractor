@@ -20,7 +20,7 @@ type Fredis(redisConnectionString : string) =
     static let redises = Dictionary<string, Redis>()  
 
     do
-        redis.Serializer <- Serialisers.Pickler
+        redis.Serializer <- PicklerBinarySerializer()
 
         if String.IsNullOrEmpty(ActorImpl<_,_>.DefaultRedisConnectionString) then
             ActorImpl<_,_>.DefaultRedisConnectionString <- redisConnectionString

@@ -14,7 +14,7 @@ using StackExchange.Redis;
 // LSet     x       x           x       x
 // LTrim    x       x           x       x
 // RPop     x       x           x       x
-// RPopLPush x       x           x       x
+// RPopLPush x      x           x       x
 // RPush    x       x           x       x
 
 
