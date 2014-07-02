@@ -14,6 +14,9 @@
 
 // TODO attributes instead of abstract methods + ActorBase, keep all properties but assign in constructor according to attrs
 
+// TODO Post() must handle errors, e.g. via GetResult in an async task
+// TODO!! do not drop messages when computation errored but put them back to the queue
+// and log/notify
 
 // NOTE: one of actor's property (from wiki) is behavior specified as a mathematical function to 
 // express what an Actor does when it processes a message including specifying a new 
