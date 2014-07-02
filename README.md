@@ -35,54 +35,34 @@ wraps around ServiceStack.ORMLite.v3, however there is no binary dependency and 
 in. Blob persistor saves large data objects to files or S3 (TODO).
 
 
+Process-oriented programming
+----------------------
+Fredis uses [process-oriented programming](http://en.wikipedia.org/wiki/Process-oriented_programming) paradigm 
+- it separates the concerns of data structures and the concurrent processes that act upon them. Data structures
+reside in Redis cluster and persistent storage (RDBMS/S3/etc) which logically extend single-box memory
+model to distributed scenario. Fredis actors are the concurrent processes that act upon the data.
+
+![Memory model](https://raw.githubusercontent.com/buybackoff/Fredis/master/docs/files/img/Memory%20model.jpg)
+
+
+![Assumptions](https://raw.githubusercontent.com/buybackoff/Fredis/master/docs/files/img/Slides/Slide2.JPG)
+![Distributed actors](https://raw.githubusercontent.com/buybackoff/Fredis/master/docs/files/img/Slides/Slide3.JPG)
+![Continuations](https://raw.githubusercontent.com/buybackoff/Fredis/master/docs/files/img/Slides/Slide4.JPG)
+![Side effects](https://raw.githubusercontent.com/buybackoff/Fredis/master/docs/files/img/Slides/Slide5.JPG)
+
+
 
 Install & Usage
 ----------------------
 
 	PM> Install-Package Fredis
 	PM> Install-Package Fredis.Persistence
+	PM> Install-Package Fredis.Persistence.AWS
 
 
 Docs & test are work in progress...
 
-Basic usage
 
-    let fredis = new Fredis("localhost")
-
-    let computation (input:string) : Async<unit> =
-        async {
-            Console.WriteLine("Hello, " + input)
-        }
-
-    let greeter = fredis.CreateActor("greeter", computation)
-    // type annotations are required
-    let sameGreeter  = Fredis.GetActor<string, unit>("greeter")
-    greeter.Post("Greeter 1")
-    greeter.Post("Greeter 2")
-    greeter.Post("Greeter 3")
-    greeter.Post("Greeter 4")
-    greeter.Post("Greeter 5")
-
-    sameGreeter.Post("Greeter via instance from Fredis.GetActor")
-
-    // this will fail if computation returns not Async<unit>
-    "greeter" <-- "Greeter via operator"
-
-    Console.WriteLine("Not started yet")
-    Thread.Sleep(1000)
-    greeter.Start()
-    Thread.Sleep(1000)
-
-Outputs
-
-    Not started yet
-    Hello, Greeter 1
-    Hello, Greeter 2
-    Hello, Greeter 3
-    Hello, Greeter 4
-    Hello, Greeter 5
-    Hello, Greeter via instance from Fredis.GetActor
-    Hello, Greeter via operator
 
 License
 ----------------------
