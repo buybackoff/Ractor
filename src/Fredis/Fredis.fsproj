@@ -64,6 +64,7 @@
     <Compile Include="Fredis.fs" />
     <None Include="packages.config" />
     <None Include="app.config" />
+    <Compile Include="Collections.fs" />
   </ItemGroup>
   <ItemGroup>
     <Reference Include="FSharp.Core">

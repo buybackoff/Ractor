@@ -13,7 +13,7 @@ namespace Fredis.Persistence.AWS {
 
         public AWSQueue(string queueName = null) {
             _queueUrl = GetOrCreateQueue(queueName);
-            Serializer = new JsonSerializer();
+            Serializer = new PicklerBinarySerializer();
         }
 
         private string GetOrCreateQueue(string name) {

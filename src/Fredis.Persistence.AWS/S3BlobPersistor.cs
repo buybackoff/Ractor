@@ -20,7 +20,7 @@ namespace Fredis.Persistence.AWS
 
             public S3Persistor(string bucket) {
                 _bucket = bucket;
-                Serializer = new JsonSerializer();
+                Serializer = new PicklerBinarySerializer();
             }
 
 

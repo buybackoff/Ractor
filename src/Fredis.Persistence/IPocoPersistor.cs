@@ -55,6 +55,8 @@ namespace Fredis {
         [Obsolete]
         void Delete<T>(List<T> items) where T : IDataObject, new();
 
+        // TODO Select() for select all
+
         /// <summary>
         /// 
         /// </summary>
