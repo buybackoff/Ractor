@@ -205,13 +205,8 @@ type internal ActorImpl<'Task, 'TResult>
         }
     let messageQueue = ConcurrentQueue<Envelope<'Task> * string>()
 
-    // CACHES ARE NOT STATIC BUT INSTANCE, otherwise continuations will fight for the same caches entries with different resuls
-    // TODO!!! Important: we need only one MemoryCache instance per app. Use Redis.Cache and apply some key naming scheme instead of 
-    // creating an instance per Actor
-    // cache of local results
-    let resultsCache = MemoryCache("results")
-    // cache of result ids that we didn't listen to
-    let resultsIdCache = MemoryCache("resultIds")
+    // Global cache reference
+    let cache = Redis.Cache
 
     static let actors = Dictionary<string, obj>()
 
@@ -266,7 +261,7 @@ type internal ActorImpl<'Task, 'TResult>
                                     // will tell us if there was a notification but we missed it.
                                     // 2. by caching ids that we waited, we could reclaim a result
                                     // after a worker death without re-posting a task (TryGetResultImmediate method)
-                                    resultsIdCache.Add(resultId, Object(), 
+                                    cache.Add(resultsKey + ":id:" + resultId, Object(), 
                                         DateTimeOffset.Now.AddMilliseconds(float this.ResultTimeout)) 
                                         |> ignore
                                 )
@@ -291,7 +286,7 @@ type internal ActorImpl<'Task, 'TResult>
                                 // notify local waiter
                                 if localResultListeners.ContainsKey(resultId) then
                                     // save trip to redis to get the result
-                                    resultsCache.Add(resultId, outMessage, 
+                                    cache.Add(resultsKey + ":" + resultId, outMessage, 
                                         DateTimeOffset.Now.AddMilliseconds(float this.ResultTimeout)) 
                                         |> ignore
                                     // save result and notify others about it even though we are doing job locally 
@@ -562,7 +557,7 @@ type internal ActorImpl<'Task, 'TResult>
     /// </summary>
     member internal this.WaitResultAsync(resultId : string) : Async<bool> = 
         //Debug.Print("Getting: " + resultId)
-        let cached = resultsCache.Get(resultId)
+        let cached = cache.Get(resultsKey + ":" + resultId)
         if cached <> null then
             async { return true }
         else 
@@ -573,7 +568,7 @@ type internal ActorImpl<'Task, 'TResult>
                 async {
                     let retryInterval = if this.ResultTimeout > 0 then this.ResultTimeout / 3 else 5000 // arbitrary large number
                     let! listenerTask = Async.AwaitWaitHandle(listener.WaitHandle, retryInterval) |> Async.StartChild
-                    let hasCachedId = resultsIdCache.Get(resultId) <> null
+                    let hasCachedId = cache.Get(resultsKey + ":id:" + resultId) <> null
                     let signaled = ref false
                     if not hasCachedId then
                         let! signal = listenerTask
@@ -583,7 +578,7 @@ type internal ActorImpl<'Task, 'TResult>
                     if !signaled then // if signaled then result definitely exists
                         return true
                     else // opportunistic retry "what if we lost a message for some reason"
-                        let cachedResult = resultsCache.Get(resultId)
+                        let cachedResult = cache.Get(resultsKey + ":" + resultId)
                         let result =
                             if cachedResult <> null then true
                             else
@@ -603,7 +598,7 @@ type internal ActorImpl<'Task, 'TResult>
     /// Check if a result is available and return it.
     /// </summary>
     member internal this.TryGetResultImmediate(resultId : string, [<Out>] result : byref<Message<'TResult>>) : bool = 
-        let cachedResult = resultsCache.Get(resultId)
+        let cachedResult = cache.Get(resultsKey + ":" + resultId)
         let result' : Message<'TResult> =
             if cachedResult <> null then unbox cachedResult
             else redis.Get<Message<'TResult>>(resultsKey + ":" + resultId)
@@ -617,11 +612,11 @@ type internal ActorImpl<'Task, 'TResult>
     /// Check if a result is likely awailable and return it.
     /// </summary>
     member internal this.TryGetResultIfItDefinitelyExists(resultId : string, [<Out>] result : byref<Message<'TResult>>) : bool = 
-        let hasCachedId = resultsIdCache.Get(resultId) <> null
+        let hasCachedId = cache.Get(resultsKey + ":id:" + resultId) <> null
         //false doesn't mean that result doesn't exist (it doesn't in 99.9..% cases), but true 100% means that we have a result
         // in most cases (depends on Redis's PubSub) this variable is right
         if hasCachedId then 
-            let cachedResult = resultsCache.Get(resultId)
+            let cachedResult = cache.Get(resultsKey + ":" + resultId)
             let result' : Message<'TResult> =
                 if cachedResult <> null then unbox cachedResult
                 else redis.Get<Message<'TResult>>(resultsKey + ":" + resultId)
