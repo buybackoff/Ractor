@@ -42,15 +42,21 @@ paradigm - it separates the concerns of data structures and the concurrent proce
 reside in Redis cluster and persistent storage (RDBMS/S3/etc) which logically extend single-box memory
 model to distributed scenario. Fredis actors are the concurrent processes that act upon the data.
 
-![Memory model](https://raw.githubusercontent.com/buybackoff/Fredis/master/docs/files/img/Memory%20model.jpg)
+Slides for library intro at HS
+----------------------
 
-
-![Assumptions](https://raw.githubusercontent.com/buybackoff/Fredis/master/docs/files/img/Slides/Slide2.JPG)
-![Distributed actors](https://raw.githubusercontent.com/buybackoff/Fredis/master/docs/files/img/Slides/Slide3.JPG)
-![Continuations](https://raw.githubusercontent.com/buybackoff/Fredis/master/docs/files/img/Slides/Slide4.JPG)
-![Side effects](https://raw.githubusercontent.com/buybackoff/Fredis/master/docs/files/img/Slides/Slide5.JPG)
-
-
+![Slide 1](https://raw.githubusercontent.com/buybackoff/Fredis/master/docs/files/img/Slides/Slide1.JPG)
+![Slide 2](https://raw.githubusercontent.com/buybackoff/Fredis/master/docs/files/img/Slides/Slide2.JPG)
+![Slide 3](https://raw.githubusercontent.com/buybackoff/Fredis/master/docs/files/img/Slides/Slide3.JPG)
+![Slide 4](https://raw.githubusercontent.com/buybackoff/Fredis/master/docs/files/img/Slides/Slide4.JPG)
+![Slide 5](https://raw.githubusercontent.com/buybackoff/Fredis/master/docs/files/img/Slides/Slide5.JPG)
+![Slide 6](https://raw.githubusercontent.com/buybackoff/Fredis/master/docs/files/img/Slides/Slide6.JPG)
+![Slide 7](https://raw.githubusercontent.com/buybackoff/Fredis/master/docs/files/img/Slides/Slide7.JPG)
+![Slide 8](https://raw.githubusercontent.com/buybackoff/Fredis/master/docs/files/img/Slides/Slide8.JPG)
+![Slide 9](https://raw.githubusercontent.com/buybackoff/Fredis/master/docs/files/img/Slides/Slide9.JPG)
+![Slide 10](https://raw.githubusercontent.com/buybackoff/Fredis/master/docs/files/img/Slides/Slide10.JPG)
+![Slide 11](https://raw.githubusercontent.com/buybackoff/Fredis/master/docs/files/img/Slides/Slide11.JPG)
+![Slide 12](https://raw.githubusercontent.com/buybackoff/Fredis/master/docs/files/img/Slides/Slide12.JPG)
 
 Install & Usage
 ----------------------
