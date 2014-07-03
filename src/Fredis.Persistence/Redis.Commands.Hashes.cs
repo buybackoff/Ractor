@@ -491,45 +491,4 @@ namespace Fredis {
     }
 
 
-    public class RedisDictionary<TKey, TValue> : IDictionary<TKey, TValue> {
-        // need sync channel
-        // need cache + cache policy
-
-        private string _key;
-        private string _prefix;
-        private string _channel;
-        // used for local storage during enumerations
-        // channel subscriber should add/remove/change it when not null
-        // so that default enumerator could throw "colelction changed" as with normal IDictionary
-        private Dictionary<TKey, TValue> _dictionary;
-        private MemoryCache _cache = Redis.Cache;
-
-        /// <summary>
-        /// 
-        /// </summary>
-        public RedisDictionary(string key) {
-            _key = key;
-            _prefix = _key + ":";
-            _channel = _prefix + "syncChannel";
-        }
-
-        public IEnumerator<KeyValuePair<TKey, TValue>> GetEnumerator() { throw new System.NotImplementedException(); }
-        IEnumerator IEnumerable.GetEnumerator() { return GetEnumerator(); }
-        public void Add(KeyValuePair<TKey, TValue> item) { throw new System.NotImplementedException(); }
-        public void Clear() { throw new System.NotImplementedException(); }
-        public bool Contains(KeyValuePair<TKey, TValue> item) { throw new System.NotImplementedException(); }
-        public void CopyTo(KeyValuePair<TKey, TValue>[] array, int arrayIndex) { throw new System.NotImplementedException(); }
-        public bool Remove(KeyValuePair<TKey, TValue> item) { throw new System.NotImplementedException(); }
-        public int Count { get; private set; }
-        public bool IsReadOnly { get; private set; }
-        public bool ContainsKey(TKey key) { throw new System.NotImplementedException(); }
-        public void Add(TKey key, TValue value) { throw new System.NotImplementedException(); }
-        public bool Remove(TKey key) { throw new System.NotImplementedException(); }
-        public bool TryGetValue(TKey key, out TValue value) { throw new System.NotImplementedException(); }
-        public TValue this[TKey key] { get { throw new System.NotImplementedException(); } set { throw new System.NotImplementedException(); } }
-
-        public ICollection<TKey> Keys { get; private set; }
-        public ICollection<TValue> Values { get; private set; }
-    }
-
 }
