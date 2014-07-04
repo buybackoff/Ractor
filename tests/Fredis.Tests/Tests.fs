@@ -64,7 +64,10 @@ let ``Hello, Actors`` () =
     greeter.Post("Greeter 6") |> ignore
 
     // doesn't work correctly yet
-    greeter.ContinueWith(greeter).Post("Double greeter") |> ignore
+    greeter.ContinueWith(greeter)
+            .ContinueWith(Greeter())
+            .ContinueWith(sameGreeter)
+            .Post("Triple greeter") |> ignore
 
     Thread.Sleep(1000)
 
