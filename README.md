@@ -31,8 +31,8 @@ Fredis will grow as well and will become mature and robust for its stated tasks 
 client based on excellent [Stackexchange.Redis](https://github.com/StackExchange/StackExchange.Redis) 
 library. The typed Redis client has strong opinion about keys schema inside Redis and uses a concept of
 root/owner objects to store dependent objects/collections. POCO/database persistor base implementation
-wraps around ServiceStack.ORMLite.v3, however there is no binary dependency and any ORM could be plugged 
-in. Blob persistor saves large data objects to files or S3 (TODO).
+wraps around ServiceStack.ORMLite, however there is no binary dependency and any ORM could be plugged 
+in. Blob persistor saves large data objects to files or S3.
 
 
 Process-oriented programming
@@ -57,6 +57,8 @@ Slides for library intro at HS
 ![Slide 10](https://raw.githubusercontent.com/buybackoff/Fredis/master/docs/files/img/Slides/Slide10.JPG)
 ![Slide 11](https://raw.githubusercontent.com/buybackoff/Fredis/master/docs/files/img/Slides/Slide11.JPG)
 ![Slide 12](https://raw.githubusercontent.com/buybackoff/Fredis/master/docs/files/img/Slides/Slide12.JPG)
+![Slide 13](https://raw.githubusercontent.com/buybackoff/Fredis/master/docs/files/img/Slides/Slide13.JPG)
+
 
 Install & Usage
 ----------------------
@@ -85,5 +87,5 @@ This software is distributed under the License is distributed on an "AS IS" BASI
 WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 
 StackExchange.Redis is licensed separately; see https://github.com/StackExchange/StackExchange.Redis/blob/master/LICENSE.
-ServiceStackV3 is licensed separately; see https://github.com/ServiceStack/ServiceStack/blob/v3/LICENSE.
+ServiceStackV3 is licensed separately; see https://github.com/ServiceStack/ServiceStack/blob/master/license.txt.
 Redis is licensed separately; see http://redis.io/topics/license. 
