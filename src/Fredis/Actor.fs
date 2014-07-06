@@ -226,7 +226,7 @@ type internal ActorImpl<'Task, 'TResult>
                     let pipelineId = Guid.NewGuid().ToString("N")
                     let hasLocal, localMessage = messageQueue.TryDequeue()
                     if hasLocal then 
-                        //Debug.Print("Took local message")
+                        Debug.Print("Took local message")
                         return localMessage
                     else 
                         let! message = redis.EvalAsync<Envelope<'Task>>
@@ -237,10 +237,10 @@ type internal ActorImpl<'Task, 'TResult>
                                        |> Async.AwaitTask
                         if Object.Equals(message, Unchecked.defaultof<Envelope<'Task>>) then 
                             let! signal = messageWaiter.WaitAsync(1000) |> Async.AwaitTask // TODO timeout, if PubSub dropped notification, recheck the queue, but not very often
-                            if not signal then Debug.Print("Timeout in awaitMessage")
+                            if not signal then Debug.Print("Timeout in awaitMessage in: " + this.Id)
                             return! awaitMessage()
                         else 
-                            //Debug.Print("Took Redis message") 
+                            Debug.Print("Took Redis message") 
                             return message, pipelineId
                 }
             
@@ -283,39 +283,53 @@ type internal ActorImpl<'Task, 'TResult>
                                 let! child = Async.StartChild(computation (inMessage, resultId), this.ResultTimeout)
                                 let! outMessage = child
 
-                                // notify local waiter
-                                if localResultListeners.ContainsKey(resultId) then
-                                    // save trip to redis to get the result
-                                    cache.Add(resultsKey + ":" + resultId, outMessage, 
-                                        DateTimeOffset.Now.AddMilliseconds(float this.ResultTimeout)) 
-                                        |> ignore
-                                    // save result and notify others about it even though we are doing job locally 
-                                    if not this.Optimistic then // TODO not sure about logic here and in the whole try block
-                                        do! 
-                                            redis.SetAsync(resultsKey + ":" + resultId, outMessage, Nullable(TimeSpan.FromMilliseconds(double resultTimeout)), When.Always, false)
-                                            |> Async.AwaitTask |> Async.Ignore
-                                        redis.Publish<string>(channelKey, resultId, this.Optimistic) |> ignore
-                                    localResultListeners.[resultId].Set() |> ignore
-                                else
-                                    do! 
-                                        redis.SetAsync(resultsKey + ":" + resultId, outMessage, Nullable(TimeSpan.FromMilliseconds(double resultTimeout)), When.Always, false)
-                                        |> Async.AwaitTask |> Async.Ignore
-                                    redis.Publish<string>(channelKey, resultId, this.Optimistic) |> ignore
 
-                                // CONTINUATION LOGIC - 
-                                // TODO 1. move to lua script
-                                // TODO 2. Add local optimization logic, probably will need to move some members to non-generic actor impl
-                                // otherwise <_,_> casts will fails because we do not know the final type of caller by its id
-                                // for each caller id we must pass current result to its inbox
-                                // get it instance
-                                for callerId in callerIds do
-                                    //let callerInstance = ActorImpl<_,_>.ActorsRepo.[callerId]
-                                    let callerInboxKey = "{" + callerId + "}" + ":Mailbox:inbox"
-                                    let envelopeForCaller : Envelope<'TResult> =
-                                        outMessage, resultId, [||]
-                                    do! redis.LPushAsync<Envelope<'TResult>>(callerInboxKey, envelopeForCaller, When.Always, false) 
-                                        |> Async.AwaitTask |> Async.Ignore
-                                    ()
+                                // NEW LOGIC
+                                // first check if there are caller ids
+                                if Array.isEmpty callerIds then
+                                    // if empty, notify result waiters
+                                    // notify local waiter if it exists
+                                    if localResultListeners.ContainsKey(resultId) then
+                                        // save result and notify others about it
+                                        // save trip to redis to get the result
+                                        cache.Set(resultsKey + ":" + resultId, outMessage, 
+                                            DateTimeOffset.Now.AddMilliseconds(float this.ResultTimeout))
+                                        // even the job is done locally, ensure the result is never ever lost when in none-Optimistic mode
+                                        if not this.Optimistic then
+                                            do! redis.SetAsync(resultsKey + ":" + resultId, outMessage, 
+                                                    Nullable(TimeSpan.FromMilliseconds(double resultTimeout)), When.Always, false)
+                                                    |> Async.AwaitTask |> Async.Ignore
+                                            do! redis.PublishAsync<string>(channelKey, resultId, false) |> Async.AwaitTask |> Async.Ignore
+                                        localResultListeners.[resultId].Set() |> ignore
+                                    else
+                                        // alway store results in Redis if there is no local waiter, but fire and forget if in optimistic mode
+                                        do!
+                                            redis.SetAsync(resultsKey + ":" + resultId, outMessage, Nullable(TimeSpan.FromMilliseconds(double resultTimeout)), When.Always, this.Optimistic)
+                                            |> Async.AwaitTask |> Async.Ignore
+                                        do! redis.PublishAsync<string>(channelKey, resultId, this.Optimistic) |> Async.AwaitTask |> Async.Ignore
+                                else
+                                    // there is no result waiters, our job is to pass results directly to the second actor
+                                    // in continuation and notify it that inbox is not empty
+                                    
+                                    for callerId in callerIds do
+                                        //let callerInstance = ActorImpl<_,_>.ActorsRepo.[callerId]
+                                        let callerInboxKey = "{" + callerId + "}" + ":Mailbox:inbox"
+                                        let callerChannelKey = "{" + callerId + "}" + ":Mailbox:channel"
+                                        let callerResultId = String.Join("|", resultId.Split('|').[1..]) // TODO check what Marc Gravel wrote about allocations and string splits
+                                        let envelopeForCaller : Envelope<'TResult> =
+                                            outMessage, callerResultId, [||]
+                                        do! redis.LPushAsync<Envelope<'TResult>>(callerInboxKey, envelopeForCaller, When.Always, false) 
+                                            |> Async.AwaitTask |> Async.Ignore
+                                        // empty notification for inbox
+                                        do! redis.PublishAsync<string>(callerChannelKey, "", this.Optimistic) |> Async.AwaitTask |> Async.Ignore
+
+                                        ()
+                                    // CONTINUATION LOGIC - 
+                                    // TODO 1. move to lua script
+                                    // TODO 2. Add local optimization logic, probably will need to move some members to non-generic actor impl
+                                    // otherwise <_,_> casts will fail because we do not know the final type of caller by its id
+                                    // for each caller id we must pass current result to its inbox
+                                    // get it instance
 
                                 redis.HDel(pipelineKey, pipelineId, this.Optimistic) |> ignore
                             finally
@@ -583,7 +597,7 @@ type internal ActorImpl<'Task, 'TResult>
                             if cachedResult <> null then true
                             else
                                 // TODO HEXISTS!
-                                not (redis.Exists(resultsKey + ":" + resultId))
+                                 (redis.Exists(resultsKey + ":" + resultId)) // not
                         if not result then
                             if tryCount > 2 then Debug.Fail("Cannot get result for: " + resultId)
                             // in release mode we will get timeout from the outer async
@@ -913,7 +927,9 @@ module FSharpExtensions =
             (continuation : Actor<'TResult1, 'TResult2>) : Actor<'Task, 'TResult2> =
                 let actor1 = ActorImpl<'Task, 'TResult1>.Instance(this)
                 let actor2 = ActorImpl<'TResult1, 'TResult2>.Instance(continuation)
+                let key = "(" + this.GetKey() + "->-" + continuation.GetKey() + ")"
                 let computation : Message<'Task> * string -> Async<Message<'TResult2>> = 
+                    // this resultId is passed from continuator call and it is in Guid("N") format
                     fun (inMessage, resultId) -> 
                         async {
                             // 1. check if we have the final result. that could *very rarely* happen if 
@@ -931,7 +947,7 @@ module FSharpExtensions =
                                 // that if actor.GetResultAsync() returned then the intermediate result
                                 // is already in cActor inbox).
                                 // (Such a situation when firstIsDone is more likely with continuations that could be chained mutiple times.)
-                                let firstIsDone, _ = actor1.TryGetResultIfItDefinitelyExists(resultId)
+                                let firstIsDone, _ = actor1.TryGetResultIfItDefinitelyExists(key + "|" + resultId)
                                 if firstIsDone then // extremely unusual
                                     // The first result must be already in the second inbox/pipeline
                                     // Do not need to get the intermediate result here, do nothing
@@ -940,20 +956,19 @@ module FSharpExtensions =
                                     // here the task message is sent to the first actor and 
                                     // it will arrive to the results list and stay there
                                     // before the results timeout
-                                    let envelope : Envelope<'Task> = inMessage, resultId, [| actor2.Id |]
+                                    let envelope : Envelope<'Task> = inMessage, key + "|" + resultId, [| actor2.Id |]
                                     do! actor1.Post(envelope) |> Async.Ignore
                                     // do not wait for intermediate result
                                     ()
                                 // wait for second actor
                                 let! r2 = actor2.GetResultAsync(resultId)
-                                Debug.Print("Final result: " + r2.ToString())
                                 return r2
                         }
             
                 let result = 
                     { new Actor<'Task, 'TResult2>() with
                            override __.Redis with get() = actor1.RedisConnectionString
-                           override __.GetKey() = "(" + this.GetKey() + "->>-" + continuation.GetKey() + ")"
+                           override __.GetKey() = key
                            override __.ResultTimeout with get() = this.ResultTimeout + continuation.ResultTimeout
                            //instead of [override __.Computation(input) = ...] assign internal computation directly
                     }

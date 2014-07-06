@@ -1,4 +1,4 @@
-﻿module Fredis.Tests
+﻿module Fredis.Tests.Basics
 
 open System
 open System.Linq
@@ -22,19 +22,22 @@ type Greeter ()=
                 return "Hello, " + input
         }
     override this.AutoStart = false
-    override this.ResultTimeout = 500 // milliseconds
+    override this.ResultTimeout = 50000 // milliseconds
 
-// C# friendly actor
 type Echo () =
-    inherit Fredis.Actor<string,string>()
+    inherit Actor<string,string>()
     override this.Redis = "localhost"
-    override this.Computation(input) : Task<string> = async { return input } |> Async.StartAsTask
+    override this.Computation(input) : Async<string> = 
+        async { 
+            Console.WriteLine("Echo: " + input)
+            return input 
+            } 
     //override this.AutoStart = true // true is default, no need to override
 
 [<Test>]
 let ``Hello, Actors`` () =
     
-    let fredis = new Fredis("localhost")
+    let fredis = new F("localhost") // TODO this is ugly, make module Fredis
 
     let greeter = Greeter()
 
@@ -55,28 +58,21 @@ let ``Hello, Actors`` () =
     greeter.Post("Greeter 5") |> ignore
 
     Console.WriteLine("Not started yet")
-    Thread.Sleep(3000)
+    Thread.Sleep(1000)
     greeter.Start()
-    Thread.Sleep(3000)
+    Thread.Sleep(1000)
     sameGreeter.Post("Greeter via sameGreeter, started") |> ignore
     
-    Thread.Sleep(1000)
     greeter.Post("Greeter 6") |> ignore
 
     // doesn't work correctly yet
-    greeter.ContinueWith(greeter)
-            .ContinueWith(Greeter())
-            .ContinueWith(sameGreeter)
-            .Post("Triple greeter") |> ignore
+    greeter.ContinueWith(greeter).ContinueWith(greeter).ContinueWith(greeter)
+            .Post("Echo greeter") |> ignore
 
-    Thread.Sleep(1000)
+    Thread.Sleep(10000)
 
     greeter.Stop()
     ()
-
-
-
-
 
 
 

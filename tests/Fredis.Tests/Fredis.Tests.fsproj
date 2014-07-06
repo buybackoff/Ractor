@@ -58,7 +58,8 @@
   <Import Project="$(FSharpTargetsPath)" />
   <Import Project="$(SolutionDir)\.nuget\NuGet.targets" Condition="Exists('$(SolutionDir)\.nuget\NuGet.targets')" />
   <ItemGroup>
-    <Compile Include="Tests.fs" />
+    <Compile Include="Basics.fs" />
+    <Compile Include="Continuations.fs" />
     <Compile Include="Lua.fs" />
     <None Include="packages.config" />
     <None Include="Tests.fsx" />

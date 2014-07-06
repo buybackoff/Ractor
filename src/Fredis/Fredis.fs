@@ -76,6 +76,9 @@ type Fredis(redisConnectionString : string) =
         redises.[id]
     static member GetRedis() = redises.[""]
 
+
+namespace Fredis.FSharp
+open Fredis
 // erased by compiler, convenient to use from F#
 type F = Fredis
 
