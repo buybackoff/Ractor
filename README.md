@@ -1,6 +1,6 @@
 Ractor
 =======================
-<img style="float: right" src="https://raw.githubusercontent.com/buybackoff/Ractor.CLR/master/docs/files/img/logo.png" />
+<img align="right" src="https://raw.githubusercontent.com/buybackoff/Ractor.CLR/master/docs/files/img/logo.png" />
 **Ractor** (Redis Actor, also see [this](http://en.wikipedia.org/wiki/The_Diamond_Age)) is a distributed 
 actor system with CLR/JVM interop and dead simple API for POCOs cache/persistence. Its API is inspired by 
 F#'s [MailboxProcessor](http://msdn.microsoft.com/en-us/library/ee370357.aspx), 
