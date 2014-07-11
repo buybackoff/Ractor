@@ -1,6 +1,13 @@
+#### 0.1.1 - July 11 2014
+* Rename to Ractor and change direction: the goal is to make CLR/JVM interoperable actors. An 
+actor could be defined in any language on any platform and called from another platform. The only
+requirement is that message types are defined on both platforms and are serializable to the same 
+Json representation.
+
+
 #### 0.1.0 - June 24 2014
 * Stabilized public API - no more methods expected unless I cannot live without them
-* Added Fredis.Persistence.AWS project with S3 IBlobPersistor and SQS IQueue implementations
+* Added Ractor.Persistence.AWS project with S3 IBlobPersistor and SQS IQueue implementations
 * NOT TESTED, MANY REDIS METHODS ARE MISSING
 
 #### 0.0.12 - June 19 2014
@@ -16,7 +23,7 @@
 * Main methods Post and PostAndReply tested for basic corectness (still could be unobvious issues)
 
 #### 0.0.7 - May 4 2014
-* Fredis first draft with actros
+* Ractor first draft with actros
 
 #### 0.0.4 - April 28 2014
 * Add perstistence stuff (DB, files, queues) for which redis is cache

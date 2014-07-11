@@ -4,19 +4,19 @@
 // --------------------------------------------------------------------------------------
 
 // Binaries that have XML documentation (in a corresponding generated XML file)
-let referenceBinaries = [ "Fredis.dll" ]
+let referenceBinaries = [ "Ractor.dll" ]
 // Web site location for the generated documentation
-let website = "/Fredis"
+let website = "/Ractor"
 
-let githubLink = "http://github.com/buybackoff/Fredis"
+let githubLink = "http://github.com/buybackoff/Ractor.CLR"
 
 // Specify more information about your project
 let info =
-  [ "project-name", "Fredis"
+  [ "project-name", "Ractor"
     "project-author", "Victor Baybekov"
     "project-summary", "F# Redis client"
     "project-github", githubLink
-    "project-nuget", "http://nuget.com/packages/Fredis" ]
+    "project-nuget", "http://nuget.com/packages/Ractor.CLR" ]
 
 // --------------------------------------------------------------------------------------
 // For typical project, no changes are needed below

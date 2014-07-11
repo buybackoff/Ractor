@@ -40,15 +40,15 @@ Throughput guarantees
 
 Redis is the limit!
 
-Each actor could live on its own Redis server via different instances of Fredis object.
+Each actor could live on its own Redis server via different instances of Ractor object.
 
 TODO passing data or references and side effects are different concers. Bad description below, rework!
 
 Thoughts dump:
 
-* Actors with side effects - should not pass data objects as Fredis messages but pass references
+* Actors with side effects - should not pass data objects as Ractor messages but pass references
 to data objects and then manipulate data from within actors. This will offload work from
-Fredis instance to other cache/persistence servers accessed from actor computations.
+Ractor instance to other cache/persistence servers accessed from actor computations.
 
 If actor dies the same computation with the same data pointer will restart and that could corrupt
 data or cause errors. (e.g. increase counter twice or seond insert into a database table with existing

@@ -21,29 +21,30 @@ open System
 
 // The name of the project 
 // (used by attributes in AssemblyInfo, name of a NuGet package and directory in 'src')
-let project = "Fredis"
+let project = "Ractor"
 
 
 // Short summary of the project
 // (used as description in AssemblyInfo and as a short summary for NuGet package)
-let summary = "Fredis (F#+Redis) is dead simple collection of APIs for POCOs cache/persistence + redis based distributed actors"
+let summary = "Ractor (Redis Actor, also see The Diamond Age by Neal Stephenson) is 
+a distributed actor system with CLR/JVM interop and dead simple API for POCOs cache/persistence"
 
 // Longer description of the project
 // (used as a description for NuGet package; line breaks are automatically cleaned up)
 let description = """
- Fredis (F# + Redis) is a light distributed actors framework built on top of Redis.  Its API is similar to 
-F#'s MailboxProcessor and Fsharp.Actor library. The main difference is that in Fredis actors exist 
+Ractor is a light distributed actors framework built on top of Redis.  Its API is similar to 
+F#'s MailboxProcessor, Fsharp.Actor or Akka(.NET) libraries. The main difference is that in Ractor actors exist 
 is Redis per se as lists of messages, while a number of ephemeral workers (actors' "incarnations") take messages
 from Redis, process them and post results back."""
 
 // List of author names (for NuGet package)
 let authors = [ "Victor Baybekov" ]
 // Tags for your project (for NuGet package)
-let tags = "F# fsharp redis"
+let tags = "F# .NET fsharp redis akka distributed JVM interop"
 
 // File system information 
 // (<solutionFile>.sln is built during the building process)
-let solutionFile  = "Fredis"
+let solutionFile  = "Ractor"
 // Pattern specifying assemblies to be tested using NUnit
 let testAssemblies = "tests/**/bin/Release/*Tests*.dll"
 
@@ -51,16 +52,16 @@ let testAssemblies = "tests/**/bin/Release/*Tests*.dll"
 // The profile where the project is posted 
 let gitHome = "https://github.com/buybackoff"
 // The name of the project on GitHub
-let gitName = "Fredis"
-let cloneUrl = "git@github.com:buybackoff/Fredis.git"
+let gitName = "Ractor"
+let cloneUrl = "git@github.com:buybackoff/Ractor.CLR.git"
 
 
 // --------------------------------------------------------------------------------------
-// Fredis.Persistence
+// Ractor.Persistence
 // --------------------------------------------------------------------------------------
 
-let projectPersistence = "Fredis.Persistence"
-let summaryPersistence = "Fredis.Persistence is a collection of APIs for POCOs and blobs persistence and a strongly typed Redis
+let projectPersistence = "Ractor.Persistence"
+let summaryPersistence = "Ractor.Persistence is a collection of APIs for POCOs and blobs persistence and a strongly typed Redis
 client based on excellent Stackexchange.Redis library."
 let descriptionPersistence = summaryPersistence + """
 The typed Redis client has strong opinion about keys schema inside Redis and uses a concept 
@@ -70,14 +71,14 @@ in. Blob persistor saves large data objects to files or S3. """
 let tagsPersistence = "persistence DB database shards"
 
 // --------------------------------------------------------------------------------------
-// Fredis.Persistence
+// Ractor.Persistence
 // --------------------------------------------------------------------------------------
 
-let projectPersistenceAWS = "Fredis.Persistence.AWS"
-let summaryPersistenceAWS = "Fredis.Persistence is a collection of APIs for POCOs and blobs persistence and a strongly typed Redis
+let projectPersistenceAWS = "Ractor.Persistence.AWS"
+let summaryPersistenceAWS = "Ractor.Persistence is a collection of APIs for POCOs and blobs persistence and a strongly typed Redis
 client based on excellent Stackexchange.Redis library."
 let descriptionPersistenceAWS = summaryPersistence + """
-Fredis.Persistence.AWS has some interface implementations for AWS platform."""
+Ractor.Persistence.AWS has some interface implementations for AWS platform."""
 let tagsPersistenceAWS = "AWS S3 persistence queue cloud"
 
 // --------------------------------------------------------------------------------------
@@ -97,9 +98,9 @@ Target "AssemblyInfo" (fun _ ->
         Attribute.Description summary
         Attribute.Version release.AssemblyVersion
         Attribute.FileVersion release.AssemblyVersion 
-        Attribute.InternalsVisibleTo "Fredis.CS.Tests"
-        Attribute.InternalsVisibleTo "Fredis.Tests"
-        Attribute.InternalsVisibleTo "Fredis.Profiler"] 
+        Attribute.InternalsVisibleTo "Ractor.CS.Tests"
+        Attribute.InternalsVisibleTo "Ractor.Tests"
+        Attribute.InternalsVisibleTo "Ractor.Profiler"] 
 )
 
 // --------------------------------------------------------------------------------------
@@ -168,7 +169,7 @@ Target "NuGet" (fun _ ->
             AccessKey = getBuildParamOrDefault "nugetkey" ""
             Publish = hasBuildParam "nugetkey" 
             Dependencies = [] })
-        ("nuget/Fredis.Persistence.nuspec")
+        ("nuget/Ractor.Persistence.nuspec")
 
     NuGet (fun p -> 
         { p with   
@@ -183,7 +184,7 @@ Target "NuGet" (fun _ ->
             AccessKey = getBuildParamOrDefault "nugetkey" ""
             Publish = hasBuildParam "nugetkey" 
             Dependencies = [] })
-        ("nuget/Fredis.Persistence.AWS.nuspec")
+        ("nuget/Ractor.Persistence.AWS.nuspec")
 )
 
 // --------------------------------------------------------------------------------------

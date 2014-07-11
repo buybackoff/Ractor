@@ -3,38 +3,44 @@ open System.Linq
 open System.Text
 open System.Threading.Tasks
 open System.Collections.Generic
-open Fredis
+open Ractor.FSharp
 open System
 open System.Text
 open System.Diagnostics
 open System.Threading
 
+type Incrementer ()=
+    inherit Actor<int,int>()
+    override this.Redis = "localhost"
+    override this.Computation(input) : Async<int> =  
+        async {
+                //Console.WriteLine("Incremented to: " + (input + 1).ToString())
+                return input + 1
+        }
+    override this.Optimistic = false
+    override this.AutoStart = true
+    override this.ResultTimeout = 50000 // milliseconds
+
+
 [<EntryPoint>]
 let main argv = 
 
-    let hp =
-        MailboxProcessor.Start(fun inbox ->
-            let rec loop n =
-                async { do printfn "n = %d, HP waiting..." n
-                        do! Async.Sleep(100)
-                        let! msg = inbox.Receive()
-                        return! loop(msg) }
-            loop 0)
+    let incr = Incrementer()
 
-    let lp =
-        MailboxProcessor.Start(fun inbox ->
-            let rec loop n =
-                
-                async { do printfn "n = %d, LP waiting..." n
-                        do! Async.Sleep(100)
-                        Thread.CurrentThread.Priority <- ThreadPriority.BelowNormal
-                        let! msg = inbox.Receive()
-                        return! loop(msg) }
-            loop 0)
+    let limit = 10000
 
-    for i in 1..100 do
-        hp.Post i
-        lp.Post i
+    let sw = Stopwatch.StartNew()
+    
+    let mutable value = 0
+
+    for i in 1..limit do
+        value <- incr.PostAndGetResultAsync(value) |> Async.RunSynchronously
+
+    sw.Stop()
+
+    Console.WriteLine("Final value: " + (value).ToString())
+    Console.WriteLine("Elapsed ms: " + sw.ElapsedMilliseconds.ToString())
+    
     
     Console.ReadLine() |> ignore
 

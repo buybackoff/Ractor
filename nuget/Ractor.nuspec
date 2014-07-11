@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="utf-8"?>
+<package xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+  <metadata xmlns="http://schemas.microsoft.com/packaging/2010/07/nuspec.xsd">
+    <id>@project@</id>
+    <version>@build.number@</version>
+    <authors>@authors@</authors>
+    <owners>@authors@</owners>
+    <licenseUrl>http://github.com/buybackoff/Ractor.CLR/blob/master/LICENSE.txt</licenseUrl>
+    <projectUrl>http://buybackoff.github.com/Ractor.CLR</projectUrl>
+    <iconUrl>http://buybackoff.github.io/Ractor.CLR/img/logo.png</iconUrl>
+    <requireLicenseAcceptance>false</requireLicenseAcceptance>
+    <summary>@summary@</summary>
+    <description>@description@</description>
+    <releaseNotes>@releaseNotes@</releaseNotes>
+    <copyright>Copyright 2014</copyright>
+    <tags>@tags@</tags>
+    <dependencies>
+      <dependency id="Ractor.Persistence" />
+      <dependency id="FSharp.Core.Microsoft.Signed" />
+      <dependency id="FsPickler" />
+    </dependencies>
+  </metadata>
+  <files>
+    <file src="..\bin\FSharp.Core.dll" target="lib/net40" />
+    <file src="..\bin\Ractor.dll" target="lib/net40" />
+    <file src="..\bin\Ractor.pdb" target="lib/net40" />
+  </files>
+</package>
