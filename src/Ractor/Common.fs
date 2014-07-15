@@ -5,13 +5,19 @@ open System.Collections.Generic
 open System.Threading
 open System.Threading.Tasks
 
+[<CLIMutableAttribute>]
+type internal Message<'T>= {
+    Value: 'T;
+    HasError: bool;
+    Error: Exception;
+}
 
-type internal Message<'T>=
-| Value of 'T
-| Error of Exception
-
-type internal Envelope<'Task> = Message<'Task> * string * string [] // * DateTime monitor time from post to get and time for pure computation
-
+[<CLIMutableAttribute>]
+type internal Envelope<'Task> = {
+    Message : Message<'Task>;
+    ResultId : String;
+    CallerIds : String[]
+}
 
 
 type IRactorPerformanceMonitor =

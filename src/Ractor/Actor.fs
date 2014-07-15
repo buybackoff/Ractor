@@ -46,16 +46,16 @@ type Actor<'Task, 'TResult>() as this =
     let mutable extendedComputation : Message<'Task> * string -> Async<Message<'TResult>> = 
         fun (inMessage,_) -> 
             async {
-                match inMessage with
-                | Value task ->
+                if inMessage.HasError then return { Value = Unchecked.defaultof<'TResult>; HasError = true; Error = inMessage.Error} 
+                else
+                    let task = inMessage.Value
                     try
                         let! child = Async.StartChild(this.Computation(task), this.ResultTimeout)
                         let! result = child
-                        return Value(result)
+                        return { Value = result; HasError = false; Error = null}
                     with e -> 
                         ActorBase.Logger.Error("Computation error", Some(e))
-                        return Error(e)
-                | Error e -> return Error(e)
+                        return { Value = Unchecked.defaultof<'TResult>; HasError = true; Error = e}
             }
     abstract Redis : string with get
     override this.Redis = "localhost"
@@ -107,16 +107,16 @@ type Actor<'Task, 'TResult>() as this =
     let mutable extendedComputation : Message<'Task> * string -> Async<Message<'TResult>> = 
         fun (inMessage,_) -> 
             async {
-                match inMessage with
-                | Value task ->
+                if inMessage.HasError then return { Value = Unchecked.defaultof<'TResult>; HasError = true; Error = inMessage.Error} 
+                else
+                    let task = inMessage.Value
                     try
                         let! child = Async.StartChild(this.Computation(task) |> Async.AwaitTask, this.ResultTimeout)
                         let! result = child
-                        return Value(result)
+                        return { Value = result; HasError = false; Error = null}
                     with e -> 
                         ActorBase.Logger.Error("Computation error", Some(e))
-                        return Error(e)
-                | Error e -> return Error(e)
+                        return { Value = Unchecked.defaultof<'TResult>; HasError = true; Error = e}
             }
 
     abstract Redis : string with get
@@ -278,7 +278,8 @@ type internal ActorImpl<'Task, 'TResult>
                         //Debug.Print("Before gate")
                         let! opened = waitForOpenGates Timeout.Infinite
                         Debug.Assert(opened)
-                        let! (inMessage, resultId, callerIds), pipelineId = awaitMessage()
+                        let! envelope, pipelineId = awaitMessage()
+                        let (inMessage, resultId, callerIds) = envelope.Message, envelope.ResultId, envelope.CallerIds
                         //Debug.Print("Received message: " + resultId)
                         async { 
                             try 
@@ -321,7 +322,7 @@ type internal ActorImpl<'Task, 'TResult>
                                         let callerChannelKey = "{" + callerId + "}" + ":Mailbox:channel"
                                         let callerResultId = String.Join("|", resultId.Split('|').[1..]) // TODO check what Marc Gravel wrote about allocations and string splits
                                         let envelopeForCaller : Envelope<'TResult> =
-                                            outMessage, callerResultId, [||]
+                                            {Message = outMessage; ResultId = callerResultId; CallerIds = [||]}
                                         do! redis.LPushAsync<Envelope<'TResult>>(callerInboxKey, envelopeForCaller, When.Always, false) 
                                             |> Async.AwaitTask |> Async.Ignore
                                         // empty notification for inbox
@@ -482,20 +483,28 @@ type internal ActorImpl<'Task, 'TResult>
         this.TryPostAsync(message) |> Async.StartAsTask
     member this.PostAsync<'Task>(message : 'Task) : Async<Guid> = 
         async {
-            let! str = this.Post((Value(message), Guid.NewGuid().ToString("N"), [||]))
+            let envelope = {
+                Message = {Value = message; HasError = false; Error = null};
+                ResultId = Guid.NewGuid().ToString("N"); 
+                CallerIds = [||]}
+            let! str = this.Post(envelope)
             return Guid.ParseExact(str, "N")
             }
     member this.TryPostAsync<'Task>(message : 'Task) : Async<bool*Guid> = 
         async {
             try
-                let! result = this.Post((Value(message), Guid.NewGuid().ToString("N"), [||]))
+                let envelope = {
+                    Message = {Value = message; HasError = false; Error = null};
+                    ResultId = Guid.NewGuid().ToString("N"); 
+                    CallerIds = [||]}
+                let! result = this.Post(envelope)
                 return true, Guid.ParseExact(result, "N")
             with
             | _ -> return false, Unchecked.defaultof<Guid>
         }
     
     member internal this.Post<'Task>(envelope : Envelope<'Task>) : Async<string> = 
-        let _, resultId, _ = envelope
+        let resultId = envelope.ResultId
         let remotePost() = 
             Console.WriteLine("Posted Redis message") 
             let res = 
@@ -550,11 +559,8 @@ type internal ActorImpl<'Task, 'TResult>
         let resultId = resultGuid.ToString("N")
         async {
             let! message = this.GetResultAsync(resultId)
-            match message with
-            | Value result -> 
-                return result
-            | Error e -> 
-                return raise e
+            if message.HasError then return raise message.Error
+            else return message.Value
         }
 
     /// <summary>
@@ -672,12 +678,13 @@ type internal ActorImpl<'Task, 'TResult>
 
     member this.PostAndGetResultAsync(message : 'Task) : Async<'TResult> = 
         async {
-            let! message = this.PostAndGetResult((Value(message), Guid.NewGuid().ToString("N"), [||]))
-            match message with
-            | Value result -> 
-                return result
-            | Error e -> 
-                return raise e
+            let envelope = {
+                    Message = {Value = message; HasError = false; Error = null};
+                    ResultId = Guid.NewGuid().ToString("N"); 
+                    CallerIds = [||]}
+            let! message = this.PostAndGetResult(envelope)
+            if message.HasError then return raise message.Error
+            else return message.Value
         }
 
     member this.TryPostAndGetResultAsync(message : 'Task) : Async<bool * 'TResult> = 
@@ -690,7 +697,7 @@ type internal ActorImpl<'Task, 'TResult>
         }
         
     member internal this.PostAndGetResult(envelope : Envelope<'Task>) : Async<Message<'TResult>> = 
-        let inMessage, resultId, _ = envelope
+        let inMessage, resultId = envelope.Message, envelope.ResultId
         let standardCall() = async {
                 do! this.Post(envelope) |> Async.Ignore
                 return! this.GetResultAsync(resultId)
@@ -832,7 +839,7 @@ type ActorExtension() =
                                     // here the task message is sent to the first actor and 
                                     // it will arrive to the results list and stay there
                                     // before the results timeout
-                                    let envelope : Envelope<'Task> = inMessage, key + "|" + resultId, [| actor2.Id |]
+                                    let envelope : Envelope<'Task> = {Message = inMessage; ResultId = key + "|" + resultId; CallerIds = [| actor2.Id |]}
                                     do! actor1.Post(envelope) |> Async.Ignore
                                     // do not wait for intermediate result
                                     ()
@@ -961,7 +968,7 @@ module FSharpExtensions =
                                     // here the task message is sent to the first actor and 
                                     // it will arrive to the results list and stay there
                                     // before the results timeout
-                                    let envelope : Envelope<'Task> = inMessage, key + "|" + resultId, [| actor2.Id |]
+                                    let envelope : Envelope<'Task> = {Message = inMessage; ResultId = key + "|" + resultId; CallerIds = [| actor2.Id |]}
                                     do! actor1.Post(envelope) |> Async.Ignore
                                     // do not wait for intermediate result
                                     ()
