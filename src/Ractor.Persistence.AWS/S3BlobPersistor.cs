@@ -25,7 +25,7 @@ namespace Ractor.Persistence.AWS
 
 
             public bool TryPut(Stream stream, out string key) {
-                var md5Hash = stream.GetSHA256Hash();
+                var md5Hash = stream.ComputeSHA256HashString();
                 var length = stream.Length;
 
                 key = md5Hash + length;
@@ -34,7 +34,7 @@ namespace Ractor.Persistence.AWS
             }
 
             public async Task<Tuple<bool, string>> TryPutAsync(Stream stream) {
-                var md5Hash = stream.GetMD5Hash();
+                var md5Hash = stream.ComputeMD5HashString();
                 var length = stream.Length;
 
                 var key = md5Hash + length;

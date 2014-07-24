@@ -4,10 +4,14 @@
 using System;
 using System.Collections.Generic;
 using System.Security.Cryptography;
+using ServiceStack;
 
 
 namespace Ractor {
 
+    /// <summary>
+    /// Guid generator for sharding
+    /// </summary>
     public static class GuidGenerator {
 
         private static readonly object Locker = new object();
@@ -22,22 +26,22 @@ namespace Ractor {
         /// </summary>
         public static readonly IDictionary<ushort, ushort> EpochToShards =
             new SortedList<ushort, ushort> {
-                {0,1},
-                {1,2},
-                {2,3},
-                {3,5},
-                {4,8},
-                {5,13},
-                {6,21},
-                {7,34},
-                {8,55},
-                {9,89},
-                {10,144},
-                {11,233},
-                {12,377},
-                {13,610},
-                {14,987},
-                {15,1597}
+                {0,0},// zero epoch kept only for shard calculation, means not sharded key
+                {1,1},
+                {2,2},
+                {3,3},
+                {4,5},
+                {5,8},
+                {6,13},
+                {7,21},
+                {8,34},
+                {9,55},
+                {10,89},
+                {11,144},
+                {12,233},
+                {13,377},
+                {14,610},
+                {15,987},
             };
 
         /// <summary>
@@ -68,6 +72,24 @@ namespace Ractor {
             return sg;
         }
 
+        /// <summary>
+        /// Translate MD5 hash of a string to Guid with zero epoch
+        /// </summary>
+        public static Guid NewGuid(string uniqueString) {
+            var bs = uniqueString.ToUtf8Bytes().ComputeMD5Hash();
+            bs[7] = (byte)((bs[7] & 0x0f) | 0 << 4);
+            return new Guid(bs);
+        }
+
+        /// <summary>
+        /// Translate MD5 hash of a string to Guid with zero epoch
+        /// </summary>
+        public static Guid NewGuid(string uniqueString, ushort epoch) {
+            var bs = uniqueString.ToUtf8Bytes().ComputeMD5Hash();
+            bs[7] = (byte)((bs[7] & 0x0f) | (byte)(epoch << 4));
+            return new Guid(bs);
+        }
+
 
         internal static byte[] GuidArray(uint epoch) {
             var bytes = new byte[16];
@@ -84,10 +106,11 @@ namespace Ractor {
             //guid[7] = (byte)((guid[7] & 0x0f) | 0x40);
 
             // Mask in epoch instead of Version 4 (random based GuidGenerator) in Bits[15..13]
-            bytes[7] = (byte)((bytes[7] & 0x0f) | (epoch << 4));
+            bytes[7] = (byte)((bytes[7] & 0x0f) | (byte)(epoch << 4));
 
             return bytes;
         }
+
 
         /// <summary>
         /// Shard in which the Guid is stored
@@ -110,29 +133,11 @@ namespace Ractor {
         public static ushort Shard(this Guid guid) {
             var bytes = guid.ToByteArray();
             var epoch = (ushort)(bytes[7] >> 4);
-
-            // each epoch has its own shards, no shared shards
-
-            // alternatively old comment below, where on new epoch new root assets are distributed among all shards not incremental shards only
-
-            // shard must be stable for each guid for different epoch
-            // epoch 0 - all guids go to single shard
-            // epoch 1 - shardingKey divided b/w 2 shards, but all shardingKey from epoch 0 direct to the first shard
-            // that means we could offload work to new shard only for new users or root sharding keys
-            // scaling out should be balanced with scaling up, should never scale up to a limit (e.g. maximum AWS instance until great engineers are there to fix all DB issue)
-            // remeber, this is only done to avoid choking with a single instance until more resources are there,
-            // not to solve all DB problems in the world
-            // The rule should be: first scale up from 1:x1 to 1:x2, then add another 2:x1, then
-            // scale up 1:x2 to 1:x4 and 2:x1 to 2:x2, then scale out, etc. (c.80% load as a trigger)
-            // in case of AWS we will still need some shutdown (c.10 mins) but that way we could 
-            // avoid moving data, changing connection strings, etc. Much simpler and faster than moving entire
-            // shards to another phisical server
-
-            // and remember, hardware costs less then time and money costs less than time!
-
+            if(epoch == 0) throw new ArgumentException("Not sharded Guid with zero epoch");
             var virtualShard = (ushort)((bytes[0] << 8) | bytes[1]);
 
-            var firstShardInEpoch = (ushort) (epoch == 0 ? 1 : EpochToShards[(ushort)(epoch - 1)] + 1);
+            // if always set to 1, new shards will take a part, not whole write load
+            var firstShardInEpoch = 1; // (ushort) (epoch == 1 ? 1 : EpochToShards[(ushort)(epoch - 1)] + 1);
             var lastShardInEpoch = EpochToShards[epoch];
 
             var numberOfShardInEpoch = lastShardInEpoch - firstShardInEpoch + 1;

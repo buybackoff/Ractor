@@ -5,7 +5,6 @@ using System.Linq;
 using System.Security.Cryptography;
 using System.Text;
 using ServiceStack;
-using ServiceStack.Text;
 
 namespace Ractor {
 
@@ -124,7 +123,21 @@ namespace Ractor {
 
     public static class CryptoExtentions {
 
-        public static string GetMD5Hash(this Stream input) {
+        public static byte[] ComputeMD5Hash(this Stream input) {
+            var position = input.Position;
+            var hasher = MD5.Create();
+            var hashValue = hasher.ComputeHash(input);
+            input.Position = position;
+            return hashValue;
+        }
+
+        public static byte[] ComputeMD5Hash(this byte[] input) {
+            var hasher = MD5.Create();
+            var hashValue = hasher.ComputeHash(input);
+            return hashValue;
+        }
+
+        public static string ComputeMD5HashString(this Stream input) {
             var position = input.Position;
             var sb = new StringBuilder();
             var hasher = MD5.Create();
@@ -135,7 +148,16 @@ namespace Ractor {
             return sb.ToString();
         }
 
-        public static string GetSHA256Hash(this Stream input) {
+        public static string ComputeMD5HashString(this byte[] input) {
+            var sb = new StringBuilder();
+            var hasher = MD5.Create();
+            var hashValue = hasher.ComputeHash(input);
+            foreach (var b in hashValue)
+                sb.Append(b.ToString("x2").ToLower());
+            return sb.ToString();
+        }
+
+        public static string ComputeSHA256HashString(this Stream input) {
             var position = input.Position;
             var sb = new StringBuilder();
             var hasher = SHA256.Create();

@@ -1,11 +1,10 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
-<Project ToolsVersion="12.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+<Project ToolsVersion="4.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <Import Project="$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props" Condition="Exists('$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props')" />
   <PropertyGroup>
     <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
     <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
-    <SchemaVersion>2.0</SchemaVersion>
-    <ProjectGuid>b9be31bf-f410-4c05-8f1f-b61716c59652</ProjectGuid>
+    <ProjectGuid>B9BE31BF-F410-4C05-8F1F-B61716C59652</ProjectGuid>
     <OutputType>Library</OutputType>
     <RootNamespace>fsredis</RootNamespace>
     <AssemblyName>Ractor</AssemblyName>
@@ -20,12 +19,11 @@
     <DebugSymbols>true</DebugSymbols>
     <DebugType>full</DebugType>
     <Optimize>false</Optimize>
-    <Tailcalls>false</Tailcalls>
+    <Tailcalls>true</Tailcalls>
     <OutputPath>bin\Debug\</OutputPath>
     <DefineConstants>DEBUG;TRACE</DefineConstants>
     <WarningLevel>3</WarningLevel>
-    <DocumentationFile>bin\Debug\Fredis.xml</DocumentationFile>
-    <OtherFlags />
+    <DocumentationFile>bin\Debug\Ractor.XML</DocumentationFile>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
     <DebugType>pdbonly</DebugType>
@@ -69,7 +67,6 @@
   <ItemGroup>
     <Reference Include="FSharp.Core">
       <HintPath>..\..\packages\FSharp.Core.Microsoft.Signed.0.0.1-beta1\lib\net45\FSharp.Core.dll</HintPath>
-      <Private>True</Private>
     </Reference>
     <Reference Include="mscorlib" />
     <Reference Include="System" />
@@ -82,8 +79,7 @@
   <ItemGroup>
     <ProjectReference Include="..\Ractor.Persistence\Ractor.Persistence.csproj">
       <Name>Ractor.Persistence</Name>
-      <Project>{6780d11c-42ad-46dc-b49d-95912164bb23}</Project>
-      <Private>True</Private>
+      <Project>{6780D11C-42AD-46DC-B49D-95912164BB23}</Project>
     </ProjectReference>
   </ItemGroup>
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 

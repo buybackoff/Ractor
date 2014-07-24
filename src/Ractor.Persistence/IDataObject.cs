@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Runtime.Serialization;
 
 namespace Ractor {
     /// <summary>
@@ -7,12 +6,20 @@ namespace Ractor {
     /// </summary>
     public interface IDataObject {
 
+        /// <summary>
+        /// Autoincremented primary key assigned automatically inside DB. Not intended for a direct use, rather for DB PK partitioning.
+        /// </summary>
         [AutoIncrement, PrimaryKey]
         long Id { get; set; }
 
         /// <summary>
-        /// Normally all data changes are stored as events so this property means creation time for 
-        /// events and the time when a snapshot of a state was taken for denormalized cache of state
+        /// Code-generated unique ID. For distributed objects it contains virtual shard and epoch.
+        /// </summary>
+        [Index(false), Required]
+        Guid Guid { get; set; }
+
+        /// <summary>
+        /// UTC time when an object was modified.
         /// </summary>
         [Index(false)]
         DateTime UpdatedAt { get; set; }

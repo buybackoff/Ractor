@@ -1,10 +1,12 @@
-﻿using System;
+﻿
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Management;
 using System.Threading;
+using System;
 using System.Threading.Tasks;
+
 
 namespace Ractor.CS.Tests {
     internal class Program {
@@ -71,7 +73,7 @@ namespace Ractor.CS.Tests {
             long totalMessagesReceived = repeat * 2;
             //times 2 since the client and the destination both send messages
 
-            
+
             long repeatsPerClient = repeat / numberOfClients;
 
             var clients = new List<Client>();
@@ -84,7 +86,7 @@ namespace Ractor.CS.Tests {
 
             var sw = Stopwatch.StartNew();
             var tks = clients.AsParallel()
-                .WithDegreeOfParallelism(numberOfClients)    
+                .WithDegreeOfParallelism(numberOfClients)
                 .Select(c => c.PostAndGetResultAsync(Run));
 
             await Task.WhenAll(tks);
@@ -122,14 +124,14 @@ namespace Ractor.CS.Tests {
             }
 
             public override async Task<bool> Computation(object message) {
-                    for (int i = 0; i < Repeat; i++) {
-                        Sent++;
-                        var res = _actor.PostAndGetResult(Msg);
-                        //if (res != Msg) throw new ApplicationException();
-                        Received++;
-                    }
-                    _latch.TrySetResult(true);
-                    return await _latch.Task;
+                for (int i = 0; i < Repeat; i++) {
+                    Sent++;
+                    var res = _actor.PostAndGetResult(Msg);
+                    //if (res != Msg) throw new ApplicationException();
+                    Received++;
+                }
+                _latch.TrySetResult(true);
+                return await _latch.Task;
             }
         }
 
@@ -147,3 +149,6 @@ namespace Ractor.CS.Tests {
         }
     }
 }
+
+
+

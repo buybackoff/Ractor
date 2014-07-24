@@ -10,39 +10,40 @@ using ServiceStack.OrmLite;
 
 namespace Ractor {
     /// <summary>
-    /// Base implementation of IPocoPersistor using ServiceStack.ORMLite v3
+    /// Base implementation of IPocoPersistor using ServiceStack.ORMLite v4
     /// </summary>
     public class BasePocoPersistor : IPocoPersistor {
         private readonly IOrmLiteDialectProvider _provider;
 
-        // public to reuse
-        public OrmLiteConnectionFactory DbFactory { get; set; } // TODO? make public??
+        /// <summary>
+        /// 
+        /// </summary>
+        internal OrmLiteConnectionFactory DbFactory { get; set; }
 
         private readonly Dictionary<ushort, string> _shards = new Dictionary<ushort, string>();
 
         /// <summary>
-        /// A number from 0 to 15 (HEX digit) showing number of shards
-        /// {0,1},
-        /// {1,2},
-        /// {2,3},
-        /// {3,5},
-        /// {4,8},
-        /// {5,13},
-        /// {6,21},
-        /// {7,34},
-        /// {8,55},
-        /// {9,89},
-        /// {10,144},
-        /// {11,233},
-        /// {12,377},
-        /// {13,610},
-        /// {14,987},
-        /// {15,1597}
+        /// A number from 1 to 15 (HEX digit) showing number of shards
+        ///{1,1},
+        ///{2,2},
+        ///{3,3},
+        ///{4,5},
+        ///{5,8},
+        ///{6,13},
+        ///{7,21},
+        ///{8,34},
+        ///{9,55},
+        ///{10,89},
+        ///{11,144},
+        ///{12,233},
+        ///{13,377},
+        ///{14,610},
+        ///{15,987},
         /// </summary>
-        public ushort Epoch { get; private set; }
+        private ushort Epoch { get; set; } // private
 
         /// <summary>
-        /// Base implementation of IPocoPersistor using ServiceStack.ORMLite v3
+        /// Base implementation of IPocoPersistor using ServiceStack.ORMLite v4
         /// </summary>
         /// <param name="provider"></param>
         /// <param name="connectionString">Connection String for central DB (relational data with complex joins, limited growth, stable usage, settings, etc)</param>
@@ -52,27 +53,9 @@ namespace Ractor {
             DbFactory = CreateDbFactory(connectionString);
             // check and register shards
             using (var db = DbFactory.OpenDbConnection()) {
-                db.SqlScalar<int>("SELECT 1+1");
+                db.SqlScalar<int>("SELECT 1+1"); // check DB engine is working
             }
             CheckShardsAndSetEpoch(shardConnectionStrings);
-        }
-
-        public BasePocoPersistor(IOrmLiteDialectProvider provider, string connectionString, string shardsConnectionStrings) 
-        {
-            // check and register shards
-            var shards = shardsConnectionStrings
-                    .Split(new[] { Environment.NewLine }, StringSplitOptions.RemoveEmptyEntries)
-                    .ToDictionary(line => {
-                        var pair = line.Split(new[] { "=>" }, StringSplitOptions.RemoveEmptyEntries);
-                        return new KeyValuePair<ushort, string>(ushort.Parse(pair[0].Trim()), pair[1].Trim());
-                    });
-            _provider = provider;
-            DbFactory = CreateDbFactory(connectionString);
-            // check and register shards
-            using (var db = DbFactory.OpenDbConnection()) {
-                db.SqlScalar<int>("SELECT 1+1");
-            }
-            CheckShardsAndSetEpoch(shards);
         }
 
         private OrmLiteConnectionFactory CreateDbFactory(string connectionString) {
@@ -83,10 +66,7 @@ namespace Ractor {
         private void CheckShardsAndSetEpoch(Dictionary<ushort, string> shardConnectionStrings) {
             var sortedShards = shardConnectionStrings.OrderBy(kvp => kvp.Key).ToList();
             var numberOfShards = sortedShards.Count;
-            // power of two
-            // TODO unit test
-            if ((numberOfShards & (numberOfShards - 1)) != 0) throw new ApplicationException("Number of shards must be a power of 2");
-
+            
             var i = 0;
             foreach (var keyValuePair in sortedShards) {
                 if (i != keyValuePair.Key) {
@@ -105,7 +85,6 @@ namespace Ractor {
             }
 
             Epoch = epochKvp.Key;
-            // 
 
             foreach (var keyValuePair in sortedShards) {
                 var key = keyValuePair.Key.ToString(CultureInfo.InvariantCulture);
@@ -113,7 +92,6 @@ namespace Ractor {
                 // test factory
                 using (var sdb = factory.OpenDbConnection()) {
                     var two = sdb.SqlScalar<int>("SELECT 1+1");
-                    Trace.Assert(two == 2, "Shard " + key + " fails!");
                     // TODO unit test
                     if (two != 2) throw new ApplicationException("Shard " + key + " doesn't work");
                 }
@@ -160,25 +138,17 @@ namespace Ractor {
             if (length == 0) return;
 
             items.ForEach(x => {
+                x.Guid = GenerateGuid(x);
                 // do not check existing value, always overwrite
                 x.UpdatedAt = DateTime.UtcNow;
             });
 
+            
             var isDistributed = typeof(IDistributedDataObject).IsAssignableFrom(typeof(T));
 
             if (isDistributed) {
-                var distributedItems = items.Cast<IDistributedDataObject>().ToList();
 
-                // generate guids for items
-
-                foreach (var distributedItem in distributedItems
-                    .Where(distributedItem => distributedItem.Guid == default(Guid))) {
-                    distributedItem.Guid = distributedItem.GetRootGuid() == default(Guid)
-                        ? GuidGenerator.NewGuid(Epoch)
-                        : GuidGenerator.NewGuid(distributedItem.GetRootGuid());
-                }
-
-                var baskets = distributedItems.ToLookup(i => i.Guid.Shard()).ToList();
+                var baskets = items.ToLookup(i => i.Guid.Shard()).ToList();
                 var hasErrors = false;
 
                 var result = baskets
@@ -186,7 +156,7 @@ namespace Ractor {
                     .WithDegreeOfParallelism(baskets.Count())
                     .WithExecutionMode(ParallelExecutionMode.ForceParallelism)
                     .Select(lu => {
-                        var basket = lu.Cast<T>().ToList();
+                        var basket = lu.ToList();
                         using (var db = DbFactory.OpenDbConnection(lu.Key.ToString(CultureInfo.InvariantCulture)))
                         using (var trans = db.OpenTransaction()) {
                             try {
@@ -206,7 +176,8 @@ namespace Ractor {
                 // ReSharper disable once RedundantAssignment
                 items = result;
 
-            } else {
+            } else {               
+
                 using (var db = DbFactory.OpenDbConnection())
                 using (var trans = db.OpenTransaction()) {
                     try {
@@ -226,11 +197,12 @@ namespace Ractor {
 
 
 
-
+        [Obsolete("Try to avoid data mutation")]
         public void Update<T>(T item) where T : IDataObject, new() {
             Update(item.ItemAsList());
         }
 
+        [Obsolete("Try to avoid data mutation")]
         public void Update<T>(List<T> items) where T : IDataObject, new() {
             if (items == null) throw new ArgumentNullException("items");
             var length = items.Count;
@@ -244,14 +216,13 @@ namespace Ractor {
             var isDistributed = typeof(IDistributedDataObject).IsAssignableFrom(typeof(T));
 
             if (isDistributed) {
-                var distributedItems = items.Cast<IDistributedDataObject>().ToList();
                 // check that Guids are here, otherwise cannot update
-                if (distributedItems
+                if (items
                     .Any(distributedItem => distributedItem.Guid == default(Guid))) {
                     throw new ApplicationException("Cannot update an object without Guid");
                 }
 
-                var baskets = distributedItems.ToLookup(i => i.Guid.Shard()).ToList();
+                var baskets = items.ToLookup(i => i.Guid.Shard()).ToList();
                 var hasErrors = false;
 
                 var result = baskets
@@ -264,7 +235,7 @@ namespace Ractor {
                             try {
                                 foreach (var ddo in lu) {
                                     var guid = ddo.Guid;
-                                    db.Update((T)ddo, x => ((IDistributedDataObject)x).Guid == guid); // TODO unit test that casting works here
+                                    db.Update(ddo, x => ((IDistributedDataObject)x).Guid == guid); // TODO unit test that casting works here
                                 }
                                 trans.Commit();
                             } catch {
@@ -273,7 +244,7 @@ namespace Ractor {
                                 hasErrors = true;
                             }
                         }
-                        return lu.Cast<T>().ToList();
+                        return lu.ToList();
                     }).SelectMany(x => x).ToList();
 
                 if (hasErrors) throw new DataException("Could not update data");
@@ -295,26 +266,21 @@ namespace Ractor {
         }
 
 
-
+        [Obsolete("Try to avoid data mutation")]
         public void Delete<T>(T item) where T : IDataObject, new() {
             Delete(item.ItemAsList());
         }
+
+        [Obsolete("Try to avoid data mutation")]
         public void Delete<T>(List<T> items) where T : IDataObject, new() {
             if (items == null) throw new ArgumentNullException("items");
             var length = items.Count;
             if (length == 0) return;
 
-            items.ForEach(x => {
-                // do not check existing value, always overwrite
-                x.UpdatedAt = DateTime.UtcNow;
-            });
-
             var isDistributed = typeof(IDistributedDataObject).IsAssignableFrom(typeof(T));
 
             if (isDistributed) {
-                var distributedItems = items.Cast<IDistributedDataObject>().ToList();
-
-                var baskets = distributedItems.ToLookup(i => i.Guid.Shard()).ToList();
+                var baskets = items.ToLookup(i => i.Guid.Shard()).ToList();
                 var hasErrors = false;
 
                 var result = baskets
@@ -337,7 +303,7 @@ namespace Ractor {
                                 hasErrors = true;
                             }
                         }
-                        return lu.Cast<T>().ToList();
+                        return lu.ToList();
                     }).SelectMany(x => x).ToList();
 
                 if (hasErrors) throw new DataException("Could not delete data");
@@ -358,36 +324,11 @@ namespace Ractor {
         }
 
 
-
-        private List<T> SelectOld<T>(Expression<Func<T, bool>> predicate = null) where T : IDataObject, new() {
-
-            var isDistributed = typeof(IDistributedDataObject).IsAssignableFrom(typeof(T));
-
-            if (isDistributed) {
-                var result = _shards
-                    .AsParallel()
-                    .WithDegreeOfParallelism(_shards.Count)
-                    .WithExecutionMode(ParallelExecutionMode.ForceParallelism)
-                    .Select(dbName => {
-                        using (var db = DbFactory.OpenDbConnection(dbName.Key.ToString(CultureInfo.InvariantCulture))) {
-                            return predicate == null ? db.Select<T>() : db.Select(predicate);
-                        }
-                    }).ToList();
-
-                var flatResult = result.SelectMany(x => x).ToList();
-                return flatResult;
-            }
-
-            using (var db = DbFactory.OpenDbConnection()) {
-                return predicate == null ? db.Select<T>() : db.Select(predicate);
-            }
-        }
-
-
         public List<T> Select<T>(Expression<Func<T, bool>> predicate = null) where T : IDataObject, new() {
 
             return QueryOperation<T, List<T>>(db => predicate == null ? db.Select<T>() : db.Select(predicate), result => result.SelectMany(x => x).ToList());
         }
+
 
         public long Count<T>() where T : IDataObject, new() {
 
@@ -397,7 +338,7 @@ namespace Ractor {
 
         // TODO add aggregation Func
         // TODO this is SS specific, should be private but convenient to have it for now
-        public TR QueryOperation<T, TR>(Func<IDbConnection, TR> operation, Func<List<TR>, TR> aggregation = null, List<ushort> shards = null ) where T : IDataObject, new() {
+        private TR QueryOperation<T, TR>(Func<IDbConnection, TR> operation, Func<List<TR>, TR> aggregation = null, List<ushort> shards = null) where T : IDataObject, new() {
 
             var isDistributed = typeof(IDistributedDataObject).IsAssignableFrom(typeof(T));
 
@@ -455,8 +396,8 @@ namespace Ractor {
         }
 
 
-        public void ExecuteSql(string sql, bool onShards = false) {
-            if (onShards) {
+        public void ExecuteSql(string sql, bool distributed = false) {
+            if (distributed) {
                 _shards
                     .AsParallel()
                     .WithDegreeOfParallelism(_shards.Count)
@@ -475,44 +416,69 @@ namespace Ractor {
 
         }
 
-        public T GetById<T>(Guid guid) where T : IDistributedDataObject, new() {
-            return GetByIds<T>(guid.ItemAsList()).Single();
+        /// <summary>
+        /// Generate new Guid for an item if Guid was not set, or return existing.
+        /// </summary>
+        public Guid GenerateGuid<T>(T item) where T : IDataObject {
+            if(item.Guid != default(Guid)) return item.Guid;
+            var distributed = item as IDistributedDataObject;
+            if (distributed != null) {
+                return distributed.GetRootGuid() == default(Guid)
+                    ? GuidGenerator.NewGuid(Epoch)
+                    : GuidGenerator.NewGuid(distributed.GetRootGuid());
+            }
+            return GuidGenerator.NewGuid(0);
         }
 
+        
 
-        public List<T> GetByIds<T>(List<Guid> guids) where T : IDistributedDataObject, new() {
-            var baskets = guids.ToLookup(i => i.Shard()).ToList();
-            var result = baskets
-                .AsParallel()
-                .WithDegreeOfParallelism(baskets.Count())
-                .WithExecutionMode(ParallelExecutionMode.ForceParallelism)
-                .Select(lu => {
-                    var shardedGuids = lu.ToList();
-                    using (var db = DbFactory.OpenDbConnection(lu.Key.ToString(CultureInfo.InvariantCulture))) {
-                        return shardedGuids.Count > 1
-                            ? db.Select<T>(q => Sql.In(q.Guid, shardedGuids))
-                            : db.SingleWhere<T>("Guid", shardedGuids.Single()).ItemAsList();
-                        // "LIMIT 1" increases performance 15x in case when Guid index is not unique - same optimisation "stop when found first" as with uniue index
 
-                    }
-                }).SelectMany(x => x).ToList();
+        public List<T> GetByIds<T>(List<Guid> guids) where T : IDataObject, new() {
+            var isDistributed = typeof(IDistributedDataObject).IsAssignableFrom(typeof(T));
 
-            return result;
+            if (isDistributed) {
+                var baskets = guids.ToLookup(i => i.Shard()).ToList();
+                var result = baskets
+                    .AsParallel()
+                    .WithDegreeOfParallelism(baskets.Count())
+                    .WithExecutionMode(ParallelExecutionMode.ForceParallelism)
+                    .Select(lu => {
+                        var shardedGuids = lu.ToList();
+                        using (var db = DbFactory.OpenDbConnection(lu.Key.ToString(CultureInfo.InvariantCulture))) {
+                            return shardedGuids.Count > 1
+                                ? db.Select<T>(q => Sql.In(q.Guid, shardedGuids))
+                                : db.SingleWhere<T>("Guid", shardedGuids.Single()).ItemAsList();
+                            // "LIMIT 1" increases performance 15x in case when Guid index is not unique - same optimisation "stop when found first" as with uniue index
+
+                        }
+                    }).SelectMany(x => x).ToList();
+
+                return result;
+            }
+            using (var db = DbFactory.OpenDbConnection()) {
+                return guids.Count > 1
+                                ? db.Select<T>(q => Sql.In(q.Guid, guids))
+                                : db.SingleWhere<T>("Guid", guids.Single()).ItemAsList();
+            }
         }
 
 
         public List<T> GetByIds<T>(List<long> ids) where T : IDataObject, new() {
             var isDistributed = typeof(IDistributedDataObject).IsAssignableFrom(typeof(T));
-            if (isDistributed) throw new ApplicationException("Distributed objects should use Guid");
+            if (isDistributed) throw new ApplicationException("Distributed objects should use only Guid");
             using (var db = DbFactory.OpenDbConnection()) {
                 return db.SelectByIds<T>(ids);
             }
         }
 
+        public T GetById<T>(Guid guid) where T : IDataObject, new() {
+            return GetByIds<T>(guid.ItemAsList()).Single();
+        }
 
         public T GetById<T>(long id) where T : IDataObject, new() {
-            // TODO use single
-            return GetByIds<T>(id.ItemAsList()).SingleOrDefault(); //
+            var isDistributed = typeof(IDistributedDataObject).IsAssignableFrom(typeof(T));
+            if (isDistributed) throw new ApplicationException("Distributed objects should use only Guid");
+            return GetByIds<T>(id.ItemAsList()).SingleOrDefault();
         }
 
 

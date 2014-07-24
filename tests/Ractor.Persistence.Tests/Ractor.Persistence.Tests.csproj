@@ -8,7 +8,7 @@
     <ProjectGuid>{3842EBE5-E76E-40DE-A375-905970DD0F30}</ProjectGuid>
     <OutputType>Library</OutputType>
     <AppDesignerFolder>Properties</AppDesignerFolder>
-    <RootNamespace>Fredis.Persistence.Tests</RootNamespace>
+    <RootNamespace>Ractor.Persistence.Tests</RootNamespace>
     <AssemblyName>Ractor.Persistence.Tests</AssemblyName>
     <TargetFrameworkVersion>v4.5</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>

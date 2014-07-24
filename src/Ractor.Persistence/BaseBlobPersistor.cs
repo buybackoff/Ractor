@@ -28,19 +28,19 @@ namespace Ractor {
         //public IBinarySerializer Serializer { get; set; }
 
         public bool TryPut(Stream stream, out string key) {
-            var md5Hash = stream.GetSHA256Hash();
+            var hashString = stream.ComputeSHA256HashString();
             var length = stream.Length;
 
-            key = md5Hash + length;
+            key = hashString + length;
 
             return TryPut(_path, key, stream);
         }
 
         public async Task<Tuple<bool, string>> TryPutAsync(Stream stream) {
             return await Task.Factory.StartNew(() => {
-                var md5Hash = stream.GetSHA256Hash();
+                var hashString = stream.ComputeSHA256HashString();
                 var length = stream.Length;
-                var key = md5Hash + length;
+                var key = hashString + length;
                 var res = TryPut(_path, key, stream);
                 return Tuple.Create(res, key);
             });

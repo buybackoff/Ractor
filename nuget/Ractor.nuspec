@@ -21,7 +21,6 @@
     </dependencies>
   </metadata>
   <files>
-    <file src="..\bin\FSharp.Core.dll" target="lib/net40" />
     <file src="..\bin\Ractor.dll" target="lib/net40" />
     <file src="..\bin\Ractor.pdb" target="lib/net40" />
   </files>

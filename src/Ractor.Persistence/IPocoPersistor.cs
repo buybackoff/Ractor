@@ -79,9 +79,14 @@ namespace Ractor {
         T GetById<T>(long id) where T : IDataObject, new();
 
         /// <summary>
+        /// Generate new Guid for an item if Guid was not set, or return existing.
+        /// </summary>
+        Guid GenerateGuid<T>(T item) where T : IDataObject;
+
+        /// <summary>
         /// 
         /// </summary>
-        T GetById<T>(Guid guid) where T : IDistributedDataObject, new();
+        T GetById<T>(Guid guid) where T : IDataObject, new();
 
         /// <summary>
         /// 
@@ -91,9 +96,8 @@ namespace Ractor {
         /// <summary>
         /// 
         /// </summary>
-        List<T> GetByIds<T>(List<Guid> guids) where T : IDistributedDataObject, new();
+        List<T> GetByIds<T>(List<Guid> guids) where T : IDataObject, new();
 
-        
 
     }
 }

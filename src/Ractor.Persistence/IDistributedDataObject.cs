@@ -2,12 +2,10 @@
 
 namespace Ractor {
     /// <summary>
-    /// Data objects that could be stored as key-value where value is a serizlized object 
+    /// Data objects distributes accross shards 
     /// </summary>
     public interface IDistributedDataObject : IDataObject {
-        [Index(true), Required] 
-        Guid Guid { get; set; }
-
+        
         /// <summary>
         /// Returns default(Guid) for root assets and root guid for dependent assets
         /// 

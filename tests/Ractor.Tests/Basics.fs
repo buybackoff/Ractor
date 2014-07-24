@@ -16,7 +16,7 @@ open FsUnit
 
 type Greeter ()=
     inherit Actor<string,string>()
-    override this.Redis = "localhost"
+    override this.Redis = "127.0.0.1:6379,resolveDns=true"
     override this.Computation(input) : Async<string> =  
         async {
                 Console.WriteLine("Hello, " + input)
@@ -27,7 +27,7 @@ type Greeter ()=
 
 type Echo () =
     inherit Actor<string,string>()
-    override this.Redis = "localhost"
+    override this.Redis = "127.0.0.1:6379,resolveDns=true"
     override this.Computation(input) : Async<string> = 
         async { 
             Console.WriteLine("Echo: " + input)
@@ -37,7 +37,7 @@ type Echo () =
 
 type Incrementer ()=
     inherit Actor<int,int>()
-    override this.Redis = "localhost"
+    override this.Redis = "127.0.0.1:6379,resolveDns=true"
     override this.Computation(input) : Async<int> =  
         async {
                 //Console.WriteLine("Incremented to: " + (input + 1).ToString())
@@ -51,7 +51,7 @@ type Incrementer ()=
 [<Test>]
 let ``Hello, Actors`` () =
     
-    let fredis = new F("localhost") // TODO this is ugly, make module Ractor
+    let fredis = new F("127.0.0.1:6379,resolveDns=true") // TODO this is ugly, make module Ractor
 
     let greeter = Greeter()
 
