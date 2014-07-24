@@ -154,7 +154,7 @@ type internal ActorImpl<'Task, 'TResult>
     internal (redisConnectionString : string, id : string, 
                 computation : Message<'Task> * string -> Async<Message<'TResult>>, resultTimeout : int, 
                 lowPriority : bool, autoStart : bool, optimistic : bool) as this = 
-    let redis = new Redis(redisConnectionString, "Ractor")
+    let redis = new Redis(redisConnectionString, "R")
     let garbageCollectionPeriod = resultTimeout
     let mutable started = false
     let mutable cts = new CancellationTokenSource()
@@ -227,7 +227,7 @@ type internal ActorImpl<'Task, 'TResult>
                         redis.call('HSET', KEYS[2], KEYS[3], result)
                     end
                     return result"
-                    let pipelineId = Guid.NewGuid().ToString("N")
+                    let pipelineId = Guid.NewGuid().ToBase64String()
                     let hasLocal, localMessage = messageQueue.TryDequeue()
                     if hasLocal then 
                         Debug.Print("Took local message")
@@ -393,7 +393,7 @@ type internal ActorImpl<'Task, 'TResult>
             }
 
     do
-        redis.Serializer <- PicklerJsonSerializer()
+        redis.Serializer <- JsonSerializer()
         checkGates() |> Async.Start
         replayStalePipeline() |> Async.Start
         if autoStart then start()
@@ -485,20 +485,20 @@ type internal ActorImpl<'Task, 'TResult>
         async {
             let envelope = {
                 Message = {Value = message; HasError = false; Error = null};
-                ResultId = Guid.NewGuid().ToString("N"); 
+                ResultId = Guid.NewGuid().ToBase64String(); 
                 CallerIds = [||]}
             let! str = this.Post(envelope)
-            return Guid.ParseExact(str, "N")
+            return str.GuidFromBase64String()
             }
     member this.TryPostAsync<'Task>(message : 'Task) : Async<bool*Guid> = 
         async {
             try
                 let envelope = {
                     Message = {Value = message; HasError = false; Error = null};
-                    ResultId = Guid.NewGuid().ToString("N"); 
+                    ResultId = Guid.NewGuid().ToBase64String(); 
                     CallerIds = [||]}
                 let! result = this.Post(envelope)
-                return true, Guid.ParseExact(result, "N")
+                return true, result.GuidFromBase64String()
             with
             | _ -> return false, Unchecked.defaultof<Guid>
         }
@@ -520,7 +520,7 @@ type internal ActorImpl<'Task, 'TResult>
         let localPost() = 
             Debug.Print("Posted local message")
             localResultListeners.TryAdd(resultId, ManualResetEventSlim()) |> ignore 
-            let pipelineId = Guid.NewGuid().ToString("N")
+            let pipelineId = Guid.NewGuid().ToBase64String()
             if not this.Optimistic then
                 redis.HSet<Envelope<'Task>>(pipelineKey, pipelineId, envelope, When.Always, false) |> ignore
             messageQueue.Enqueue(envelope, pipelineId)
@@ -556,7 +556,7 @@ type internal ActorImpl<'Task, 'TResult>
         this.TryGetResultAsync(resultGuid) |> Async.StartAsTask
 
     member this.GetResultAsync(resultGuid : Guid) : Async<'TResult> = 
-        let resultId = resultGuid.ToString("N")
+        let resultId = resultGuid.ToBase64String()
         async {
             let! message = this.GetResultAsync(resultId)
             if message.HasError then return raise message.Error
@@ -680,7 +680,7 @@ type internal ActorImpl<'Task, 'TResult>
         async {
             let envelope = {
                     Message = {Value = message; HasError = false; Error = null};
-                    ResultId = Guid.NewGuid().ToString("N"); 
+                    ResultId = Guid.NewGuid().ToBase64String(); 
                     CallerIds = [||]}
             let! message = this.PostAndGetResult(envelope)
             if message.HasError then return raise message.Error
@@ -812,7 +812,6 @@ type ActorExtension() =
                 let actor2 = ActorImpl<'TResult1, 'TResult2>.Instance(continuation)
                 let key = "(" + this.GetKey() + "->-" + continuation.GetKey() + ")"
                 let computation : Message<'Task> * string -> Async<Message<'TResult2>> = 
-                    // this resultId is passed from continuator call and it is in Guid("N") format
                     fun (inMessage, resultId) -> 
                         async {
                             // 1. check if we have the final result. that could *very rarely* happen if 
@@ -941,7 +940,7 @@ module FSharpExtensions =
                 let actor2 = ActorImpl<'TResult1, 'TResult2>.Instance(continuation)
                 let key = "(" + this.GetKey() + "->-" + continuation.GetKey() + ")"
                 let computation : Message<'Task> * string -> Async<Message<'TResult2>> = 
-                    // this resultId is passed from continuator call and it is in Guid("N") format
+                    // this resultId is passed from continuator call and it is in ShortGuid format
                     fun (inMessage, resultId) -> 
                         async {
                             // 1. check if we have the final result. that could *very rarely* happen if 

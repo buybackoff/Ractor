@@ -331,7 +331,6 @@ namespace Ractor {
 
 
         public long Count<T>() where T : IDataObject, new() {
-
             return QueryOperation<T, long>(db => db.Count<T>(),
                 result => result.Aggregate(0L, (acc, i) => acc + i));
         }

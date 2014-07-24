@@ -1,15 +1,16 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.IO;
 using System.IO.Compression;
-using System.Runtime.Serialization.Formatters.Binary;
-using System.Security.Cryptography;
-using System.Text;
-using ServiceStack.Text;
 
 namespace Ractor {
+    /// <summary>
+    /// 
+    /// </summary>
     public static class CommonExtentions {
 
+        /// <summary>
+        /// 
+        /// </summary>
         public static List<T> ItemAsList<T>(this T o) {
             return new List<T>
             {
@@ -17,13 +18,19 @@ namespace Ractor {
                        };
         }
 
+        /// <summary>
+        /// 
+        /// </summary>
         public static T[] ItemAsArray<T>(this T o) {
             return new[] {
                            o
                        };
         }
 
-        public static byte[] Zip(this byte[] bytes) {
+        /// <summary>
+        /// In-memory compress
+        /// </summary>
+        public static byte[] GZip(this byte[] bytes) {
             using (var inStream = new MemoryStream(bytes)) {
                 using (var outStream = new MemoryStream()) {
                     using (var compress = new GZipStream(outStream, CompressionMode.Compress)) {
@@ -35,7 +42,10 @@ namespace Ractor {
         }
 
 
-        public static byte[] UnZip(this byte[] bytes) {
+        /// <summary>
+        /// In-memory uncompress
+        /// </summary>
+        public static byte[] UnGZip(this byte[] bytes) {
             byte[] outBytes;
             using (var inStream = new MemoryStream(bytes)) {
                 using (var outStream = new MemoryStream()) {

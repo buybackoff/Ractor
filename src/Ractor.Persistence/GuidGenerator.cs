@@ -130,4 +130,21 @@ namespace Ractor {
             return shard;
         }
     }
+
+    public static class GuidExtensions {
+        public static Guid GuidFromBase64String(this string shortGuid) {
+            Guid guid;
+            shortGuid = shortGuid.Replace("-", "/").Replace("_", "+") + "==";
+            try {
+                guid = new Guid(Convert.FromBase64String(shortGuid));
+            } catch (Exception ex) {
+                throw new ArgumentException("Wrong Base64 fomat for GUID", ex);
+            }
+            return guid;
+        }
+
+        public static string ToBase64String(this Guid guid) {
+            return Convert.ToBase64String(guid.ToByteArray()).Replace("/", "-").Replace("+", "_").Replace("=", "");
+        }
+    }
 }

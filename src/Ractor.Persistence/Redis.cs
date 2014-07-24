@@ -18,18 +18,28 @@ namespace Ractor {
         /// </summary>
         public static MemoryCache Cache = new MemoryCache("Redis");
 
-        // all non-commands stuff here
-
+        /// <summary>
+        /// Prefix to all keys created/read by an instance of Redis
+        /// </summary>
         public string KeyNameSpace { get; private set; }
         private readonly string _nameSpace;
 
+        /// <summary>
+        /// 
+        /// </summary>
         public ISerializer Serializer { get; set; }
 
-        public Redis(string connectionString, string keyNameSpace = "") {
+        /// <summary>
+        /// Public constructor for Redis client
+        /// </summary>
+        /// <param name="connectionString"></param>
+        /// <param name="keyNameSpace">Prefix to all keys created/read by an instance of Redis</param>
+        public Redis(string connectionString = "", string keyNameSpace = "") {
+            if (string.IsNullOrWhiteSpace(connectionString)) connectionString = "localhost,resolveDns=true";
             ConnectionMultiplexer = ConnectionMultiplexer.Connect(connectionString);
             KeyNameSpace = keyNameSpace ?? ""; // just if null is provided
             _nameSpace = KeyNameSpace.IsNullOrEmpty() ? "" : KeyNameSpace + ":";
-            Serializer = new PicklerJsonSerializer();
+            Serializer = new JsonSerializer();
         }
 
         private ConnectionMultiplexer ConnectionMultiplexer { get; set; }
@@ -102,8 +112,8 @@ namespace Ractor {
             if (result.IsNull) return default(T);
             var bytes =
                 IsTypeCompressed<T>()
-                ? ((byte[])result).UnZip()
-                :  ((byte[])result);
+                ? ((byte[])result).UnGZip()
+                : ((byte[])result);
             return Serializer.Deserialize<T>(bytes);
         }
 
@@ -113,7 +123,7 @@ namespace Ractor {
             }
             var bytes = Serializer.Serialize(item);
             return IsTypeCompressed<T>()
-                ? (RedisValue)bytes.Zip()
+                ? (RedisValue)bytes.GZip()
                 : (RedisValue)bytes;
         }
 
@@ -174,13 +184,13 @@ namespace Ractor {
                 }
                 var iddo = obj as IDistributedDataObject;
                 if (iddo != null) {
-                    return iddo.Guid.ToString("N");
+                    return iddo.Guid.ToBase64String();
                 }
+                // for IDataObject put CacheKey attribute on GUID to use it as a key
                 var ido = obj as IDataObject;
                 if (ido != null) {
                     return ido.Id.ToString(CultureInfo.InvariantCulture);
                 }
-                // TODO? with reflection check for "Id" and "Key"? or just restrict to IDataObject?
                 if (PrimaryKeyProperty == null) throw new ApplicationException("Cannot determine cache key. Add CacheKey or PrimaryKey attribute to a key property");
                 return PrimaryKeyProperty.GetValue(obj, null).ToString();
             }

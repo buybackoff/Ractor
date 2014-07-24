@@ -20,7 +20,7 @@ namespace Ractor.Persistence.AWS
 
             public S3Persistor(string bucket) {
                 _bucket = bucket;
-                Serializer = new PicklerJsonSerializer();
+                Serializer = new JsonSerializer();
             }
 
 
@@ -49,7 +49,7 @@ namespace Ractor.Persistence.AWS
             }
 
             public bool TryPut<T>(string key, T poco) {
-                Stream stream = new MemoryStream(Serializer.Serialize(poco).Zip());
+                Stream stream = new MemoryStream(Serializer.Serialize(poco).GZip());
                 return TryPut(_bucket, key, stream);
             }
 
@@ -58,7 +58,7 @@ namespace Ractor.Persistence.AWS
             }
 
             public async Task<bool> TryPutAsync<T>(string key, T poco) {
-                Stream stream = new MemoryStream(Serializer.Serialize(poco).Zip());
+                Stream stream = new MemoryStream(Serializer.Serialize(poco).GZip());
                 return await TryPutAsync(_bucket, key, stream);
             }
 
@@ -76,7 +76,7 @@ namespace Ractor.Persistence.AWS
                 if (!res) return false;
                 var ms = new MemoryStream();
                 stream.CopyTo(ms);
-                poco = Serializer.Deserialize<T>(ms.ToArray().UnZip());
+                poco = Serializer.Deserialize<T>(ms.ToArray().UnGZip());
                 return true;
             }
 
@@ -91,7 +91,7 @@ namespace Ractor.Persistence.AWS
                 if (!res.Item1) return Tuple.Create(false, poco);
                 var ms = new MemoryStream();
                 res.Item2.CopyTo(ms);
-                poco = Serializer.Deserialize<T>(ms.ToArray().UnZip());
+                poco = Serializer.Deserialize<T>(ms.ToArray().UnGZip());
                 return Tuple.Create(true, poco);
             }
 

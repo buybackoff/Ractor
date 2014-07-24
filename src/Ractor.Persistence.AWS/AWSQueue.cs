@@ -13,7 +13,7 @@ namespace Ractor.Persistence.AWS {
 
         public AWSQueue(string queueName = null) {
             _queueUrl = GetOrCreateQueue(queueName);
-            Serializer = new PicklerJsonSerializer();
+            Serializer = new JsonSerializer();
         }
 
         private string GetOrCreateQueue(string name) {

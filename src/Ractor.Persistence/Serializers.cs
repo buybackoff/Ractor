@@ -1,15 +1,19 @@
 ﻿using System.Collections.Generic;
 using System.IO;
-using Nessos.FsPickler.Json; // Need this for F# types in Actors
-
-
 
 namespace Ractor {
     // TODO how to correctly deal with null? throw here or pass downstream?
-    public class PicklerJsonSerializer : ISerializer {
+    // TODO replace with JSON.NET after all objects are made POCOs
+    /// <summary>
+    /// 
+    /// </summary>
+    public class JsonSerializer : ISerializer {
 
-        private readonly JsonPickler _pickler = FsPickler.CreateJson();
+        private readonly Nessos.FsPickler.Json.JsonSerializer _pickler = Nessos.FsPickler.Json.FsPickler.CreateJson();
 
+        /// <summary>
+        /// 
+        /// </summary>
         public byte[] Serialize<T>(T value) {
             if (!typeof(T).IsValueType && EqualityComparer<T>.Default.Equals(value, default(T))) {
                 return null;
@@ -19,6 +23,9 @@ namespace Ractor {
             return memoryStream.ToArray();
         }
 
+        /// <summary>
+        /// 
+        /// </summary>
         public T Deserialize<T>(byte[] bytes) {
             return bytes == null
                 ? default(T)

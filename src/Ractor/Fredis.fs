@@ -13,14 +13,14 @@ open Ractor
 // TODO test high CPU load and many (1000+) IO-like actors
 
 type Ractor(redisConnectionString : string) = 
-    let redis = Redis(redisConnectionString, "Ractor")
+    let redis = Redis(redisConnectionString, "R")
        
     static let dbs = Dictionary<string, IPocoPersistor>()
     static let blobs = Dictionary<string, IBlobPersistor>()
     static let redises = Dictionary<string, Redis>()  
 
     do
-        redis.Serializer <- PicklerJsonSerializer()
+        redis.Serializer <- JsonSerializer()
 
         if String.IsNullOrEmpty(ActorImpl<_,_>.DefaultRedisConnectionString) then
             ActorImpl<_,_>.DefaultRedisConnectionString <- redisConnectionString

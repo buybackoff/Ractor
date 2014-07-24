@@ -19,7 +19,7 @@ namespace Ractor {
         /// <param name="path">Directory to store blobs</param>
         public FileBlobPersistor(string path) {
             _path = path;
-            Serializer = new PicklerJsonSerializer();
+            Serializer = new JsonSerializer();
         }
 
         /// <summary>
@@ -53,7 +53,7 @@ namespace Ractor {
         }
 
         public bool TryPut<T>(string key, T poco) {
-            Stream stream = new MemoryStream(Serializer.Serialize(poco).Zip());
+            Stream stream = new MemoryStream(Serializer.Serialize(poco).GZip());
             return TryPut(_path, key, stream);
         }
 
@@ -64,7 +64,7 @@ namespace Ractor {
         public async Task<bool> TryPutAsync<T>(string key, T poco) {
             return await Task.Factory.StartNew(() => {
 
-                Stream stream = new MemoryStream(Serializer.Serialize(poco).Zip());
+                Stream stream = new MemoryStream(Serializer.Serialize(poco).GZip());
                 var res = TryPut(_path, key, stream);
                 return res;
             });
@@ -84,7 +84,7 @@ namespace Ractor {
             if (!res) return false;
             var ms = new MemoryStream();
             stream.CopyTo(ms);
-            poco = Serializer.Deserialize<T>(ms.ToArray().UnZip());
+            poco = Serializer.Deserialize<T>(ms.ToArray().UnGZip());
             return true;
         }
 
@@ -105,7 +105,7 @@ namespace Ractor {
                 MemoryStream ms;
                 var suc = TryGet(key, out ms);
                 if (!suc) return Tuple.Create(false, poco);
-                poco = Serializer.Deserialize<T>(ms.ToArray().UnZip());
+                poco = Serializer.Deserialize<T>(ms.ToArray().UnGZip());
                 return Tuple.Create(true, poco);
             });
         }
