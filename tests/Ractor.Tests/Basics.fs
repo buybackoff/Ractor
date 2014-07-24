@@ -51,7 +51,7 @@ type Incrementer ()=
 [<Test>]
 let ``Hello, Actors`` () =
     
-    let fredis = new F("127.0.0.1:6379,resolveDns=true") // TODO this is ugly, make module Ractor
+    let fredis = new Ractor("127.0.0.1:6379,resolveDns=true") // TODO this is ugly, make module Ractor
 
     let greeter = Greeter()
 

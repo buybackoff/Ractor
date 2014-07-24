@@ -75,34 +75,3 @@ type Ractor(redisConnectionString : string) =
         let id = id.ToLowerInvariant() 
         redises.[id]
     static member GetRedis() = redises.[""]
-
-
-namespace Ractor.FSharp
-open Ractor
-// erased by compiler, convenient to use from F#
-type F = Ractor
-
-
-// TODO uncomment and rethink operators
-//[<AutoOpen>]
-//module Operators = 
-//    let (<--) (id : string) (msg : 'Task) : unit = Ractor.GetActor<'Task, unit>(id).Post(msg)
-//    let (-->) (msg : 'Task) (id : string) : unit = Ractor.GetActor<'Task, unit>(id).Post(msg)
-//    let (<-*) (id : string) (msg : 'Task) : Async<'TResult> = 
-//        Ractor.GetActor<'Task, 'TResult>(id).PostAndGetResult(msg, Timeout.Infinite)
-//    let ( *-> ) (msg : 'Task) (id : string) : Async<'TResult> = 
-//        Ractor.GetActor<'Task, 'TResult>(id).PostAndGetResult(msg, Timeout.Infinite)
-    
-
-
-
-// TODO do we really need 1-to-many and many-to-1 continuations as a separate methods,
-// or it is good enough to call one actor from another... 
-// we need to store a reference (Guid) as a part of message to continuator so that
-// it could retry on power shutdown etc. Same issue as with 1-to-1.
-// 
-// ContinueWith
-// ->>- 1-1
-// ->>= 1-many
-// =>>- many - 1
-// should filter unit if that is possible
