@@ -423,15 +423,14 @@ namespace Ractor {
             if(item.Guid != default(Guid)) return item.Guid;
             var distributed = item as IDistributedDataObject;
             if (distributed != null) {
-                return distributed.GetRootGuid() == default(Guid)
-                    ? GuidGenerator.NewGuid(Epoch)
+                return (distributed.GetRootGuid() == default(Guid) || distributed.GetRootGuid().Epoch() == 0)
+                    ? GuidGenerator.NewGuid(Epoch) // root is undistributed entity/identity
                     : GuidGenerator.NewGuid(distributed.GetRootGuid());
             }
             return GuidGenerator.NewGuid(0);
         }
 
-        
-
+       
 
         public List<T> GetByIds<T>(List<Guid> guids) where T : IDataObject, new() {
             var isDistributed = typeof(IDistributedDataObject).IsAssignableFrom(typeof(T));
