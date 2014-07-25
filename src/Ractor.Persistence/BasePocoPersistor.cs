@@ -22,7 +22,8 @@ namespace Ractor {
         internal OrmLiteConnectionFactory DbFactory { get; set; }
 
         private readonly Dictionary<ushort, string> _shards = new Dictionary<ushort, string>();
-
+        private readonly HashSet<byte> _readOnlyShards = new HashSet<byte>();
+        private List<byte> _writableShards;
 
         private byte NumberOfShards { get; set; }
 
@@ -30,21 +31,30 @@ namespace Ractor {
         /// Base implementation of IPocoPersistor using ServiceStack.ORMLite v4
         /// </summary>
         /// <param name="provider"></param>
-        /// <param name="connectionString">Connection String for central DB (relational data with complex joins, limited growth, stable usage, settings, etc)</param>
-        /// <param name="shardConnectionStrings">Connection string for shards, keys MUST START FROM ONE and be consecutive</param>
+        /// <param name="mainConnectionString">Connection String for central DB (relational data with complex joins, limited growth, stable usage, settings, etc)</param>
+        /// <param name="shardConnectionStringsStartFrom1">Connection string for shards, keys MUST START FROM ONE and be consecutive</param>
+        /// <param name="readOnlyShards">No new Guids will be generated for these shards. Updates and rooted inserts will throw.</param>
         /// <param name="guidType"></param>
-        public BasePocoPersistor(IOrmLiteDialectProvider provider, 
-            string connectionString, 
-            Dictionary<ushort, string> shardConnectionStrings,
+        public BasePocoPersistor(IOrmLiteDialectProvider provider,
+            string mainConnectionString,
+            Dictionary<byte, string> shardConnectionStringsStartFrom1,
+            byte[] readOnlyShards = null,
             SequentialGuidType guidType = SequentialGuidType.SequentialAsString) {
             _provider = provider;
             _guidType = guidType;
-            DbFactory = CreateDbFactory(connectionString);
+            if (readOnlyShards != null) {
+                foreach (var readOnlyShard in readOnlyShards) { _readOnlyShards.Add(readOnlyShard); }
+            }
+            if (_readOnlyShards.Count >= shardConnectionStringsStartFrom1.Count)
+                throw new ArgumentException("Too few writable shards!");
+
+
+            DbFactory = CreateDbFactory(mainConnectionString);
             // check and register shards
             using (var db = DbFactory.OpenDbConnection()) {
                 db.SqlScalar<int>("SELECT 1+1"); // check DB engine is working
             }
-            CheckShardsAndSetEpoch(shardConnectionStrings);
+            CheckShardsAndSetEpoch(shardConnectionStringsStartFrom1);
         }
 
         private OrmLiteConnectionFactory CreateDbFactory(string connectionString) {
@@ -52,12 +62,13 @@ namespace Ractor {
             return new OrmLiteConnectionFactory(connectionString, _provider);
         }
 
-        private void CheckShardsAndSetEpoch(Dictionary<ushort, string> shardConnectionStrings) {
+        private void CheckShardsAndSetEpoch(Dictionary<byte, string> shardConnectionStrings) {
             var sortedShards = shardConnectionStrings.OrderBy(kvp => kvp.Key).ToList();
             var numberOfShards = sortedShards.Count;
             if (numberOfShards > 254) throw new ArgumentException("Too many shards!");
             NumberOfShards = (byte)numberOfShards;
-
+            _writableShards = shardConnectionStrings.Keys.Except(_readOnlyShards).ToList();
+            if (_writableShards.Count == 0) throw new ApplicationException("No writable shards");
             var i = 1;
             foreach (var keyValuePair in sortedShards) {
                 if (i != keyValuePair.Key) {
@@ -97,6 +108,8 @@ namespace Ractor {
         public void CreateTable<T>(bool overwrite = false) where T : IDataObject, new() {
             bool isDistributed = typeof(IDistributedDataObject).IsAssignableFrom(typeof(T));
 
+            if(_readOnlyShards.Count > 0) throw new ReadOnlyException("Cannot create table with read-only shards!");
+
             if (isDistributed) {
                 foreach (var storedShard in _shards) {
                     using (var db = DbFactory.OpenDbConnection(storedShard.Key.ToString(CultureInfo.InvariantCulture))) {
@@ -124,7 +137,7 @@ namespace Ractor {
             if (length == 0) return;
 
             items.ForEach(x => {
-                GenerateGuid(ref x);
+                CheckOrGenerateGuid(ref x, true);
                 // do not check existing value, always overwrite
                 x.UpdatedAt = DateTime.UtcNow;
             });
@@ -146,18 +159,16 @@ namespace Ractor {
                         using (var db = DbFactory.OpenDbConnection(lu.Key.ToString(CultureInfo.InvariantCulture))) {
                             try {
                                 db.InsertAll(basket);
-                            } 
-                            catch (Exception e) {
+                            } catch (Exception e) {
                                 internalError = e;
                             }
                         }
                     });
 
-                if (internalError != null) throw internalError; 
+                if (internalError != null) throw internalError;
 
             } else {
-                using (var db = DbFactory.OpenDbConnection())
-                {
+                using (var db = DbFactory.OpenDbConnection()) {
                     db.InsertAll(items);
                 }
             }
@@ -180,8 +191,8 @@ namespace Ractor {
             if (items == null) throw new ArgumentNullException("items");
             var length = items.Count;
             if (length == 0) return;
-
             items.ForEach(x => {
+                CheckOrGenerateGuid(ref x, true);
                 // do not check existing value, always overwrite
                 x.UpdatedAt = DateTime.UtcNow;
             });
@@ -255,6 +266,7 @@ namespace Ractor {
             if (items == null) throw new ArgumentNullException("items");
             var length = items.Count;
             if (length == 0) return;
+            items.ForEach(x => CheckOrGenerateGuid(ref x, true));
 
             var isDistributed = typeof(IDistributedDataObject).IsAssignableFrom(typeof(T));
 
@@ -373,7 +385,12 @@ namespace Ractor {
         }
 
 
+        /// <summary>
+        /// 
+        /// </summary>
         public void ExecuteSql(string sql, bool distributed = false) {
+            if (_readOnlyShards.Count > 0) throw new ReadOnlyException("Cannot execute SQL with read-only shards!");
+
             if (distributed) {
                 _shards
                     .AsParallel()
@@ -393,28 +410,36 @@ namespace Ractor {
 
         }
 
-        /// <summary>
-        /// Generate new Guid for an item if Guid was not set, or return existing.
-        /// </summary>
-        public void GenerateGuid<T>(ref T item) where T : IDataObject {
+        internal void CheckOrGenerateGuid<T>(ref T item, bool onlyWritable) where T : IDataObject {
             if (item.Id != default(Guid)) {
-                if (item.Id.Bucket() > NumberOfShards) throw new ApplicationException("Wrong Guid bucket");
+                var bucket = item.Id.Bucket();
+                if (bucket > NumberOfShards) throw new ApplicationException("Wrong Guid bucket");
+                if (onlyWritable && _readOnlyShards.Contains(bucket)) throw new ReadOnlyException("Could not write to shard: " + bucket);
                 return;
             }
             var distributed = item as IDistributedDataObject;
             if (distributed != null) {
                 if (distributed.GetRootGuid() == default(Guid)
                     || distributed.GetRootGuid().Bucket() == 0) {
-                    var randomBucket = (byte) (new Random()).Next(1, NumberOfShards);
-                    item.Id = GuidGenerator.NewBucketGuid(randomBucket, _guidType);
+                    // this will generate guids only for writable buckets
+                    var randomWritableBucket = _writableShards[(byte)(new Random()).Next(0, _writableShards.Count - 1)];
+                    item.Id = GuidGenerator.NewBucketGuid(randomWritableBucket, _guidType);
                 } else {
-                    item.Id = GuidGenerator.NewBucketGuid(distributed.GetRootGuid().Bucket(),
+                    var bucket = distributed.GetRootGuid().Bucket();
+                    if (onlyWritable && _readOnlyShards.Contains(bucket)) throw new ReadOnlyException("Could not write to shard: " + bucket);
+                    item.Id = GuidGenerator.NewBucketGuid(bucket,
                         _guidType);
                 }
             } else {
+                if (onlyWritable && _readOnlyShards.Contains(0)) throw new ReadOnlyException("Could not write to shard: " + 0);
                 item.Id = GuidGenerator.NewBucketGuid(0, _guidType);
             }
         }
+
+        /// <summary>
+        /// Generate new Guid for an item if Guid was not set, or return existing.
+        /// </summary>
+        public void GenerateGuid<T>(ref T item) where T : IDataObject { CheckOrGenerateGuid(ref item, false); }
 
 
 
@@ -444,7 +469,7 @@ namespace Ractor {
         public T GetById<T>(Guid guid) where T : IDataObject, new() {
             return GetByIds<T>(guid.ItemAsList()).Single();
         }
-        
+
 
 
 

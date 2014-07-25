@@ -36,7 +36,7 @@ namespace Ractor.Persistence.Tests {
             //};
             //Persistor = new BasePocoPersistor(SqliteDialect.Provider, "App_Data/main.sqlite", shards);
 
-            var shards = new Dictionary<ushort, string> {
+            var shards = new Dictionary<byte, string> {
                 {1, "Server=localhost;Database=fredis.0;Uid=test;Pwd=test;"},
                 {2, "Server=localhost;Database=fredis.1;Uid=test;Pwd=test;"}
                 //,{1, "App_Data/1.sqlite"}
