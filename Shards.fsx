@@ -31,8 +31,8 @@ Sharding/functional division could only be useful for write scalability. Reading
 done from cache.
 
 
-If we use AI int64 ID for identities,
-
+http://www.codeproject.com/Articles/388157/GUIDs-as-fast-primary-keys-under-multiple-database
+Use sequential GUIDs everywhere. Performance is almost the same 
 
 
 **)

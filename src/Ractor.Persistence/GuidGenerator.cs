@@ -1,100 +1,106 @@
-﻿// explained in Mono https://github.com/mono/mono/blob/master/mcs/class/corlib/System/Guid.cs
-
-
-using System;
-using System.Collections.Generic;
+﻿using System;
 using System.Security.Cryptography;
+using System.Threading;
 using ServiceStack;
 
 namespace Ractor {
+
+    public enum SequentialGuidType {
+        /// <summary>
+        /// Guid.ToString() will be sequential
+        /// </summary>
+        SequentialAsString,
+        /// <summary>
+        /// Guid.ToByteArray() will be sequential
+        /// </summary>
+        SequentialAsBinary,
+        /// <summary>
+        /// Use for MSSQL only
+        /// </summary>
+        SequentialAtEnd
+    }
+
     /// <summary>
-    ///     Guid generator for sharding
+    ///     Guid generator
+    ///     0 bucket - main DB
     /// </summary>
-    public static class GuidGenerator {
-        private static readonly object Locker = new object();
-        private static RandomNumberGenerator _rng;
+    internal static class GuidGenerator {
+        private static readonly RandomNumberGenerator Rng = new RNGCryptoServiceProvider();
 
-        /// <summary>
-        ///     Fibinacci sequence. When increasing epoch the number of shards will grow by c.62%
-        ///     which is better than using powers of two (100%) or prime numbers (too small increases)
-        ///     Given that load is not only from new root assets but from existing ones, scaling out
-        ///     will reduce load on existing shards by only moving new root assets to new shards
-        /// </summary>
-        internal static readonly IDictionary<ushort, ushort> EpochToShards =
-            new SortedList<ushort, ushort> {
-                {0, 0}, // zero epoch kept only for shard calculation, means not sharded key
-                {1, 1},
-                {2, 2},
-                {3, 3},
-                {4, 5},
-                {5, 8},
-                {6, 13},
-                {7, 21},
-                {8, 34},
-                {9, 55},
-                {10, 89},
-                {11, 144},
-                {12, 233},
-                {13, 377},
-                {14, 610},
-                {15, 987},
-            };
+        public static Guid NewGuid(SequentialGuidType guidType = SequentialGuidType.SequentialAsString) {
+            return new Guid(GuidSequentialArray(0, guidType));
+        }
 
-        /// <summary>
-        ///     Generate new Guid for an epoch
-        /// </summary>
-        internal static Guid NewGuid(uint epoch) {
-            if (epoch > 15u) throw new ArgumentException("Epoch could be from 0 to 15", "epoch");
-
-            byte[] b = GuidArray(epoch);
-            var sg = new Guid(b);
-            return sg;
+        public static Guid NewRandomBucketGuid(SequentialGuidType guidType = SequentialGuidType.SequentialAsString) {
+            var bs = new byte[1];
+            bs[0] = 0;
+            while (bs[0] == 0) { Rng.GetBytes(bs); } // 1-255
+            return new Guid(GuidSequentialArray(bs[0], guidType));
         }
 
         /// <summary>
-        ///     Generate a new Guid that will have the same shard as the root Guid
+        ///     Generate new Guid for a bucket
         /// </summary>
-        internal static Guid NewGuid(Guid rootGuid) {
-            uint epoch = rootGuid.Epoch();
-            byte[] rootBytes = rootGuid.ToByteArray();
-            byte[] newBytes = GuidArray(epoch);
-
-            // set the same virtual shard to the new guid
-            // still have 2^(8*13) combinations which must be not globally unique but within a virtual shard
-            newBytes[0] = rootBytes[0];
-            newBytes[1] = rootBytes[1];
-
-            var sg = new Guid(newBytes);
-            return sg;
+        public static Guid NewBucketGuid(byte bucket, SequentialGuidType guidType = SequentialGuidType.SequentialAsString) {
+            return new Guid(GuidSequentialArray(bucket, guidType));
         }
 
         /// <summary>
-        ///     Translate MD5 hash of a string to Guid with zero epoch
+        ///     Generate a new Guid that will have the same bucket as the root Guid
         /// </summary>
-        public static Guid NewGuid(string uniqueString) {
-            byte[] bs = uniqueString.ToUtf8Bytes().ComputeMD5Hash();
-            bs[7] = (byte)((bs[7] & 0x0f) | 0 << 4);
-            return new Guid(bs);
+        public static Guid NewBucketGuid(Guid rootGuid, SequentialGuidType guidType = SequentialGuidType.SequentialAsString) {
+            return new Guid(GuidSequentialArray(rootGuid.ToByteArray()[8], guidType));
         }
 
 
-        internal static byte[] GuidArray(uint epoch) {
+        private static readonly long BaseTicks = new DateTime(2000, 1, 1).Ticks;
+        private static long _previousTicks = DateTime.UtcNow.Ticks - BaseTicks;
+
+        private static long GetTicks() {
+            long orig, newval;
+            do {
+                orig = _previousTicks;
+                var now = DateTime.UtcNow.Ticks - BaseTicks;
+                newval = Math.Max(now, orig + 1);
+            } while (Interlocked.CompareExchange
+                         (ref _previousTicks, newval, orig) != orig);
+            return newval;
+        }
+        
+        
+        internal static byte[] GuidSequentialArray(byte bucket, SequentialGuidType guidType) {
             var bytes = new byte[16];
+            Rng.GetBytes(bytes);
+            long ticks = GetTicks();
 
-            lock (Locker) {
-                if (_rng == null) _rng = RandomNumberGenerator.Create(); // new RNGCryptoServiceProvider(); //
-                _rng.GetBytes(bytes);
+            // Convert to a byte array 
+            byte[] ticksArray = BitConverter.GetBytes(ticks);
+            if (BitConverter.IsLittleEndian) {
+                Array.Reverse(ticksArray);
             }
 
-            // Mask in Variant 1-0 in Bit[7..6]
-            bytes[8] = (byte)((bytes[8] & 0x3f) | 0x80);
+            // Copy the bytes into the guid 
 
-            // Mask in Version 4 (random based GuidGenerator) in Bits[15..13]
-            //guid[7] = (byte)((guid[7] & 0x0f) | 0x40);
+            switch (guidType) {
+                case SequentialGuidType.SequentialAsString:
+                case SequentialGuidType.SequentialAsBinary:
+                    Array.Copy(ticksArray, 1, bytes, 0, 7); // 7 bytes for ticks ~ 228 years
 
-            // Mask in epoch instead of Version 4 (random based GuidGenerator) in Bits[15..13]
-            bytes[7] = (byte)((bytes[7] & 0x0f) | (byte)(epoch << 4));
+                    // If formatting as a string, we have to reverse the order
+                    // of the Data1 and Data2 blocks on little-endian systems.
+                    if (guidType == SequentialGuidType.SequentialAsString && BitConverter.IsLittleEndian) {
+                        Array.Reverse(bytes, 0, 4);
+                        Array.Reverse(bytes, 4, 2);
+                        Array.Reverse(bytes, 6, 2);
+                    }
+                    break;
 
+                case SequentialGuidType.SequentialAtEnd:
+                    Buffer.BlockCopy(ticksArray, 1, bytes, 9, 7);
+                    break;
+            }
+
+            bytes[8] = bucket;
             return bytes;
         }
 
@@ -102,32 +108,9 @@ namespace Ractor {
         /// <summary>
         ///     Shard in which the Guid is stored
         /// </summary>
-        public static uint Epoch(this Guid guid) {
+        public static byte Bucket(this Guid guid) {
             byte[] bytes = guid.ToByteArray();
-            return (uint)(bytes[7] >> 4);
-        }
-
-
-        /// <summary>
-        ///     Returns shard from Guid based on epoch/virtual shard that are stored in Guid
-        /// </summary>
-        internal static ushort Shard(this Guid guid) {
-            byte[] bytes = guid.ToByteArray();
-            var epoch = (ushort)(bytes[7] >> 4);
-            if (epoch == 0) throw new ArgumentException("Not sharded Guid with zero epoch");
-            var virtualShard = (ushort)((bytes[0] << 8) | bytes[1]);
-
-            // if always set to 1, new shards will take a part, not whole write load
-            // ReSharper disable once ConvertToConstant.Local
-            int firstShardInEpoch = 1; // (ushort) (epoch == 1 ? 1 : EpochToShards[(ushort)(epoch - 1)] + 1);
-            ushort lastShardInEpoch = EpochToShards[epoch];
-
-            int numberOfShardInEpoch = lastShardInEpoch - firstShardInEpoch + 1;
-
-            var shard = (ushort)(firstShardInEpoch + ((numberOfShardInEpoch * virtualShard) / 65536) - 1);
-            // 6553*6* not 5!
-
-            return shard;
+            return bytes[8];
         }
     }
 
@@ -146,5 +129,23 @@ namespace Ractor {
         public static string ToBase64String(this Guid guid) {
             return Convert.ToBase64String(guid.ToByteArray()).Replace("/", "-").Replace("+", "_").Replace("=", "");
         }
+
+        /// <summary>
+        ///     Translate MD5 hash of a string to Guid with zero epoch
+        /// </summary>
+        public static Guid MD5Guid(this string uniqueString) {
+            byte[] bs = uniqueString.ToUtf8Bytes().ComputeMD5Hash();
+            bs[8] = 0;
+            return new Guid(bs);
+        }
+
+        internal static DateTime Timestamp(this Guid guid) {
+            var bs = new byte[8];
+            var gbs = guid.ToByteArray();
+            Array.Copy(gbs, 0, bs, 1, 7);
+            var ticks = BitConverter.ToInt64(bs, 0);
+            return new DateTime(ticks, DateTimeKind.Utc);
+        }
+
     }
 }

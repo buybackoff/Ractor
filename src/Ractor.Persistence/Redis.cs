@@ -2,7 +2,6 @@
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.Globalization;
 using System.Linq;
 using System.Reflection;
 using System.Runtime.Caching;
@@ -182,14 +181,9 @@ namespace Ractor {
                 if (CacheKeyProperty != null) {
                     return CacheKeyProperty.GetValue(obj, null).ToString();
                 }
-                var iddo = obj as IDistributedDataObject;
+                var iddo = obj as IDataObject;
                 if (iddo != null) {
-                    return iddo.Guid.ToBase64String();
-                }
-                // for IDataObject put CacheKey attribute on GUID to use it as a key
-                var ido = obj as IDataObject;
-                if (ido != null) {
-                    return ido.Id.ToString(CultureInfo.InvariantCulture);
+                    return iddo.Id.ToBase64String();
                 }
                 if (PrimaryKeyProperty == null) throw new ApplicationException("Cannot determine cache key. Add CacheKey or PrimaryKey attribute to a key property");
                 return PrimaryKeyProperty.GetValue(obj, null).ToString();

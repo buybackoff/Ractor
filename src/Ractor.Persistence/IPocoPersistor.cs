@@ -60,7 +60,7 @@ namespace Ractor {
         /// <summary>
         /// 
         /// </summary>
-        List<T> Select<T>(Expression<Func<T, bool>> predicate) where T : IDataObject, new();
+        List<T> Select<T>(Expression<Func<T, bool>> predicate = null) where T : IDataObject, new();
         /// <summary>
         /// 
         /// </summary>
@@ -74,24 +74,15 @@ namespace Ractor {
         // count
 
         /// <summary>
-        /// 
-        /// </summary>
-        T GetById<T>(long id) where T : IDataObject, new();
-
-        /// <summary>
         /// Generate new Guid for an item if Guid was not set, or return existing.
         /// </summary>
-        Guid GenerateGuid<T>(T item) where T : IDataObject;
+        void GenerateGuid<T>(ref T item) where T : IDataObject;
 
         /// <summary>
         /// 
         /// </summary>
         T GetById<T>(Guid guid) where T : IDataObject, new();
 
-        /// <summary>
-        /// 
-        /// </summary>
-        List<T> GetByIds<T>(List<long> ids) where T : IDataObject, new();
 
         /// <summary>
         /// 

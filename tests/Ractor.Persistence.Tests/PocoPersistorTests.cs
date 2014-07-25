@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using NUnit.Framework;
 using ServiceStack.OrmLite;
@@ -36,8 +37,8 @@ namespace Ractor.Persistence.Tests {
             //Persistor = new BasePocoPersistor(SqliteDialect.Provider, "App_Data/main.sqlite", shards);
 
             var shards = new Dictionary<ushort, string> {
-                {0, "Server=localhost;Database=fredis.0;Uid=test;Pwd=test;"},
-                {1, "Server=localhost;Database=fredis.1;Uid=test;Pwd=test;"}
+                {1, "Server=localhost;Database=fredis.0;Uid=test;Pwd=test;"},
+                {2, "Server=localhost;Database=fredis.1;Uid=test;Pwd=test;"}
                 //,{1, "App_Data/1.sqlite"}
             };
             Persistor = new BasePocoPersistor(MySqlDialect.Provider,
@@ -48,7 +49,6 @@ namespace Ractor.Persistence.Tests {
         [Test]
         public void CouldCreateTableAndCrudDataObject() {
             
-
             Persistor.CreateTable<DataObject>(true);
 
             for (int i = 0; i < 10; i++) {
@@ -75,21 +75,20 @@ namespace Ractor.Persistence.Tests {
 
             for (int i = 0; i < 1; i++) {
 
-
                 var dobj = new RootAsset() {
                     Value = "inserted"
                 };
 
                 Persistor.Insert(dobj);
 
-                var fromDb = Persistor.GetById<RootAsset>(dobj.Guid);
+                var fromDb = Persistor.GetById<RootAsset>(dobj.Id);
                 Assert.AreEqual("inserted", fromDb.Value);
 
-                Console.WriteLine(dobj.Guid);
+                Console.WriteLine(dobj.Id);
 
                 fromDb.Value = "updated";
                 Persistor.Update(fromDb);
-                fromDb = Persistor.GetById<RootAsset>(dobj.Guid);
+                fromDb = Persistor.GetById<RootAsset>(dobj.Id);
                 Assert.AreEqual("updated", fromDb.Value);
             }
         }
@@ -97,16 +96,22 @@ namespace Ractor.Persistence.Tests {
         [Test]
         public void CouldCreateTableAndInsertManyDataObject() {
 
-            Persistor.CreateTable<DataObject>(true);
+            //Persistor.CreateTable<DataObject>(true);
+            var sw = new Stopwatch();
+            sw.Start();
             var list = new List<DataObject>();
-            for (int i = 0; i < 5000; i++) {
+            for (int i = 0; i < 100000; i++) {
 
                 var dobj = new DataObject() {
                     Value = "inserted"
                 };
+                //Persistor.Insert(dobj);
                 list.Add(dobj);
             }
             Persistor.Insert(list);
+            sw.Stop();
+            Console.WriteLine("Elapsed: " + sw.ElapsedMilliseconds);
+            
         }
 
 
@@ -140,7 +145,7 @@ namespace Ractor.Persistence.Tests {
             //}
             //Persistor.Insert(list);
 
-            var values = Persistor.Select<RootAsset>(q => q.Id < 201).Select(ra => ra.Guid).ToList();
+            var values = Persistor.Select<RootAsset>().Select(ra => ra.Id).ToList();
             RootAsset a;
             foreach (var value in values) {
                 a = Persistor.GetById<RootAsset>(value);

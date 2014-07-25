@@ -1,8 +1,12 @@
 ﻿using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Runtime.InteropServices;
+using System.Threading.Tasks;
 using NUnit.Framework;
+using ServiceStack;
 
 namespace Ractor.CS.Tests {
     
@@ -28,7 +32,7 @@ namespace Ractor.CS.Tests {
             const int count = 1000;
             var freq = new Dictionary<string, int>();
             for (int i = 0; i < count; i++) {
-                var guidFirstChar = GuidGenerator.NewGuid(4).ToString("N").Substring(0, 2);
+                var guidFirstChar = GuidGenerator.NewGuid().ToString("N").Substring(0, 2);
                 if (freq.ContainsKey(guidFirstChar)) {
                     freq[guidFirstChar] = freq[guidFirstChar] + 1;
                 } else {
@@ -48,14 +52,24 @@ namespace Ractor.CS.Tests {
 
 
         [Test]
+        public void GuidToBytesAndBack() {
+            var guid = Guid.NewGuid();
+
+            var bs = guid.ToByteArray();
+
+            var g2 = new Guid(bs);
+            Console.WriteLine(guid.Equals(g2));
+        }
+
+        [Test]
         public void GuidShardDistribution() {
 
-            for (uint epoch = 0; epoch < 16; epoch++) {
-                Console.WriteLine("Epoch: {0}", epoch);
+            for (byte bucket = 0; bucket < 255; bucket++) {
+                Console.WriteLine("Bucket: {0}", bucket);
                 const int count = 10000;
                 var freq = new Dictionary<uint, int>();
                 for (int i = 0; i < count; i++) {
-                    var shard = GuidGenerator.NewGuid(epoch).Shard();
+                    var shard = GuidGenerator.NewRandomBucketGuid().Bucket();
                     if (freq.ContainsKey(shard)) {
                         freq[shard] = freq[shard] + 1;
                     } else {
@@ -79,41 +93,77 @@ namespace Ractor.CS.Tests {
         [Test]
         public void GuidInspectByEyes() {
             const int count = 10;
-            Console.WriteLine("Mono:");
+            Console.WriteLine("As string:");
             for (int i = 0; i < count; i++) {
-                Console.WriteLine(GuidGenerator.NewGuid(9).ToString("D"));
+                var guid = GuidGenerator.NewRandomBucketGuid(SequentialGuidType.SequentialAsString);
+                Console.WriteLine(guid.ToString("D"));
+                Console.WriteLine(guid.Timestamp().Ticks);
             }
 
-            Console.WriteLine("System:");
+            Console.WriteLine("As binary:");
             for (int i = 0; i < count; i++) {
-                Console.WriteLine(Guid.NewGuid().ToString("D"));
-            }
-
-            Console.WriteLine("System:");
-            for (int i = 0; i < count; i++) {
-                Guid guid;
-                NativeMethods.UuidCreateSequential(out guid);
-                Console.WriteLine(guid);
+                Console.WriteLine(GuidGenerator.NewRandomBucketGuid().ToByteArray().Select(x => x.ToString("x2")).Join(""));
             }
         }
 
 
         [Test]
-        public void GuidEpoch() {
-            const int count = 15;
-            for (uint i = 0; i <= count; i++) {
-                Console.WriteLine("Epoch {0}", i);
-                var guid = GuidGenerator.NewGuid(i);
-                Assert.AreEqual(i, guid.Epoch());
-                Console.WriteLine(guid.ToString("D"));
+        public void Generate1Million() {
+            var sw = new Stopwatch();
+            sw.Start();
+            
+            for (int i = 0; i < 1000000; i++) {
+                var guid = GuidGenerator.NewRandomBucketGuid();
             }
+            sw.Stop();
+            Console.WriteLine("Elapsed: " + sw.ElapsedMilliseconds );
+        }
 
+        [Test]
+        public void Ticks() {
 
-            Console.WriteLine("Version 4");
-            var sguid = Guid.NewGuid();
-            Console.WriteLine(sguid.ToString("D"));
-            Assert.AreEqual(4u, sguid.Epoch());
+            for (int i = 0; i < 100; i++) {
+                Console.WriteLine("Tick: " + DateTime.UtcNow.Millisecond);
+            }
+            
+        }
 
+        [Test]
+        public void Generate1MillionCheckUnique() {
+            var sw = new Stopwatch();
+            sw.Start();
+
+            var set = new ConcurrentDictionary<Guid, object>();
+
+            var action = new Action(() => {
+                for (int i = 0; i < 1000000/4; i++) {
+                    var guid = GuidGenerator.NewRandomBucketGuid();
+                    if (set.ContainsKey(guid)) throw new ApplicationException("duplicate");
+                    if (!set.TryAdd(guid, null)) throw new ApplicationException("cannot add");
+                }
+            });
+
+            Parallel.Invoke(action, action, action, action);
+            
+            sw.Stop();
+            Console.WriteLine("Elapsed: " + sw.ElapsedMilliseconds);
+        }
+
+        [Test]
+        public void Generate1MillionCheckOrder() {
+            var sw = new Stopwatch();
+            sw.Start();
+
+            var previous = GuidGenerator.NewRandomBucketGuid(SequentialGuidType.SequentialAsString);
+
+            for (int i = 0; i < 1000000; i++) {
+                var guid = GuidGenerator.NewRandomBucketGuid(SequentialGuidType.SequentialAsString);
+                //Console.WriteLine(String.CompareOrdinal(guid.ToString("N"), previous.ToString("N")));
+                if (String.CompareOrdinal(guid.ToString("N"), previous.ToString("N")) < 1) throw new ApplicationException();
+                previous = guid;
+            }
+            sw.Stop();
+            Console.WriteLine("Elapsed: " + sw.ElapsedMilliseconds);
         }
 
         [Test]
