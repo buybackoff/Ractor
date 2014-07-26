@@ -18,13 +18,5 @@ namespace Ractor {
         // assume this fits memory and avoid IO mess by using AI PK from IDataObject, which is not used anywhere directly for IDistributedDataObject
         // use byte(16) instead of char(32)/(36) in private fork of SS.ORML.MySQL
 
-        /// <summary>
-        /// Normaly all data is stored as events or as snapshots of state after a series of events 
-        /// so this property means creation time for events and the time when a snapshot of a 
-        /// state was taken for denormalized cache of state
-        /// </summary>
-        [DataMember]
-        [Index(false)]
-        public virtual DateTime UpdatedAt { get; set; }
     }
 }

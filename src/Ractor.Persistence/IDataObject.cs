@@ -11,11 +11,5 @@ namespace Ractor {
         /// </summary>
         [PrimaryKey]
         Guid Id { get; set; }
-
-        /// <summary>
-        /// UTC time when an object was modified.
-        /// </summary>
-        [Index(false)]
-        DateTime UpdatedAt { get; set; }
     }
 }

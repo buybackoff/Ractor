@@ -139,11 +139,30 @@ namespace Ractor {
             return new Guid(bs);
         }
 
-        internal static DateTime Timestamp(this Guid guid) {
-            var bs = new byte[8];
+        internal static DateTime Timestamp(this Guid guid, SequentialGuidType guidType = SequentialGuidType.SequentialAsString) {
+            var bytes = new byte[8];
             var gbs = guid.ToByteArray();
-            Array.Copy(gbs, 0, bs, 1, 7);
-            var ticks = BitConverter.ToInt64(bs, 0);
+
+            
+            switch (guidType) {
+                case SequentialGuidType.SequentialAsString:
+                case SequentialGuidType.SequentialAsBinary:
+                    
+                    if (guidType == SequentialGuidType.SequentialAsString && BitConverter.IsLittleEndian) {
+                        Array.Reverse(gbs, 0, 4);
+                        Array.Reverse(gbs, 4, 2);
+                        Array.Reverse(gbs, 6, 2);
+                    }
+                    Array.Copy(gbs, 0, bytes, 1, 7);
+                    break;
+                case SequentialGuidType.SequentialAtEnd:
+                    Buffer.BlockCopy(gbs, 1, bytes, 9, 7);
+                    break;
+            }
+            if (BitConverter.IsLittleEndian) {
+                Array.Reverse(bytes);
+            }
+            var ticks = BitConverter.ToInt64(bytes, 0);
             return new DateTime(ticks, DateTimeKind.Utc);
         }
 
