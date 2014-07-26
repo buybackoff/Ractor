@@ -102,7 +102,7 @@ namespace Ractor.CS.Tests {
 
             Console.WriteLine("As binary:");
             for (int i = 0; i < count; i++) {
-                Console.WriteLine(GuidGenerator.NewRandomBucketGuid().ToByteArray().Select(x => x.ToString("x2")).Join(""));
+                Console.WriteLine("0x" + BitConverter.ToString(GuidGenerator.NewRandomBucketGuid().ToByteArray()).Replace("-", ""));
             }
         }
 

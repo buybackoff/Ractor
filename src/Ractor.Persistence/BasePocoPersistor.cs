@@ -136,11 +136,7 @@ namespace Ractor {
             var length = items.Count;
             if (length == 0) return;
 
-            items.ForEach(x => {
-                CheckOrGenerateGuid(ref x, true);
-                // do not check existing value, always overwrite
-                x.UpdatedAt = DateTime.UtcNow;
-            });
+            items.ForEach(x => CheckOrGenerateGuid(ref x, true));
 
 
             var isDistributed = typeof(IDistributedDataObject).IsAssignableFrom(typeof(T));
@@ -191,11 +187,7 @@ namespace Ractor {
             if (items == null) throw new ArgumentNullException("items");
             var length = items.Count;
             if (length == 0) return;
-            items.ForEach(x => {
-                CheckOrGenerateGuid(ref x, true);
-                // do not check existing value, always overwrite
-                x.UpdatedAt = DateTime.UtcNow;
-            });
+            items.ForEach(x => CheckOrGenerateGuid(ref x, true));
 
             var isDistributed = typeof(IDistributedDataObject).IsAssignableFrom(typeof(T));
 
@@ -422,7 +414,7 @@ namespace Ractor {
                 if (distributed.GetRootGuid() == default(Guid)
                     || distributed.GetRootGuid().Bucket() == 0) {
                     // this will generate guids only for writable buckets
-                    var randomWritableBucket = _writableShards[(byte)(new Random()).Next(0, _writableShards.Count - 1)];
+                    var randomWritableBucket = _writableShards[(byte)(new Random()).Next(0, _writableShards.Count)]; // no '-1', maxValue is exlusive
                     item.Id = GuidGenerator.NewBucketGuid(randomWritableBucket, _guidType);
                 } else {
                     var bucket = distributed.GetRootGuid().Bucket();

@@ -61,7 +61,7 @@
     </Reference>
     <Reference Include="ServiceStack.OrmLite.MySql, Version=4.0.22.0, Culture=neutral, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
-      <HintPath>..\..\packages\ServiceStack.OrmLite.MySql.4.0.22\lib\net40\ServiceStack.OrmLite.MySql.dll</HintPath>
+      <HintPath>..\..\lib\ServiceStack.OrmLite.MySql.dll</HintPath>
     </Reference>
     <Reference Include="ServiceStack.Text, Version=4.0.22.0, Culture=neutral, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>

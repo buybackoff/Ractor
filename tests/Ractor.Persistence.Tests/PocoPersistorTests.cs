@@ -37,12 +37,14 @@ namespace Ractor.Persistence.Tests {
             //Persistor = new BasePocoPersistor(SqliteDialect.Provider, "App_Data/main.sqlite", shards);
 
             var shards = new Dictionary<byte, string> {
-                {1, "Server=localhost;Database=fredis.0;Uid=test;Pwd=test;"},
-                {2, "Server=localhost;Database=fredis.1;Uid=test;Pwd=test;"}
+                {1, "Server=localhost;Database=fredis.0;Uid=test;Pwd=test"},
+                {2, "Server=localhost;Database=fredis.1;Uid=test;Pwd=test"},
+                {3, "Server=localhost;Database=fredis.2;Uid=test;Pwd=test"},
+                {4, "Server=localhost;Database=fredis.3;Uid=test;Pwd=test"}
                 //,{1, "App_Data/1.sqlite"}
             };
             Persistor = new BasePocoPersistor(MySqlDialect.Provider,
-                "Server=localhost;Database=fredis;Uid=test;Pwd=test;", shards);
+                "Server=localhost;Database=fredis;Uid=test;Pwd=test", shards, null, SequentialGuidType.SequentialAsBinary);
         }
 
 
@@ -96,7 +98,7 @@ namespace Ractor.Persistence.Tests {
         [Test]
         public void CouldCreateTableAndInsertManyDataObject() {
 
-            //Persistor.CreateTable<DataObject>(true);
+            Persistor.CreateTable<DataObject>(true);
             var sw = new Stopwatch();
             sw.Start();
             var list = new List<DataObject>();
@@ -114,13 +116,20 @@ namespace Ractor.Persistence.Tests {
             
         }
 
+         [Test]
+        public void RandomTest() {
+            for (int i = 0; i < 100; i++) { Console.WriteLine((new Random()).Next(0, 2)); }
+            
+        }
 
         [Test]
         public void CouldCreateTableAndInsertManyDistributedDataObject() {
 
-            Persistor.CreateTable<RootAsset>(false);
+            Persistor.CreateTable<RootAsset>(true);
+            var sw = new Stopwatch();
+            sw.Start();
             var list = new List<RootAsset>();
-            for (int i = 0; i < 5000; i++) {
+            for (int i = 0; i < 100000; i++) {
 
                 var dobj = new RootAsset() {
                     Value = "inserted"
@@ -128,6 +137,8 @@ namespace Ractor.Persistence.Tests {
                 list.Add(dobj);
             }
             Persistor.Insert(list);
+            sw.Stop();
+            Console.WriteLine("Elapsed: " + sw.ElapsedMilliseconds);
         }
 
 
