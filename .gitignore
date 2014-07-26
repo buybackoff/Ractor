@@ -181,3 +181,4 @@ nuget/*.nupkg
 
 
 !lib/ServiceStack.OrmLite.MySql.dll
+!lib/ServiceStack.OrmLite.MySql.pdb
