@@ -50,14 +50,30 @@ namespace Ractor {
         }
 
 
-        // TODO Eval deserialization works only for previously serialized values!
-        // TODO should add an option to avoid deserialization!
-
-        //Eval now doesn't prefixes keys, should use redis.KeyNameSpace + ":" + key to access a key.
-        public TResult Eval<TResult>(string script, string[] keys = null, object[] values = null) {
+        /// <summary>
+        /// Runs lua script and returns a deserialized result (int, long, double, bool, string are not deserialized).
+        /// Eval doesn't prefixes keys, should use redis.KeyNameSpace + ":" + key to access a key.
+        /// </summary>
+        public TResult Eval<TResult>(string script, string[] fullKeysWithPrefix = null, object[] values = null) {
             var result = GetDb().ScriptEvaluate(script,
-                keys == null ? null : keys.Select(k => (RedisKey)(k)).ToArray(),
+                fullKeysWithPrefix == null ? null : fullKeysWithPrefix.Select(k => (RedisKey)(k)).ToArray(),
                 values == null ? null : values.Select(PackValueNullable).ToArray());
+            var type = typeof (TResult);
+            if (type == typeof (int)) {
+                return (TResult)((object)(int)(RedisValue)result);
+            }
+            if (type == typeof(long)) {
+                return (TResult)((object)(long)(RedisValue)result);
+            }
+            if (type == typeof(double)) {
+                return (TResult)((object)(double)(RedisValue)result);
+            }
+            if (type == typeof(bool)) {
+                return (TResult)((object)(bool)(RedisValue)result);
+            }
+            if (type == typeof(string)) {
+                return (TResult)((object)(string)(RedisValue)result);
+            }
             return UnpackResultNullable<TResult>((RedisValue)result);
         }
 
@@ -67,11 +83,30 @@ namespace Ractor {
                 values == null ? null : values.Select(PackValueNullable).ToArray());
         }
 
-        //Eval now doesn't prefixes keys, should use redis.KeyNameSpace + ":" + key to access a key.
-        public async Task<TResult> EvalAsync<TResult>(string script, string[] keys = null, object[] values = null) {
+        /// <summary>
+        /// Runs lua script and returns a deserialized result (int, long, double, bool, string are not deserialized).
+        /// Eval doesn't prefixes keys, should use redis.KeyNameSpace + ":" + key to access a key.
+        /// </summary>
+        public async Task<TResult> EvalAsync<TResult>(string script, string[] fullKeysWithPrefix = null, object[] values = null) {
             var result = await GetDb().ScriptEvaluateAsync(script,
-                keys == null ? null : keys.Select(k => (RedisKey)(k)).ToArray(),
+                fullKeysWithPrefix == null ? null : fullKeysWithPrefix.Select(k => (RedisKey)(k)).ToArray(),
                 values == null ? null : values.Select(PackValueNullable).ToArray());
+            var type = typeof(TResult);
+            if (type == typeof(int)) {
+                return (TResult)((object)(int)(RedisValue)result);
+            }
+            if (type == typeof(long)) {
+                return (TResult)((object)(long)(RedisValue)result);
+            }
+            if (type == typeof(double)) {
+                return (TResult)((object)(double)(RedisValue)result);
+            }
+            if (type == typeof(bool)) {
+                return (TResult)((object)(bool)(RedisValue)result);
+            }
+            if (type == typeof(string)) {
+                return (TResult)((object)(string)(RedisValue)result);
+            }
             return UnpackResultNullable<TResult>((RedisValue)result);
         }
 
