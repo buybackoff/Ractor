@@ -318,8 +318,8 @@ type internal ActorImpl<'Task, 'TResult>
                                     
                                     for callerId in callerIds do
                                         //let callerInstance = ActorImpl<_,_>.ActorsRepo.[callerId]
-                                        let callerInboxKey = "{" + callerId + "}" + ":Mailbox:inbox"
-                                        let callerChannelKey = "{" + callerId + "}" + ":Mailbox:channel"
+                                        let callerInboxKey = "{" + callerId + "}" + ":inbox"
+                                        let callerChannelKey = "{" + callerId + "}" + ":channel"
                                         let callerResultId = String.Join("|", resultId.Split('|').[1..]) // TODO check what Marc Gravel wrote about allocations and string splits
                                         let envelopeForCaller : Envelope<'TResult> =
                                             {Message = outMessage; ResultId = callerResultId; CallerIds = [||]}

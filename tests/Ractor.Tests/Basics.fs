@@ -114,36 +114,20 @@ let ``Iterate`` () =
     //Thread.Sleep(5000)
     
     ()
-//
-//[<Test>]
-//let ``PostAndReply local execution`` () =
-//    let fredis = new Ractor("localhost")
-//
-////    let computation (input:string) : Async<string> =
-////        async {
-////            return ("Hello, " + input)
-////        }
-////
-////    
-////
-////    let greeter = fredis.CreateActor("greeterReply", computation)
-////    
-////    greeter.Start()
-////
-////    // type annotations are required
-////    let sameGreeter  = Ractor.GetActor<string, string>("greeterReply")
-////    Console.WriteLine(greeter.PostAndGetResult("Greeter 1") |> Async.RunSynchronously)
-////    Console.WriteLine(greeter.PostAndGetResult("Greeter 2") |> Async.RunSynchronously)
-////    Console.WriteLine(greeter.PostAndGetResult("Greeter 3") |> Async.RunSynchronously)
-////    Console.WriteLine(greeter.PostAndGetResult("Greeter 4") |> Async.RunSynchronously)
-////    Console.WriteLine(greeter.PostAndGetResult("Greeter 5") |> Async.RunSynchronously)
-////
-////    Console.WriteLine(sameGreeter.PostAndGetResult("Greeter via instance from Ractor.GetActor") |> Async.RunSynchronously)
-////
-////    // this will fail if computation returns not Async<unit>
-////    let res : string = "greeterReply" <-* "Greeter via operator"  |> Async.RunSynchronously
-////    Console.WriteLine(res)
-//    ()
+
+[<Test>]
+let ``PostAndReply local execution`` () =
+    let fredis = new Ractor("localhost")
+    
+
+    let greeter = Greeter()
+    
+    greeter.Start()
+
+    // type annotations are required
+    Console.WriteLine("Reply: " + greeter.PostAndGetResult("Greeter 1") )
+
+
 //
 //
 //[<Test>]
