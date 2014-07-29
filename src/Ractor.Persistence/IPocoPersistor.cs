@@ -76,7 +76,7 @@ namespace Ractor {
         /// <summary>
         /// Generate new Guid for an item if Guid was not set, or return existing.
         /// </summary>
-        void GenerateGuid<T>(ref T item) where T : IDataObject;
+        void GenerateGuid<T>(ref T item, DateTime? utcDateTime = null) where T : IDataObject;
 
         /// <summary>
         /// 

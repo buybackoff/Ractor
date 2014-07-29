@@ -402,7 +402,7 @@ namespace Ractor {
 
         }
 
-        internal void CheckOrGenerateGuid<T>(ref T item, bool onlyWritable) where T : IDataObject {
+        internal void CheckOrGenerateGuid<T>(ref T item, bool onlyWritable, DateTime? utcDateTime = null) where T : IDataObject {
             if (item.Id != default(Guid)) {
                 var bucket = item.Id.Bucket();
                 if (bucket > NumberOfShards) throw new ApplicationException("Wrong Guid bucket");
@@ -415,23 +415,25 @@ namespace Ractor {
                     || distributed.GetRootGuid().Bucket() == 0) {
                     // this will generate guids only for writable buckets
                     var randomWritableBucket = _writableShards[(byte)(new Random()).Next(0, _writableShards.Count)]; // no '-1', maxValue is exlusive
-                    item.Id = GuidGenerator.NewBucketGuid(randomWritableBucket, _guidType);
+                    item.Id = GuidGenerator.NewBucketGuid(randomWritableBucket, _guidType, utcDateTime);
                 } else {
                     var bucket = distributed.GetRootGuid().Bucket();
                     if (onlyWritable && _readOnlyShards.Contains(bucket)) throw new ReadOnlyException("Could not write to shard: " + bucket);
                     item.Id = GuidGenerator.NewBucketGuid(bucket,
-                        _guidType);
+                        _guidType, utcDateTime);
                 }
             } else {
                 if (onlyWritable && _readOnlyShards.Contains(0)) throw new ReadOnlyException("Could not write to shard: " + 0);
-                item.Id = GuidGenerator.NewBucketGuid(0, _guidType);
+                item.Id = GuidGenerator.NewBucketGuid(0, _guidType, utcDateTime);
             }
         }
 
         /// <summary>
         /// Generate new Guid for an item if Guid was not set, or return existing.
         /// </summary>
-        public void GenerateGuid<T>(ref T item) where T : IDataObject { CheckOrGenerateGuid(ref item, false); }
+        public void GenerateGuid<T>(ref T item, DateTime? utcDateTime = null) where T : IDataObject {
+            CheckOrGenerateGuid(ref item, false, utcDateTime);
+        }
 
 
 
@@ -461,8 +463,6 @@ namespace Ractor {
         public T GetById<T>(Guid guid) where T : IDataObject, new() {
             return GetByIds<T>(guid.ItemAsList()).Single();
         }
-
-
 
 
 

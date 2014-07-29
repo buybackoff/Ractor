@@ -27,22 +27,22 @@ namespace Ractor {
     internal static class GuidGenerator {
         private static readonly RandomNumberGenerator Rng = new RNGCryptoServiceProvider();
 
-        public static Guid NewGuid(SequentialGuidType guidType = SequentialGuidType.SequentialAsString) {
-            return new Guid(GuidSequentialArray(0, guidType));
+        public static Guid NewGuid(SequentialGuidType guidType = SequentialGuidType.SequentialAsString, DateTime? utcDateTime = null) {
+            return new Guid(GuidSequentialArray(0, guidType, utcDateTime));
         }
 
-        public static Guid NewRandomBucketGuid(SequentialGuidType guidType = SequentialGuidType.SequentialAsString) {
+        public static Guid NewRandomBucketGuid(SequentialGuidType guidType = SequentialGuidType.SequentialAsString, DateTime? utcDateTime = null) {
             var bs = new byte[1];
             bs[0] = 0;
             while (bs[0] == 0) { Rng.GetBytes(bs); } // 1-255
-            return new Guid(GuidSequentialArray(bs[0], guidType));
+            return new Guid(GuidSequentialArray(bs[0], guidType, utcDateTime));
         }
 
         /// <summary>
         ///     Generate new Guid for a bucket
         /// </summary>
-        public static Guid NewBucketGuid(byte bucket, SequentialGuidType guidType = SequentialGuidType.SequentialAsString) {
-            return new Guid(GuidSequentialArray(bucket, guidType));
+        public static Guid NewBucketGuid(byte bucket, SequentialGuidType guidType = SequentialGuidType.SequentialAsString, DateTime? utcDateTime = null) {
+            return new Guid(GuidSequentialArray(bucket, guidType,utcDateTime));
         }
 
         /// <summary>
@@ -68,10 +68,11 @@ namespace Ractor {
         }
         
         
-        internal static byte[] GuidSequentialArray(byte bucket, SequentialGuidType guidType) {
+        internal static byte[] GuidSequentialArray(byte bucket, SequentialGuidType guidType, DateTime? utcDateTime = null) {
             var bytes = new byte[16];
             Rng.GetBytes(bytes);
-            long ticks = GetTicks();
+
+            long ticks = utcDateTime.HasValue? utcDateTime.Value.Ticks : GetTicks();
 
             // Convert to a byte array 
             byte[] ticksArray = BitConverter.GetBytes(ticks);
