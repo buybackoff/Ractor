@@ -26,16 +26,16 @@ let project = "Ractor"
 
 // Short summary of the project
 // (used as description in AssemblyInfo and as a short summary for NuGet package)
-let summary = "Ractor (Redis Actor, also see The Diamond Age by Neal Stephenson) is 
-a distributed actor system with CLR/JVM interop and dead simple API for POCOs cache/persistence"
+let summary = "Redis based distributed actors + Dead simple API for distributed POCOs persistence"
 
 // Longer description of the project
 // (used as a description for NuGet package; line breaks are automatically cleaned up)
-let description = """
-Ractor is a light distributed actors framework built on top of Redis.  Its API is similar to 
-F#'s MailboxProcessor, Fsharp.Actor or Akka(.NET) libraries. The main difference is that in Ractor actors exist 
-is Redis per se as lists of messages, while a number of ephemeral workers (actors' "incarnations") take messages
-from Redis, process them and post results back."""
+let description = """Ractor (Redis Actor) is a distributed actor system 
+with CLR/JVM interop (WIP) and dead simple API for POCOs cache/persistence. 
+Its API is inspired by F#'s MailboxProcessor, Fsharp.Actor and Akka(.NET) libraries. 
+The main difference is that in Ractor actors exist is Redis per se as lists of messages, 
+while a number of ephemeral workers (actors' "incarnations") take messages from Redis, 
+process them and post results back."""
 
 // List of author names (for NuGet package)
 let authors = [ "Victor Baybekov" ]
@@ -64,11 +64,12 @@ let projectPersistence = "Ractor.Persistence"
 let summaryPersistence = "Ractor.Persistence is a collection of APIs for POCOs and blobs persistence and a strongly typed Redis
 client based on excellent Stackexchange.Redis library."
 let descriptionPersistence = summaryPersistence + """
-The typed Redis client has strong opinion about keys schema inside Redis and uses a concept 
-root/owner objects to store dependent objects/collections. POCO/database persistor base implementation
-wraps around ServiceStack.ORMLite.v3, however there is no binary dependency and any ORM could be plugged 
-in. Blob persistor saves large data objects to files or S3. """
-let tagsPersistence = "persistence DB database shards"
+The typed Redis client has strong opinion about keys schema inside Redis and uses a 
+concept of root/owner objects to store dependent objects/collections. POCO/database 
+persistor base implementation wraps around ServiceStack.ORMLite, however there is no 
+binary dependency and any ORM could be plugged in. Blob persistor saves large data 
+objects to files or S3."""
+let tagsPersistence = "F# .NET fsharp redis akka distributed JVM interop persistence DB database shards"
 
 // --------------------------------------------------------------------------------------
 // Ractor.Persistence
@@ -79,7 +80,7 @@ let summaryPersistenceAWS = "Ractor.Persistence is a collection of APIs for POCO
 client based on excellent Stackexchange.Redis library."
 let descriptionPersistenceAWS = summaryPersistence + """
 Ractor.Persistence.AWS has some interface implementations for AWS platform."""
-let tagsPersistenceAWS = "AWS S3 persistence queue cloud"
+let tagsPersistenceAWS = "F# .NET fsharp redis akka distributed JVM interop AWS S3 persistence queue cloud"
 
 // --------------------------------------------------------------------------------------
 // END TODO: The rest of the file includes standard build steps 

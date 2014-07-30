@@ -6,8 +6,8 @@
     <authors>@authors@</authors>
     <owners>@authors@</owners>
     <licenseUrl>http://github.com/buybackoff/Ractor.CLR/blob/master/LICENSE.txt</licenseUrl>
-    <projectUrl>http://buybackoff.github.com/Ractor.CLR</projectUrl>
-    <iconUrl>http://buybackoff.github.io/Ractor.CLR/img/logo.png</iconUrl>
+    <projectUrl>https://github.com/buybackoff/Ractor.CLR</projectUrl>
+    <iconUrl>https://raw.githubusercontent.com/buybackoff/Ractor.CLR/master/docs/files/img/logo.png</iconUrl>
     <requireLicenseAcceptance>false</requireLicenseAcceptance>
     <summary>@summary@</summary>
     <description>@description@</description>

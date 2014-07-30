@@ -1,3 +1,14 @@
+#### 0.2.0 - July 30 2014
+* Concrete shards instead of virtual shards.
+* Sequential GUID generator with timestamp.
+* Use sequential GUIDs for primary everywhere. With timestamp stored inside GUID
+there is effectively zero overhead. We always need 8 bytes timestamp and an incrementing ID
+for clustered index, with sequential GUIDs we get both + distributed generation. (use NTP
+to sync time on machines)
+* ServiceStack.ORMLite.MySQL version with GUID stored as binary(16) 
+(/lib with 4.0.23 version and [source here](https://github.com/buybackoff/ServiceStack.OrmLite)).
+
+
 #### 0.1.1 - July 11 2014
 * Rename to Ractor and change direction: the goal is to make CLR/JVM interoperable actors. An 
 actor could be defined in any language on any platform and called from another platform. The only
