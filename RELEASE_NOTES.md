@@ -1,3 +1,6 @@
+#### 0.2.2 - August 5 2014
+* Add config methods
+
 #### 0.2.1 - August 5 2014
 * Remove record types and FsPickler dependency
 
