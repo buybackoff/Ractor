@@ -17,7 +17,7 @@ using StackExchange.Redis;
 // HLen     x       x           x       x
 // HMGet    x       x           x       x
 // HMSet    x       x           x       x
-// HSet     x
+// HSet     x       x           x       x
 // HVals    x       x           x       x
 // HScan
 

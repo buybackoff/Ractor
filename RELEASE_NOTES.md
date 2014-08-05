@@ -1,3 +1,7 @@
+#### 0.2.1 - August 5 2014
+* Remove record types and FsPickler dependency
+
+
 #### 0.2.0 - July 30 2014
 * Concrete shards instead of virtual shards.
 * Sequential GUID generator with timestamp.

@@ -5,19 +5,17 @@ open System.Collections.Generic
 open System.Threading
 open System.Threading.Tasks
 
-[<CLIMutableAttribute>]
-type internal Message<'T>= {
-    Value: 'T;
-    HasError: bool;
-    Error: Exception;
-}
+type Message<'T>(value:'T, hasError:bool, error:Exception) = 
+    member val Value = value with get, set
+    member val HasError = hasError with get, set
+    member val Error = error with get, set
+    new() = Message<'T>(Unchecked.defaultof<'T>, false, null)
 
-[<CLIMutableAttribute>]
-type internal Envelope<'Task> = {
-    Message : Message<'Task>;
-    ResultId : String;
-    CallerIds : String[]
-}
+type Envelope<'Task>(message:Message<'Task>, resultId:string, callerIds : String[]) = 
+    member val Message = message with get, set
+    member val ResultId = resultId  with get, set
+    member val CallerIds : String[] = callerIds with get, set
+    new() = Envelope<'Task>(Unchecked.defaultof<Message<'Task>>, "", [||])
 
 
 type IRactorPerformanceMonitor =

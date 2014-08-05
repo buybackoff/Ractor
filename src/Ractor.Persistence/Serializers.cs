@@ -1,15 +1,13 @@
 ﻿using System.Collections.Generic;
-using System.IO;
+using System.Text;
+using Newtonsoft.Json;
 
 namespace Ractor {
     // TODO how to correctly deal with null? throw here or pass downstream?
-    // TODO replace with JSON.NET after all objects are made POCOs
     /// <summary>
     /// 
     /// </summary>
     public class JsonSerializer : ISerializer {
-
-        private readonly Nessos.FsPickler.Json.JsonSerializer _pickler = Nessos.FsPickler.Json.FsPickler.CreateJson();
 
         /// <summary>
         /// 
@@ -18,18 +16,17 @@ namespace Ractor {
             if (!typeof(T).IsValueType && EqualityComparer<T>.Default.Equals(value, default(T))) {
                 return null;
             }
-            var memoryStream = new MemoryStream();
-            _pickler.Serialize(memoryStream, value);
-            return memoryStream.ToArray();
+            var json = JsonConvert.SerializeObject(value);
+            return Encoding.UTF8.GetBytes(json);
         }
 
         /// <summary>
         /// 
         /// </summary>
         public T Deserialize<T>(byte[] bytes) {
-            return bytes == null
-                ? default(T)
-                : _pickler.Deserialize<T>(new MemoryStream(bytes));
+            if (bytes == null) return default(T);
+            var json = Encoding.UTF8.GetString(bytes);
+            return JsonConvert.DeserializeObject<T>(json);
         }
     }
 

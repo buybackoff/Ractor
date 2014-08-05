@@ -30,8 +30,7 @@ let summary = "Redis based distributed actors + Dead simple API for distributed 
 
 // Longer description of the project
 // (used as a description for NuGet package; line breaks are automatically cleaned up)
-let description = """Ractor (Redis Actor) is a distributed actor system 
-with CLR/JVM interop (WIP) and dead simple API for POCOs cache/persistence. 
+let description = """Ractor (Redis Actor) is a distributed actor system with CLR/JVM interop (WIP) and dead simple API for POCOs cache/persistence. 
 Its API is inspired by F#'s MailboxProcessor, Fsharp.Actor and Akka(.NET) libraries. 
 The main difference is that in Ractor actors exist is Redis per se as lists of messages, 
 while a number of ephemeral workers (actors' "incarnations") take messages from Redis, 
