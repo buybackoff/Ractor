@@ -11,7 +11,7 @@ open System.Threading
 
 type Incrementer ()=
     inherit Actor<int,int>()
-    override this.Redis = "localhost"
+    override this.RedisConnectionString = "localhost"
     override this.Computation(input) : Async<int> =  
         async {
                 //Console.WriteLine("Incremented to: " + (input + 1).ToString())

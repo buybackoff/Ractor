@@ -1,8 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Configuration;
+using System.Linq;
 using System.Net;
-using ServiceStack;
 
 namespace Ractor {
     public static class Config {
@@ -19,13 +19,15 @@ namespace Ractor {
             }
         }
 
-        public static Dictionary<ushort, string> ShardsDictionaryFromConnectionString(string shardConnections) {
-            return shardConnections
+        public static Dictionary<byte, string> ShardsDictionaryFromConnectionString(string shardConnections) {
+            var kvps =
+             shardConnections
                 .Split(new[] { "||" }, StringSplitOptions.RemoveEmptyEntries)
-                .ToDictionary(line => {
+                .Select(line => {
                     var pair = line.Split(new[] { "==" }, StringSplitOptions.RemoveEmptyEntries);
-                    return new KeyValuePair<ushort, string>(UInt16.Parse(pair[0].Trim()), pair[1].Trim());
+                    return new KeyValuePair<byte, string>(byte.Parse(pair[0].Trim()), pair[1].Trim());
                 });
+            return kvps.ToDictionary(kvp => kvp.Key, kvp => kvp.Value);
         }
 
         public static string GetSettingOrDefault(string key, string defaultValue = "") {

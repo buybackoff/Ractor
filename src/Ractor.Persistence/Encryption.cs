@@ -4,7 +4,6 @@ using System.IO.Compression;
 using System.Linq;
 using System.Security.Cryptography;
 using System.Text;
-using ServiceStack;
 
 namespace Ractor {
 
@@ -199,7 +198,7 @@ namespace Ractor {
         }
 
         public static string Encrypt(this string input, byte[] key, byte[] iv) {
-            var bytes = input.ToUtf8Bytes();
+            var bytes = Encoding.UTF8.GetBytes(input);
             bytes = bytes.Encrypt(key, iv);
             return Convert.ToBase64String(bytes);
         }

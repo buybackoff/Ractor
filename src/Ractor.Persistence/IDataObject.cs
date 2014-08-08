@@ -5,7 +5,6 @@ namespace Ractor {
     /// Structured data objects stored in RDBMSs or Redis schema with separate fields and foreign keys
     /// </summary>
     public interface IDataObject {
-
         /// <summary>
         /// Code-generated unique ID. For distributed objects it contains shard id.
         /// </summary>

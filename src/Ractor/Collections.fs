@@ -5,17 +5,17 @@ open System.Collections
 open System.Collections.Generic
 open System.Runtime.Caching
 
-// Distributed synchronized collections
+// Distributed synchronized collections, WIP
 
 [<AbstractClassAttribute>]
-type DistributedCollectionBase
+type private DistributedCollectionBase
     internal() =
     let syncRoot = Object()
     static member Cache = new MemoryCache("DistributedCollections")
     member this.SyncRoot = syncRoot
 
 [<AbstractClassAttribute>]
-type DistributedCollection<'T>
+type private DistributedCollection<'T>
     internal(redis:Redis, key:string) =
     inherit DistributedCollectionBase()
     

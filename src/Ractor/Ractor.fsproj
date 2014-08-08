@@ -58,11 +58,12 @@
     <Compile Include="Common.fs" />
     <Compile Include="Serialization.fs" />
     <Compile Include="Logging.fs" />
+    <Compile Include="Connections.fs" />
     <Compile Include="Actor.fs" />
-    <Compile Include="Fredis.fs" />
     <None Include="packages.config" />
     <None Include="app.config" />
     <Compile Include="Collections.fs" />
+    <Compile Include="ActorExtensions.fs" />
   </ItemGroup>
   <ItemGroup>
     <Reference Include="FSharp.Core">

@@ -5,6 +5,8 @@ open System.Collections.Generic
 open System.Threading
 open System.Threading.Tasks
 
+
+
 type Message<'T>(value:'T, hasError:bool, error:Exception) = 
     member val Value = value with get, set
     member val HasError = hasError with get, set

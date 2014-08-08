@@ -1,3 +1,8 @@
+#### 0.2.3 - August 8 2014
+* Connections: static methods to register and get Redis, IPoco, IBlob persistors and
+same shortcut properties inside Actor definitions
+* Some refactoring
+
 #### 0.2.2 - August 5 2014
 * Add config methods
 

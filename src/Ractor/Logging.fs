@@ -51,3 +51,10 @@ module Logging =
               member x.Info(msg, exn) = () |> ignore
               member x.Warning(msg, exn) = () |> ignore
               member x.Error(msg, exn) = () |> ignore }
+
+
+namespace Ractor
+open System
+[<AbstractClassAttribute>]
+type ActorBase() = 
+    static member val Logger = Logging.Silent with get, set
