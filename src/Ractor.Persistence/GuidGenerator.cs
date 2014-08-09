@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Security.Cryptography;
+using System.Text;
 using System.Threading;
-using ServiceStack;
 
 namespace Ractor {
 
@@ -135,7 +135,7 @@ namespace Ractor {
         ///     Translate MD5 hash of a string to Guid with zero epoch
         /// </summary>
         public static Guid MD5Guid(this string uniqueString) {
-            byte[] bs = uniqueString.ToUtf8Bytes().ComputeMD5Hash();
+            byte[] bs = Encoding.UTF8.GetBytes(uniqueString).ComputeMD5Hash();
             bs[8] = 0;
             return new Guid(bs);
         }

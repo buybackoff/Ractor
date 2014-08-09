@@ -56,7 +56,6 @@
   <ItemGroup>
     <Compile Include="AssemblyInfo.fs" />
     <Compile Include="Common.fs" />
-    <Compile Include="Serialization.fs" />
     <Compile Include="Logging.fs" />
     <Compile Include="Connections.fs" />
     <Compile Include="Actor.fs" />

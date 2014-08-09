@@ -55,13 +55,12 @@
       <SpecificVersion>False</SpecificVersion>
       <HintPath>..\..\packages\ServiceStack.Interfaces.4.0.24\lib\net40\ServiceStack.Interfaces.dll</HintPath>
     </Reference>
-    <Reference Include="ServiceStack.OrmLite, Version=4.0.24.0, Culture=neutral, processorArchitecture=MSIL">
-      <SpecificVersion>False</SpecificVersion>
+    <Reference Include="ServiceStack.OrmLite">
       <HintPath>..\..\packages\ServiceStack.OrmLite.4.0.24\lib\net40\ServiceStack.OrmLite.dll</HintPath>
     </Reference>
-    <Reference Include="ServiceStack.OrmLite.MySql, Version=4.0.22.0, Culture=neutral, processorArchitecture=MSIL">
+    <Reference Include="ServiceStack.OrmLite.MySql, Version=4.0.24.0, Culture=neutral, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
-      <HintPath>..\..\lib\ServiceStack.OrmLite.MySql.dll</HintPath>
+      <HintPath>..\..\packages\ServiceStack.OrmLite.MySql.4.0.24\lib\net40\ServiceStack.OrmLite.MySql.dll</HintPath>
     </Reference>
     <Reference Include="ServiceStack.Text, Version=4.0.24.0, Culture=neutral, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>

@@ -44,6 +44,10 @@
       <SpecificVersion>False</SpecificVersion>
       <HintPath>..\..\packages\Elasticsearch.Net.1.0.1\lib\Elasticsearch.Net.dll</HintPath>
     </Reference>
+    <Reference Include="MySql.Data, Version=6.9.2.0, Culture=neutral, PublicKeyToken=c5687fc88969c44d, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\..\packages\MySql.Data.6.9.2-rc1\lib\net45\MySql.Data.dll</HintPath>
+    </Reference>
     <Reference Include="Nest, Version=1.0.0.0, Culture=neutral, PublicKeyToken=96c599bbe3e70f5d, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
       <HintPath>..\..\packages\NEST.1.0.1\lib\Nest.dll</HintPath>
@@ -63,6 +67,9 @@
     <Reference Include="ServiceStack.OrmLite, Version=4.0.24.0, Culture=neutral, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
       <HintPath>..\..\packages\ServiceStack.OrmLite.4.0.24\lib\net40\ServiceStack.OrmLite.dll</HintPath>
+    </Reference>
+    <Reference Include="ServiceStack.OrmLite.MySql">
+      <HintPath>..\..\packages\ServiceStack.OrmLite.MySql.4.0.24\lib\net40\ServiceStack.OrmLite.MySql.dll</HintPath>
     </Reference>
     <Reference Include="ServiceStack.Text, Version=4.0.24.0, Culture=neutral, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>

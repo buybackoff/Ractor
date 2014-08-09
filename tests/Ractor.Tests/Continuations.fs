@@ -31,7 +31,6 @@ let ``Could chain continuations and get result`` () =
     let incrementer = Incrementer()
     incrementer.Start()
 
-    // doesn't work correctly yet
     let result = 
             incrementer
                 .ContinueWith(incrementer)

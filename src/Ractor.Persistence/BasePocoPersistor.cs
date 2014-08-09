@@ -5,6 +5,7 @@ using System.Diagnostics;
 using System.Globalization;
 using System.Linq;
 using System.Linq.Expressions;
+using System.Reflection;
 using ServiceStack;
 using ServiceStack.OrmLite;
 
@@ -93,7 +94,7 @@ namespace Ractor {
         }
 
         private static void CreateTableOnConnection<T>(bool overwrite, IDbConnection db) where T : IDataObject, new() {
-            var createTableAttribute = typeof(T).FirstAttribute<CreateTableAttribute>();
+            var createTableAttribute = typeof(T).GetCustomAttributes<CreateTableAttribute>(true) .FirstOrDefault();
             var createScript = createTableAttribute != null ? createTableAttribute.Sql : null;
             if (!string.IsNullOrWhiteSpace(createScript)) {
                 if (overwrite) db.DropTable<T>();
@@ -108,7 +109,7 @@ namespace Ractor {
         public void CreateTable<T>(bool overwrite = false) where T : IDataObject, new() {
             bool isDistributed = typeof(IDistributedDataObject).IsAssignableFrom(typeof(T));
 
-            if(_readOnlyShards.Count > 0) throw new ReadOnlyException("Cannot create table with read-only shards!");
+            if (_readOnlyShards.Count > 0) throw new ReadOnlyException("Cannot create table with read-only shards!");
 
             if (isDistributed) {
                 foreach (var storedShard in _shards) {

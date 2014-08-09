@@ -5,7 +5,6 @@ using System.Diagnostics;
 using System.Linq;
 using System.Reflection;
 using System.Runtime.Caching;
-using ServiceStack;
 using StackExchange.Redis;
 
 namespace Ractor {
@@ -37,7 +36,7 @@ namespace Ractor {
             if (string.IsNullOrWhiteSpace(connectionString)) connectionString = "localhost,resolveDns=true";
             ConnectionMultiplexer = ConnectionMultiplexer.Connect(connectionString);
             KeyNameSpace = keyNameSpace ?? ""; // just if null is provided
-            _nameSpace = KeyNameSpace.IsNullOrEmpty() ? "" : KeyNameSpace + ":";
+            _nameSpace = String.IsNullOrEmpty(KeyNameSpace) ? "" : KeyNameSpace + ":";
             Serializer = new JsonSerializer();
         }
 
@@ -150,9 +149,9 @@ namespace Ractor {
             private PropertyInfo PrimaryKeyProperty { get; set; }
             public CacheInfo(Type type) {
 
-                CacheContract = type.HasAttribute<RedisAttribute>()
-                    ? type.FirstAttribute<RedisAttribute>()
-                    : new RedisAttribute {
+                CacheContract = 
+                    type.GetCustomAttributes<RedisAttribute>().FirstOrDefault()
+                    ?? new RedisAttribute {
                         Compressed = false,
                         Expiry = null,
                         Name = type.Name

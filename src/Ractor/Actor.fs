@@ -1,33 +1,13 @@
 ﻿#nowarn "760" // new for IDisposable
 
-// TODO move design todos here from all scattered comments
-
-// ResultTimeout is used for computation and garbage collection as well
-// but remember that results will stay in Redis for that time and if it is very long
-// the memory consumption could be large. Possible solutions:
-// - multiple, e.g. computation timeout is 10x of results
-// - no meaningful timeout for computations, do the logic inside actors if needed
-// - leave it as is
-// - TODO: make RTO => CalcTO - an emergency setting for calcs. Monitor how fast each result
-// is reclaimed *locally* (no trips to Redis for logging) and schedule GC with a multiple of that
-// or with 5-sigma, etc of that e.g. if on average we reclaim in 1 sec, store for 10 seconds
-
-// TODO attributes instead of abstract methods + ActorBase, keep all properties but assign in constructor according to attrs
+// TODO lua script: combine separate calls into one script call where possible, e.g. in Post()
 
 // TODO Post() must handle errors, e.g. via GetResult in an async task
 // TODO!! do not drop messages when computation errored but put them back to the queue
 // and log/notify
 
-// NOTE: one of actor's property (from wiki) is behavior specified as a mathematical function to 
-// express what an Actor does when it processes a message including specifying a new 
-// behavior to process the next message that arrives.
-// The last part basically means state - that could be done by directly accessing Redis 
-// inside actors (e.g. counters) or use static distributed data structures in actor definition 
-// (the same stuff, but more abstracted).
-
-// TODO make twi overloadable methods - one in not async, async is optional
-
-
+// TODO! ensure that we are alway reusing an existing Redis instance for each connection string
+// TODO Logstash/Kibana integration for logging
 
 
 namespace Ractor.FSharp
@@ -512,6 +492,7 @@ type internal ActorImpl<'Task, 'TResult>
         let resultId = envelope.ResultId
         let remotePost() = 
             Console.WriteLine("Posted Redis message") 
+            // TODO combine push and publish inside a lua script
             let res = 
                 async {
                     do! redis.LPushAsync<Envelope<'Task>>(inboxKey, envelope, When.Always, this.Optimistic) 
