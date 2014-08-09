@@ -113,6 +113,8 @@ type Actors() =
                                     // here the task message is sent to the first actor and 
                                     // it will arrive to the results list and stay there
                                     // before the results timeout
+
+                                    // first actor has a prefixed resultId
                                     let envelope : Envelope<'Task> = Envelope(inMessage, key + "|" + resultId, [| actor2.Id |])
                                     do! actor1.Post(envelope) |> Async.Ignore
                                     // do not wait for intermediate result
@@ -129,18 +131,55 @@ type Actors() =
                            override __.ResultTimeout with get() = this.ResultTimeout + continuation.ResultTimeout
                            //instead of [override __.Computation(input) = ...] assign internal computation directly
                     }
-                // overwrite the default computation that ignores resultId with the proper one
+                // overwrite the default computation, which ignores resultId, with the proper one
                 result.ExtendedComputation <- computation
                 result
 
-//    [<Extension>]
-//    static member ParallelWith(this : Actor<'Task, 'TResult>, second : Actor<'Task2, 'TResult2>) 
-//            : Actor<'Task * 'Task2, 'TResult * 'TResult2> =
-//            failwith "not implemented"
+    [<Extension>]
+    static member ParallelWith(this : Actor<'Task, 'TResult>, second : Actor<'Task2, 'TResult2>) 
+            : Actor<'Task * 'Task2, 'TResult * 'TResult2> =
+                let actor1 = ActorImpl<'Task, 'TResult>.Instance(this)
+                let actor2 = ActorImpl<'Task2, 'TResult2>.Instance(second)
+                let timeout = Math.Max(this.ResultTimeout, second.ResultTimeout)
+                let key = "(" + this.GetKey() + "|>|" + second.GetKey() + ")"
+                let computation : Message<'Task * 'Task2> * string -> Async<Message<'TResult * 'TResult2>> = 
+                    fun (inMessage, resultId) ->
+                        async {
+                            let (t1 : 'Task), (t2:'Task2) = inMessage.Value
+                            let rId1 = resultId + "|"
+                            let rId2 = "|" + resultId
+                            let envelope1 : Envelope<'Task> = Envelope(Message(t1, false, null), rId1, [||])
+                            let envelope2 : Envelope<'Task2> = Envelope(Message(t2, false, null), rId2, [||])
+                            let! child1 = Async.StartChild( actor1.PostAndGetResult(envelope1), timeout)
+                            let! child2 = Async.StartChild( actor2.PostAndGetResult(envelope2), timeout)
+                            let! r1 = child1
+                            let! r2 = child2
+                            let result = r1.Value, r2.Value
+                            let hasError = r1.HasError || r2.HasError
+                            let ex : Exception = 
+                                match r1.Error, r2.Error with
+                                | null, null -> null
+                                | null, e2 -> e2
+                                | e1, null -> e1
+                                | e1, e2 -> System.AggregateException(e1, e2) :> Exception
+                            let outMessage = Message(result, hasError, ex)
+                            return outMessage
+                        }
+            
+                let result = 
+                    { new Actor<'Task * 'Task2, 'TResult * 'TResult2>() with
+                           override __.RedisConnectionString with get() = actor1.RedisConnectionString
+                           override __.GetKey() = key
+                           override __.ResultTimeout with get() = timeout
+                           //instead of [override __.Computation(input) = ...] assign internal computation directly
+                    }
+                // overwrite the default computation, which ignores resultId, with the proper one
+                result.ExtendedComputation <- computation
+                result
 
 namespace Ractor.FSharp
 [<AutoOpenAttribute>]
-module FSharpExtensions =
+module FSharpActorExtensions =
     open System
     open Ractor
     open Ractor.FSharp
@@ -246,6 +285,8 @@ module FSharpExtensions =
                                     // here the task message is sent to the first actor and 
                                     // it will arrive to the results list and stay there
                                     // before the results timeout
+
+                                    // first actor has a prefixed resultId
                                     let envelope : Envelope<'Task> = Envelope(inMessage, key + "|" + resultId, [| actor2.Id |])
                                     do! actor1.Post(envelope) |> Async.Ignore
                                     // do not wait for intermediate result
@@ -262,11 +303,49 @@ module FSharpExtensions =
                            override __.ResultTimeout with get() = this.ResultTimeout + continuation.ResultTimeout
                            //instead of [override __.Computation(input) = ...] assign internal computation directly
                     }
-                // overwrite the default computation that ignores resultId with the proper one
+                // overwrite the default computation, which ignores resultId, with the proper one
                 result.ExtendedComputation <- computation
                 result
         //#endregion
 
-//        member this.Parallel(second : Actor<'Task2, 'TResult2>) 
-//            : Actor<'Task * 'Task2, 'TResult * 'TResult2> =
-//            failwith "not implemented"
+        member this.ParallelWith<'Task,'TResult,'Task2,'TResult2>
+            (second : Actor<'Task2, 'TResult2>) 
+            : Actor<'Task * 'Task2, 'TResult * 'TResult2> =
+                let actor1 = ActorImpl<'Task, 'TResult>.Instance(this)
+                let actor2 = ActorImpl<'Task2, 'TResult2>.Instance(second)
+                let timeout = Math.Max(this.ResultTimeout, second.ResultTimeout)
+                let key = "(" + this.GetKey() + "|>|" + second.GetKey() + ")"
+                let computation : Message<'Task * 'Task2> * string -> Async<Message<'TResult * 'TResult2>> = 
+                    fun (inMessage, resultId) -> 
+                        async {
+                            let (t1 : 'Task), (t2:'Task2) = inMessage.Value
+                            let rId1 = resultId + "|"
+                            let rId2 = "|" + resultId
+                            let envelope1 : Envelope<'Task> = Envelope(Message(t1, false, null), rId1, [||])
+                            let envelope2 : Envelope<'Task2> = Envelope(Message(t2, false, null), rId2, [||])
+                            let! child1 = Async.StartChild( actor1.PostAndGetResult(envelope1), timeout)
+                            let! child2 = Async.StartChild( actor2.PostAndGetResult(envelope2), timeout)
+                            let! r1 = child1
+                            let! r2 = child2
+                            let result = r1.Value, r2.Value
+                            let hasError = r1.HasError || r2.HasError
+                            let ex : Exception = 
+                                match r1.Error, r2.Error with
+                                | null, null -> null
+                                | null, e2 -> e2
+                                | e1, null -> e1
+                                | e1, e2 -> System.AggregateException(e1, e2) :> Exception
+                            let outMessage = Message(result, hasError, ex)
+                            return outMessage
+                        }
+            
+                let result = 
+                    { new Actor<'Task * 'Task2, 'TResult * 'TResult2>() with
+                           override __.RedisConnectionString with get() = actor1.RedisConnectionString
+                           override __.GetKey() = key
+                           override __.ResultTimeout with get() = timeout
+                           //instead of [override __.Computation(input) = ...] assign internal computation directly
+                    }
+                // overwrite the default computation, which ignores resultId, with the proper one
+                result.ExtendedComputation <- computation
+                result

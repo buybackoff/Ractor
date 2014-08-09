@@ -1,3 +1,6 @@
+#### 0.2.4 - August 8 2014
+* Reliable parallel actors execution with actor.ParallelWith(actor2).ParallelWith(actor3) etc
+
 #### 0.2.3 - August 8 2014
 * Connections: static methods to register and get Redis, IPoco, IBlob persistors and
 same shortcut properties inside Actor definitions

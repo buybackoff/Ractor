@@ -60,6 +60,7 @@
   <ItemGroup>
     <Compile Include="Basics.fs" />
     <Compile Include="Continuations.fs" />
+    <Compile Include="Parallel.fs" />
     <Compile Include="Lua.fs" />
     <None Include="packages.config" />
     <None Include="Tests.fsx" />

@@ -122,3 +122,52 @@ module Helpers =
             "
         Console.WriteLine("Before eval")
         redis.EvalAsync<int>(lua, [|hkey|]).Result
+
+
+[<AutoOpenAttribute>]
+module unnestModule = 
+    let unnest3 (tuple : (('T1 * 'T2) * 'T3)  ) =
+        let ((v1, v2), v3) = tuple
+        v1, v2, v3
+
+    let unnest4 (tuple : ((('T1 * 'T2) * 'T3) * 'T4)  ) =
+        let (((v1, v2), v3), v4) = tuple
+        v1, v2, v3, v4
+
+    let unnest5 (tuple : (((('T1 * 'T2) * 'T3) * 'T4) * 'T5)  ) =
+        let ((((v1, v2), v3), v4), v5) = tuple
+        v1, v2, v3, v4, v5
+
+    let unnest6 (tuple : ((((('T1 * 'T2) * 'T3) * 'T4) * 'T5) * 'T6)  ) =
+        let (((((v1, v2), v3), v4), v5), v6) = tuple
+        v1, v2, v3, v4, v5, v6
+
+    let unnest7 (tuple : (((((('T1 * 'T2) * 'T3) * 'T4) * 'T5) * 'T6) * 'T7)  ) =
+        let ((((((v1, v2), v3), v4), v5), v6), v7) = tuple
+        v1, v2, v3, v4, v5, v6, v7
+
+open System
+open System.Runtime.InteropServices
+open System.Runtime.CompilerServices
+
+[<Extension>]
+type TuplesExtension() =
+    [<Extension>]
+    static member Unnest(this : (('T1 * 'T2) * 'T3)) = 
+        unnest3 this
+
+    [<Extension>]
+    static member Unnest(this : (('T1 * 'T2) * 'T3) * 'T4 ) = 
+        unnest4 this
+
+    [<Extension>]
+    static member Unnest(this : (((('T1 * 'T2) * 'T3) * 'T4) * 'T5) ) = 
+        unnest5 this
+
+    [<Extension>]
+    static member Unnest(this : ((((('T1 * 'T2) * 'T3) * 'T4) * 'T5) * 'T6) ) = 
+        unnest6 this
+
+    [<Extension>]
+    static member Unnest(this : (((((('T1 * 'T2) * 'T3) * 'T4) * 'T5) * 'T6) * 'T7) ) = 
+        unnest7 this
