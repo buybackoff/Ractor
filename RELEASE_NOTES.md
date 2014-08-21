@@ -1,3 +1,9 @@
+#### 0.2.6 - August 21 2014
+* Fixed resultId naming bug when the same actor 'x' runs like: 
+`(x.ParallelWith(x)).ContinueWith(x.ParallelWith(x))` 
+or like `(x.ContinueWith(x)).ParallelWith(x.ContinueWith(x))`, etc. 
+Now continuations and parallels must work always at least from the resultId naming perspective.
+
 #### 0.2.5 - August 20 2014
 * Fix connection collection logic
 

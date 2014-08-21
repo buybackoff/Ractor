@@ -39,3 +39,31 @@ let ``Could chain continuations and get result`` () =
                 .PostAndGetResult(1)
     result |> should equal 5
     ()
+
+
+[<Test>]
+let ``Could run parallels then continue`` () =
+     //TODO with static repo cannot create another actor in the same process. LOL, that was intended
+    let incrementer = Incrementer()
+    incrementer.Start()
+
+    let result1, result2 = 
+            (incrementer
+                .ParallelWith(incrementer))
+                .ContinueWith(incrementer.ParallelWith(incrementer))
+                .PostAndGetResult(1, 1)
+    result1+result2 |> should equal 6
+    ()
+
+[<Test>]
+let ``Could run continuations in parallel`` () =
+     //TODO with static repo cannot create another actor in the same process. LOL, that was intended
+    let incrementer = Incrementer()
+    incrementer.Start()
+
+    let result1, result2 = 
+            (incrementer.ContinueWith(incrementer))
+                .ParallelWith(incrementer.ContinueWith(incrementer))
+                .PostAndGetResult(1, 1)
+    result1+result2 |> should equal 6
+    ()

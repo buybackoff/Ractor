@@ -91,10 +91,12 @@ type Actors() =
                 let computation : Message<'Task> * string -> Async<Message<'TResult2>> = 
                     fun (inMessage, resultId) -> 
                         async {
+                            let rId1 = resultId + "-"
+                            let rId2 = "-" + resultId
                             // 1. check if we have the final result. that could *very rarely* happen if 
                             // we resume work from dead continuator while actor1 and actor2 are alive
                             // (it takes a local cache lookup - very cheap)
-                            let secondIsDone, r2 = actor2.TryGetResultIfItDefinitelyExists(resultId)
+                            let secondIsDone, r2 = actor2.TryGetResultIfItDefinitelyExists(rId2) // resultId
                             if secondIsDone then // extremely unusual
                                 return r2
                             else
@@ -106,7 +108,7 @@ type Actors() =
                                 // that if actor.GetResultAsync() returned then the intermediate result
                                 // is already in cActor inbox).
                                 // (Such a situation when firstIsDone is more likely with continuations that could be chained mutiple times.)
-                                let firstIsDone, _ = actor1.TryGetResultIfItDefinitelyExists(key + "|" + resultId)
+                                let firstIsDone, _ = actor1.TryGetResultIfItDefinitelyExists(rId1) //key + "|" + resultId
                                 if firstIsDone then // extremely unusual
                                     // The first result must be already in the second inbox/pipeline
                                     // Do not need to get the intermediate result here, do nothing
@@ -117,12 +119,12 @@ type Actors() =
                                     // before the results timeout
 
                                     // first actor has a prefixed resultId
-                                    let envelope : Envelope<'Task> = Envelope(inMessage, key + "|" + resultId, [| actor2.Id |])
-                                    do! actor1.Post(envelope) |> Async.Ignore
+                                    let envelope1 : Envelope<'Task> = Envelope(inMessage, rId1, [| actor2.Id |]) //key + "|" + resultId
+                                    do! actor1.Post(envelope1) |> Async.Ignore
                                     // do not wait for intermediate result
                                     ()
                                 // wait for second actor
-                                let! r2 = actor2.GetResultAsync(resultId)
+                                let! r2 = actor2.GetResultAsync(rId2) //resultId
                                 return r2
                         }
             
@@ -271,10 +273,12 @@ module FSharpActorExtensions =
                     // this resultId is passed from continuator call and it is in ShortGuid format
                     fun (inMessage, resultId) -> 
                         async {
+                            let rId1 = resultId + "-"
+                            let rId2 = "-" + resultId
                             // 1. check if we have the final result. that could *very rarely* happen if 
                             // we resume work from dead continuator while actor1 and actor2 are alive
                             // (it takes a local cache lookup - very cheap)
-                            let secondIsDone, r2 = actor2.TryGetResultIfItDefinitelyExists(resultId)
+                            let secondIsDone, r2 = actor2.TryGetResultIfItDefinitelyExists(rId2) //resultId
                             if secondIsDone then // extremely unusual
                                 return r2
                             else
@@ -286,7 +290,7 @@ module FSharpActorExtensions =
                                 // that if actor.GetResultAsync() returned then the intermediate result
                                 // is already in cActor inbox).
                                 // (Such a situation when firstIsDone is more likely with continuations that could be chained mutiple times.)
-                                let firstIsDone, _ = actor1.TryGetResultIfItDefinitelyExists(key + "|" + resultId)
+                                let firstIsDone, _ = actor1.TryGetResultIfItDefinitelyExists(rId1) // key + "|" + resultId
                                 if firstIsDone then // extremely unusual
                                     // The first result must be already in the second inbox/pipeline
                                     // Do not need to get the intermediate result here, do nothing
@@ -297,12 +301,12 @@ module FSharpActorExtensions =
                                     // before the results timeout
 
                                     // first actor has a prefixed resultId
-                                    let envelope : Envelope<'Task> = Envelope(inMessage, key + "|" + resultId, [| actor2.Id |])
-                                    do! actor1.Post(envelope) |> Async.Ignore
+                                    let envelope1 : Envelope<'Task> = Envelope(inMessage, rId1, [| actor2.Id |]) // key + "|" + resultId
+                                    do! actor1.Post(envelope1) |> Async.Ignore
                                     // do not wait for intermediate result
                                     ()
                                 // wait for second actor
-                                let! r2 = actor2.GetResultAsync(resultId)
+                                let! r2 = actor2.GetResultAsync(rId2) // resultId
                                 return r2
                         }
             

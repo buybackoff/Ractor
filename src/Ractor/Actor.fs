@@ -302,7 +302,7 @@ type internal ActorImpl<'Task, 'TResult>
 
 
                                 // NEW LOGIC
-                                // first check if there are caller ids
+                                // first check if there are caller ids, if not then we have a simle call
                                 if Array.isEmpty callerIds then
                                     // if empty, notify result waiters
                                     // notify local waiter if it exists
@@ -328,13 +328,19 @@ type internal ActorImpl<'Task, 'TResult>
                                     // there is no result waiters, our job is to pass results directly to the second actor
                                     // in continuation and notify it that inbox is not empty
                                     
+                                    // first actor result id ends with '-', cntinuator's rId starts with '-'
+
                                     for callerId in callerIds do
                                         //let callerInstance = ActorImpl<_,_>.ActorsRepo.[callerId]
-                                        let callerInboxKey = "{" + callerId + "}" + ":inbox"
+                                        let callerInboxKey = "{" + callerId + "}" + ":inbox" // TODO inbox, channel must be defined in one place, we use them twice in different places - one serious bug was already from similar thing
                                         let callerChannelKey = "{" + callerId + "}" + ":channel"
-                                        let callerResultId = String.Join("|", resultId.Split('|').[1..]) // TODO check what Marc Gravel wrote about allocations and string splits
+                                        // must remove laght dash and add left dash
+                                        //Console.WriteLine(resultId)
+                                        Trace.Assert(resultId.EndsWith("-"))
+                                        let rId2 = "-" + resultId.Remove(resultId.Length - 1)
                                         let envelopeForCaller : Envelope<'TResult> =
-                                            Envelope(outMessage,callerResultId,[||])
+                                            // envelope for second actor rId2
+                                            Envelope(outMessage,rId2,[||])
                                         do! redis.LPushAsync<Envelope<'TResult>>(callerInboxKey, envelopeForCaller, When.Always, false) 
                                             |> Async.AwaitTask |> Async.Ignore
                                         // empty notification for inbox
