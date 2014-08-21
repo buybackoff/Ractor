@@ -74,3 +74,13 @@ type Connections(redisConnectionString : string) =
         let id = id.ToLowerInvariant() 
         redises.[id]
     static member GetRedis() = redises.[""]
+    static  member internal GetOrCreateRedis(connectionString : string, ns : string) = 
+        let key = (ns + ":" + connectionString).ToLowerInvariant()
+        if redises.ContainsKey(key) then
+            redises.[key]
+        else
+            let newRedis = Redis(connectionString, ns)
+            redises.[key] <- newRedis
+            newRedis
+
+

@@ -33,8 +33,20 @@ type Actor<'Task, 'TResult>() as this =
                         ActorBase.Logger.Error("Computation error", Some(e))
                         return Message(Unchecked.defaultof<'TResult>,true,e)
             }
+    /// <summary>
+    /// Where Ractors store messages and other service data (with namespace "R")
+    /// </summary>
     abstract RedisConnectionString : string with get
     override this.RedisConnectionString = "localhost"
+
+    /// <summary>
+    /// Where Ractors store data (with namespace set at RedisDataNamespace)
+    /// </summary>
+    abstract RedisDataConnectionString : string with get
+    override this.RedisDataConnectionString = this.RedisConnectionString
+    abstract RedisDataNamespace : string with get
+    override this.RedisDataNamespace = "data"
+
     /// <summary>
     /// One actor implementation instance per id.
     /// </summary>
@@ -62,7 +74,7 @@ type Actor<'Task, 'TResult>() as this =
         and set v = extendedComputation <- v
 
     member this.Cache with get () = Redis.Cache
-    member this.Redis with get () = Connections.GetRedis()
+    member this.Redis with get () = Connections.GetOrCreateRedis(this.RedisDataConnectionString, this.RedisDataNamespace)
     member this.GetRedis(id) = Connections.GetRedis(id)
     member this.DB with get() = Connections.GetDB()
     member this.GetDB(id) = Connections.GetRedis(id)
@@ -104,7 +116,16 @@ type Actor<'Task, 'TResult>() as this =
             }
 
     abstract RedisConnectionString : string with get
-    override this.RedisConnectionString with get() =  "localhost" 
+    override this.RedisConnectionString with get() =  "localhost"
+    
+    /// <summary>
+    /// Where Ractors store data (with namespace set at RedisDataNamespace)
+    /// </summary>
+    abstract RedisDataConnectionString : string with get
+    override this.RedisDataConnectionString = this.RedisConnectionString
+    abstract RedisDataNamespace : string with get
+    override this.RedisDataNamespace = "data"
+
     /// <summary>
     /// One actor implementation instance per id.
     /// </summary>
@@ -134,7 +155,7 @@ type Actor<'Task, 'TResult>() as this =
         and set v = extendedComputation <- v
 
     member this.Cache with get () = Redis.Cache
-    member this.Redis with get () = Connections.GetRedis()
+    member this.Redis with get () = Connections.GetOrCreateRedis(this.RedisDataConnectionString, this.RedisDataNamespace)
     member this.GetRedis(id) = Connections.GetRedis(id)
     member this.DB with get() = Connections.GetDB()
     member this.GetDB(id) = Connections.GetRedis(id)
@@ -145,7 +166,7 @@ type internal ActorImpl<'Task, 'TResult>
     internal (redisConnectionString : string, id : string, 
                 computation : Message<'Task> * string -> Async<Message<'TResult>>, resultTimeout : int, 
                 lowPriority : bool, autoStart : bool, optimistic : bool) as this = 
-    let redis = new Redis(redisConnectionString, "R")
+    let redis = Connections.GetOrCreateRedis(redisConnectionString, "R")
     let garbageCollectionPeriod = resultTimeout
     let mutable started = false
     let mutable cts = new CancellationTokenSource()

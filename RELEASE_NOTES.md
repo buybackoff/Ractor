@@ -1,3 +1,6 @@
+#### 0.2.5 - August 20 2014
+* Fix connection collection logic
+
 #### 0.2.4 - August 8 2014
 * Reliable parallel actors execution with actor.ParallelWith(actor2).ParallelWith(actor3) etc
 

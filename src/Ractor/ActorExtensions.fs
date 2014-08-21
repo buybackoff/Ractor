@@ -85,6 +85,8 @@ type Actors() =
             continuation : Actor<'TResult1, 'TResult2>) : Actor<'Task, 'TResult2> =
                 let actor1 = ActorImpl<'Task, 'TResult1>.Instance(this)
                 let actor2 = ActorImpl<'TResult1, 'TResult2>.Instance(continuation)
+                let dataConnection = this.RedisDataConnectionString
+                let dataNameSapce = this.RedisDataNamespace
                 let key = "(" + this.GetKey() + "->-" + continuation.GetKey() + ")"
                 let computation : Message<'Task> * string -> Async<Message<'TResult2>> = 
                     fun (inMessage, resultId) -> 
@@ -126,6 +128,8 @@ type Actors() =
             
                 let result = 
                     { new Actor<'Task, 'TResult2>() with
+                           override __.RedisDataConnectionString with get() = dataConnection
+                           override __.RedisDataNamespace with get() = dataNameSapce
                            override __.RedisConnectionString with get() = actor1.RedisConnectionString
                            override __.GetKey() = key
                            override __.ResultTimeout with get() = this.ResultTimeout + continuation.ResultTimeout
@@ -140,6 +144,8 @@ type Actors() =
             : Actor<'Task * 'Task2, 'TResult * 'TResult2> =
                 let actor1 = ActorImpl<'Task, 'TResult>.Instance(this)
                 let actor2 = ActorImpl<'Task2, 'TResult2>.Instance(second)
+                let dataConnection = this.RedisDataConnectionString
+                let dataNameSapce = this.RedisDataNamespace
                 let timeout = Math.Max(this.ResultTimeout, second.ResultTimeout)
                 let key = "(" + this.GetKey() + "|>|" + second.GetKey() + ")"
                 let computation : Message<'Task * 'Task2> * string -> Async<Message<'TResult * 'TResult2>> = 
@@ -168,6 +174,8 @@ type Actors() =
             
                 let result = 
                     { new Actor<'Task * 'Task2, 'TResult * 'TResult2>() with
+                           override __.RedisDataConnectionString with get() = dataConnection
+                           override __.RedisDataNamespace with get() = dataNameSapce
                            override __.RedisConnectionString with get() = actor1.RedisConnectionString
                            override __.GetKey() = key
                            override __.ResultTimeout with get() = timeout
@@ -256,6 +264,8 @@ module FSharpActorExtensions =
             (continuation : Actor<'TResult1, 'TResult2>) : Actor<'Task, 'TResult2> =
                 let actor1 = ActorImpl<'Task, 'TResult1>.Instance(this)
                 let actor2 = ActorImpl<'TResult1, 'TResult2>.Instance(continuation)
+                let dataConnection = this.RedisDataConnectionString
+                let dataNameSapce = this.RedisDataNamespace
                 let key = "(" + this.GetKey() + "->-" + continuation.GetKey() + ")"
                 let computation : Message<'Task> * string -> Async<Message<'TResult2>> = 
                     // this resultId is passed from continuator call and it is in ShortGuid format
@@ -298,6 +308,8 @@ module FSharpActorExtensions =
             
                 let result = 
                     { new Actor<'Task, 'TResult2>() with
+                           override __.RedisDataConnectionString with get() = dataConnection
+                           override __.RedisDataNamespace with get() = dataNameSapce
                            override __.RedisConnectionString with get() = actor1.RedisConnectionString
                            override __.GetKey() = key
                            override __.ResultTimeout with get() = this.ResultTimeout + continuation.ResultTimeout
@@ -313,6 +325,8 @@ module FSharpActorExtensions =
             : Actor<'Task * 'Task2, 'TResult * 'TResult2> =
                 let actor1 = ActorImpl<'Task, 'TResult>.Instance(this)
                 let actor2 = ActorImpl<'Task2, 'TResult2>.Instance(second)
+                let dataConnection = this.RedisDataConnectionString
+                let dataNameSapce = this.RedisDataNamespace
                 let timeout = Math.Max(this.ResultTimeout, second.ResultTimeout)
                 let key = "(" + this.GetKey() + "|>|" + second.GetKey() + ")"
                 let computation : Message<'Task * 'Task2> * string -> Async<Message<'TResult * 'TResult2>> = 
@@ -341,6 +355,8 @@ module FSharpActorExtensions =
             
                 let result = 
                     { new Actor<'Task * 'Task2, 'TResult * 'TResult2>() with
+                           override __.RedisDataConnectionString with get() = dataConnection
+                           override __.RedisDataNamespace with get() = dataNameSapce
                            override __.RedisConnectionString with get() = actor1.RedisConnectionString
                            override __.GetKey() = key
                            override __.ResultTimeout with get() = timeout
