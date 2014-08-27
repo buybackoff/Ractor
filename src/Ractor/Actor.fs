@@ -219,6 +219,8 @@ type internal ActorImpl<'Task, 'TResult>
                 else async {return true}
             return hp && lp
         }
+
+
     let messageQueue = ConcurrentQueue<Envelope<'Task> * string>()
 
     // Global cache reference
@@ -242,7 +244,7 @@ type internal ActorImpl<'Task, 'TResult>
                     let pipelineId = Guid.NewGuid().ToBase64String()
                     let hasLocal, localMessage = messageQueue.TryDequeue()
                     if hasLocal then 
-                        Debug.Print("Took local message")
+                        Debug.Print("Took local message:"  + this.Id)
                         return localMessage
                     else 
                         let! message = redis.EvalAsync<Envelope<'Task>>
@@ -252,11 +254,11 @@ type internal ActorImpl<'Task, 'TResult>
                                                     pipelineId |])
                                        |> Async.AwaitTask
                         if Object.Equals(message, Unchecked.defaultof<Envelope<'Task>>) then 
-                            let! signal = messageWaiter.WaitAsync(1000) |> Async.AwaitTask // TODO timeout, if PubSub dropped notification, recheck the queue, but not very often
+                            let! signal = messageWaiter.WaitAsync(10000) |> Async.AwaitTask // TODO timeout, if PubSub dropped notification, recheck the queue, but not very often
                             if not signal then Debug.Print("Timeout in awaitMessage in: " + this.Id)
                             return! awaitMessage()
                         else 
-                            Debug.Print("Took Redis message") 
+                            Debug.Print("Took Redis message: " + this.Id) 
                             return message, pipelineId
                 }
             
@@ -430,7 +432,8 @@ type internal ActorImpl<'Task, 'TResult>
                 | x when isSubclassOfRawGeneric(typedefof<Actor<'Task, 'TResult>>, x.GetType()) -> // :? Actor<'Task, 'TResult> as taskDefinition -> 
                     let taskDefinition = x :?> Actor<'Task, 'TResult>
                     key <-  taskDefinition.GetKey()
-                    if ActorImpl<_,_>.ActorsRepo.ContainsKey(key) then 
+                    if ActorImpl<_,_>.ActorsRepo.ContainsKey(key) then
+                            Debug.WriteLine("Took existing actor: " + key)
                             ActorImpl<_,_>.ActorsRepo.[key] :?> ActorImpl<'Task, 'TResult>
                     else
                         let conn = 
@@ -446,6 +449,7 @@ type internal ActorImpl<'Task, 'TResult>
                     let asyncDefinition = x :?> Ractor.FSharp.Actor<'Task, 'TResult>
                     key <-  asyncDefinition.GetKey()
                     if ActorImpl<_,_>.ActorsRepo.ContainsKey(key) then 
+                            Debug.WriteLine("Took existing actor: " + key)
                             ActorImpl<_,_>.ActorsRepo.[key] :?> ActorImpl<'Task, 'TResult>
                     else
                         let conn = 

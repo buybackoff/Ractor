@@ -369,3 +369,18 @@ module FSharpActorExtensions =
                 // overwrite the default computation, which ignores resultId, with the proper one
                 result.ExtendedComputation <- computation
                 result
+
+[<AutoOpenAttribute>]
+module Operators =
+    /// <summary>
+    /// Continue with
+    /// </summary>
+    let inline (->-) (first: Actor<'Task, 'TResult1>) (continuation : Actor<'TResult1, 'TResult2>) =
+           first.ContinueWith(continuation)
+
+    /// <summary>
+    /// Parallel with
+    /// </summary>
+    let inline (|^|) (first: Actor<'Task, 'TResult>) (second : Actor<'Task2, 'TResult2>) =
+           first.ParallelWith(second)
+            

@@ -19,8 +19,19 @@ type Incrementer ()=
     override this.RedisConnectionString = "localhost"
     override this.Computation(input) : Async<int> =  
         async {
-                Console.WriteLine("Incremented to: " + (input + 1).ToString())
+                //Console.WriteLine("Incremented to: " + (input + 1).ToString())
                 return input + 1
+        }
+    override this.AutoStart = true
+    override this.ResultTimeout = 50000 // milliseconds
+
+type Adder ()=
+    inherit Actor<int*int,int>()
+    override this.RedisConnectionString = "localhost"
+    override this.Computation((input1, input2)) : Async<int> =  
+        async {
+                Console.WriteLine("Added to: " + (input1 + input2).ToString())
+                return input1 + input2
         }
     override this.AutoStart = true
     override this.ResultTimeout = 50000 // milliseconds
@@ -31,6 +42,7 @@ let ``Could chain continuations and get result`` () =
     let incrementer = Incrementer()
     incrementer.Start()
 
+    
     let result = 
             incrementer
                 .ContinueWith(incrementer)
@@ -38,6 +50,9 @@ let ``Could chain continuations and get result`` () =
                 .ContinueWith(incrementer)
                 .PostAndGetResult(1)
     result |> should equal 5
+
+    let r2 = (incrementer ->- incrementer ->- incrementer ->- incrementer).PostAndGetResult(1)
+    r2 |> should equal 5
     ()
 
 
@@ -47,12 +62,18 @@ let ``Could run parallels then continue`` () =
     let incrementer = Incrementer()
     incrementer.Start()
 
-    let result1, result2 = 
-            (incrementer
-                .ParallelWith(incrementer))
-                .ContinueWith(incrementer.ParallelWith(incrementer))
-                .PostAndGetResult(1, 1)
-    result1+result2 |> should equal 6
+    for i in 1..100 do
+        let sw = Stopwatch()
+        sw.Start()
+
+        let result = 
+                ((   (incrementer |^| incrementer) 
+                ->- (incrementer |^| incrementer))
+                ->- Adder())
+                    .PostAndGetResult(1, 1)
+        result |> should equal 6
+        sw.Stop()
+        Console.WriteLine("Elapsed: " + sw.ElapsedMilliseconds.ToString())
     ()
 
 [<Test>]
@@ -62,8 +83,10 @@ let ``Could run continuations in parallel`` () =
     incrementer.Start()
 
     let result1, result2 = 
-            (incrementer.ContinueWith(incrementer))
-                .ParallelWith(incrementer.ContinueWith(incrementer))
+            (   (incrementer 
+                        ->- incrementer
+                                ->- incrementer) 
+            |^| (incrementer ->- incrementer))
                 .PostAndGetResult(1, 1)
-    result1+result2 |> should equal 6
+    result1+result2 |> should equal 7
     ()

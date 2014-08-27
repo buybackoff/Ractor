@@ -5,7 +5,7 @@ Ractor
 actor system with CLR/JVM interop and dead simple API for POCOs cache/persistence. Its API is inspired by 
 F#'s [MailboxProcessor](http://msdn.microsoft.com/en-us/library/ee370357.aspx), 
 [Fsharp.Actor](https://github.com/colinbull/Fsharp.Actor) and Akka(.NET) libraries. The main difference is that 
-in Ractor actors exist is Redis per se as lists of messages, while a number of ephemeral 
+in Ractor actors are virtual and exist is Redis per se as lists of messages, while a number of ephemeral 
 workers (actors' "incarnations") take messages from Redis, process them and post results back.
 
 Benchmarks (e.g. [1](http://blog.jupo.org/2013/02/23/a-tale-of-two-queues/)) show that Redis is as performant 
@@ -21,6 +21,17 @@ setup one could get, and it is available in minutes for cheap price. With this r
 one could then use autoscale group and even add spot instances to the system. Random shutdowns of any 
 worker nodes will not affect the system in any way. This setup gives an elastic, easy to maintain and 
 (automatically) scalable to a large size system of distributed actors.
+
+> Update 08/27: I have just found a recent pre-release of project 
+> [Orleans](http://research.microsoft.com/en-us/projects/orleans/), which is
+> conceptually the closest thing to Ractor. The Orleans [technical report](http://research.microsoft.com/pubs/210931/Orleans-MSR-TR-2014-41.pdf)
+> from Microsoft nicely describes the concepts of virtual actors, perpetual existence, automatic 
+> instantiation, location transparency, automatic scale out. This report could serve as a partial
+> documentation for concepts (rather than implementation), and probably Orleans' implementation
+> is better for you than Ractor if you are on Azure.
+> When/if Orleans code if open-sourced, Ractor will try to get the best from it, while still enjoying
+> the awesomeness of Redis cluster instead of proprietary many-to-many networking mechanisms.
+> At the meantime, the existence of Orleans validates the virtual actors approach.
 
 **Ractor.Persistence** is a collection of APIs for POCOs and blobs persistence and a strongly typed Redis
 client based on excellent [Stackexchange.Redis](https://github.com/StackExchange/StackExchange.Redis) 

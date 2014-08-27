@@ -20,7 +20,7 @@ type Slowpoke ()=
     override this.RedisConnectionString = "localhost"
     override this.Computation(input) : Async<int> =  
         async {
-                do! Async.Sleep(500)
+                //do! Async.Sleep(500)
                 Console.WriteLine("Incremented to: " + (input + 1).ToString())
                 return input + 1
         }
