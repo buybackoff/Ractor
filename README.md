@@ -29,9 +29,9 @@ worker nodes will not affect the system in any way. This setup gives an elastic,
 > instantiation, location transparency, automatic scale out. This report could serve as a partial
 > documentation for concepts (rather than implementation), and probably Orleans' implementation
 > is better for you than Ractor if you are on Azure.
-> When/if Orleans code if open-sourced, Ractor will try to get the best from it, while still enjoying
+> When/if Orleans code is open-sourced, Ractor will try to get the best from it, while still enjoying
 > the awesomeness of Redis cluster instead of proprietary many-to-many networking mechanisms.
-> At the meantime, the existence of Orleans validates the virtual actors approach.
+> In the meantime, the existence of Orleans validates the virtual actors approach.
 
 **Ractor.Persistence** is a collection of APIs for POCOs and blobs persistence and a strongly typed Redis
 client based on excellent [Stackexchange.Redis](https://github.com/StackExchange/StackExchange.Redis) 
