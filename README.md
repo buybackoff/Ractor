@@ -22,9 +22,8 @@ one could then use autoscale group and even add spot instances to the system. Ra
 worker nodes will not affect the system in any way. This setup gives an elastic, easy to maintain and 
 (automatically) scalable to a large size system of distributed actors.
 
-> Update 08/27: I have just found a recent pre-release of project 
-> [Orleans](http://research.microsoft.com/en-us/projects/orleans/), which is
-> conceptually the closest thing to Ractor. The Orleans [technical report](http://research.microsoft.com/pubs/210931/Orleans-MSR-TR-2014-41.pdf)
+> A recent pre-release of project  [Orleans](http://research.microsoft.com/en-us/projects/orleans/)
+> is conceptually the closest thing to Ractor. The Orleans [technical report](http://research.microsoft.com/pubs/210931/Orleans-MSR-TR-2014-41.pdf)
 > from Microsoft nicely describes the concepts of virtual actors, perpetual existence, automatic 
 > instantiation, location transparency, automatic scale out. This report could serve as a partial
 > documentation for concepts (rather than implementation), and probably Orleans' implementation

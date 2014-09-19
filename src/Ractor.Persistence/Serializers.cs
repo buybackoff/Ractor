@@ -13,6 +13,7 @@ namespace Ractor {
         /// 
         /// </summary>
         public byte[] Serialize<T>(T value) {
+            // TODO test if JSON.NET does exactly the same thing with nulls
             if (!typeof(T).IsValueType && EqualityComparer<T>.Default.Equals(value, default(T))) {
                 return null;
             }
