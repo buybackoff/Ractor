@@ -6,9 +6,8 @@ using System.Linq;
 using System.Runtime.InteropServices;
 using System.Threading.Tasks;
 using NUnit.Framework;
-using ServiceStack;
 
-namespace Ractor.CS.Tests {
+namespace Ractor.Persistence.Tests {
     
     class NativeMethods {
         [DllImport("rpcrt4.dll", SetLastError = true)]
@@ -79,7 +78,7 @@ namespace Ractor.CS.Tests {
 
                 var ordered = freq.OrderBy(x => x.Value);
 
-                var diff = ((double)ordered.Last().Value / (double)ordered.First().Value) - 1.0;
+                var diff = (ordered.Last().Value / (double)ordered.First().Value) - 1.0;
 
                 Console.WriteLine("Number of shards: " + freq.Count);
                 Console.WriteLine("Error: " + diff);

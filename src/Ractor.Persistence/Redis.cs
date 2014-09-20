@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.ComponentModel.DataAnnotations;
 using System.Diagnostics;
 using System.Linq;
 using System.Reflection;
@@ -163,9 +164,10 @@ namespace Ractor {
                     .SingleOrDefault(p =>
                         p.GetCustomAttributes(typeof(RedisKeyAttribute), false).Count() == 1);
 
+                // TODO what is not Id and not Key attribute?
                 PrimaryKeyProperty = (type).GetProperties(BindingFlags.Public | BindingFlags.Instance)
-                    .SingleOrDefault(p =>
-                        p.GetCustomAttributes(typeof(PrimaryKeyAttribute), false).Count() == 1);
+                    .SingleOrDefault(p => p.Name.Equals("Id", StringComparison.OrdinalIgnoreCase) || 
+                        p.GetCustomAttributes(typeof(KeyAttribute), false).Count() == 1);
             }
 
             public string GetTypePrefix() {

@@ -59,14 +59,15 @@
     <Compile Include="Logging.fs" />
     <Compile Include="Connections.fs" />
     <Compile Include="Actor.fs" />
-    <None Include="packages.config" />
     <None Include="app.config" />
     <Compile Include="Collections.fs" />
     <Compile Include="ActorExtensions.fs" />
+    <Content Include="packages.config" />
   </ItemGroup>
   <ItemGroup>
     <Reference Include="FSharp.Core">
-      <HintPath>..\..\packages\FSharp.Core.Microsoft.Signed.0.0.1-beta1\lib\net45\FSharp.Core.dll</HintPath>
+      <HintPath>..\..\packages\FSharp.Core.Microsoft.Signed.3.1.1.1\lib\net45\FSharp.Core.dll</HintPath>
+      <Private>True</Private>
     </Reference>
     <Reference Include="mscorlib" />
     <Reference Include="System" />
@@ -75,8 +76,6 @@
     <Reference Include="System.Numerics" />
     <Reference Include="System.Runtime.Caching" />
     <Reference Include="System.Web" />
-  </ItemGroup>
-  <ItemGroup>
     <ProjectReference Include="..\Ractor.Persistence\Ractor.Persistence.csproj">
       <Name>Ractor.Persistence</Name>
       <Project>{6780D11C-42AD-46DC-B49D-95912164BB23}</Project>

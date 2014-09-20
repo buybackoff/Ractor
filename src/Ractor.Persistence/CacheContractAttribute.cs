@@ -2,7 +2,7 @@
 
 namespace Ractor {
     /// <summary>
-    /// Sets default expiration time span, name and compression option for a type
+    /// Sets default expiration time span, name and compression option for a type. 
     /// </summary>
     [AttributeUsage(AttributeTargets.Class | AttributeTargets.Struct, AllowMultiple = false)]
     public class RedisAttribute : Attribute {

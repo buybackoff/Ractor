@@ -5,19 +5,23 @@ using System.Threading;
 
 namespace Ractor {
 
-    public enum SequentialGuidType {
-        /// <summary>
-        /// Guid.ToString() will be sequential
-        /// </summary>
-        SequentialAsString,
+    /// <summary>
+    /// Bytes layout that affects sorting. With SSDs phisical order shouldn't matter that much,
+    /// so default is Binary to save space.
+    /// </summary>
+    public enum SequentialGuidType : byte {
         /// <summary>
         /// Guid.ToByteArray() will be sequential
         /// </summary>
-        SequentialAsBinary,
+        SequentialAsBinary = 0,
+        /// <summary>
+        /// Guid.ToString() will be sequential
+        /// </summary>
+        SequentialAsString = 1,
         /// <summary>
         /// Use for MSSQL only
         /// </summary>
-        SequentialAtEnd
+        SequentialAtEnd = 2
     }
 
     /// <summary>
@@ -67,8 +71,9 @@ namespace Ractor {
             return newval;
         }
         
-        
         internal static byte[] GuidSequentialArray(byte bucket, SequentialGuidType guidType, DateTime? utcDateTime = null) {
+            if (bucket > 63) throw new ArgumentOutOfRangeException("bucket", "Bucket is too large! 64 buckets ought to be enough for anybody!");
+            
             var bytes = new byte[16];
             Rng.GetBytes(bytes);
 
@@ -101,7 +106,10 @@ namespace Ractor {
                     break;
             }
 
-            bytes[8] = bucket;
+
+            var guidTypeByte = (byte) guidType;
+            // first two bits for sequence type, other 6 bits for bucket
+            bytes[8] = (byte)(( (guidTypeByte & 3) << 6 ) | (bucket & 63) );
             return bytes;
         }
 
@@ -111,8 +119,17 @@ namespace Ractor {
         /// </summary>
         public static byte Bucket(this Guid guid) {
             byte[] bytes = guid.ToByteArray();
-            return bytes[8];
+            return (byte)(bytes[8] & 63);
         }
+
+        /// <summary>
+        ///     Shard in which the Guid is stored
+        /// </summary>
+        internal static SequentialGuidType SequentialType(this Guid guid) {
+            byte[] bytes = guid.ToByteArray();
+            return (SequentialGuidType)(bytes[8] >> 6);
+        }
+
     }
 
     public static class GuidExtensions {
@@ -140,10 +157,10 @@ namespace Ractor {
             return new Guid(bs);
         }
 
-        internal static DateTime Timestamp(this Guid guid, SequentialGuidType guidType = SequentialGuidType.SequentialAsString) {
-            var bytes = new byte[8];
+        internal static DateTime Timestamp(this Guid guid) {
+            var tickBytes = new byte[8];
             var gbs = guid.ToByteArray();
-
+            var guidType = guid.SequentialType();
             
             switch (guidType) {
                 case SequentialGuidType.SequentialAsString:
@@ -154,16 +171,16 @@ namespace Ractor {
                         Array.Reverse(gbs, 4, 2);
                         Array.Reverse(gbs, 6, 2);
                     }
-                    Array.Copy(gbs, 0, bytes, 1, 7);
+                    Array.Copy(gbs, 0, tickBytes, 1, 7);
                     break;
                 case SequentialGuidType.SequentialAtEnd:
-                    Buffer.BlockCopy(gbs, 1, bytes, 9, 7);
+                    Buffer.BlockCopy(gbs, 1, tickBytes, 9, 7);
                     break;
             }
             if (BitConverter.IsLittleEndian) {
-                Array.Reverse(bytes);
+                Array.Reverse(tickBytes);
             }
-            var ticks = BitConverter.ToInt64(bytes, 0);
+            var ticks = BitConverter.ToInt64(tickBytes, 0);
             return new DateTime(ticks, DateTimeKind.Utc);
         }
 

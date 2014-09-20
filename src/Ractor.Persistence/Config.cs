@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Configuration;
+using System.Data.Entity.Migrations;
 using System.Linq;
 using System.Net;
 
@@ -30,9 +31,55 @@ namespace Ractor {
             return kvps.ToDictionary(kvp => kvp.Key, kvp => kvp.Value);
         }
 
+        [Obsolete]
         public static string GetSettingOrDefault(string key, string defaultValue = "") {
             var s = ConfigurationManager.AppSettings[key];
             return !String.IsNullOrEmpty(s) ? s : defaultValue;
         }
+
+        /// <summary>
+        /// Get name of the main connection string
+        /// </summary>
+        public static string DataConnectionName(string name) {
+            var css = ConfigurationManager.ConnectionStrings;
+            for (var i = 0; i < css.Count; i++) {
+                var cs = css[i];
+                if (cs.Name.Equals(name, StringComparison.OrdinalIgnoreCase)) {
+                    return cs.Name;
+                }
+            }
+            throw new ApplicationException("No main Ractor connection string in app config.");
+        }
+
+        /// <summary>
+        /// Get name of the main connection string
+        /// </summary>
+        public static IEnumerable<KeyValuePair<byte, string>> DistibutedDataConnectionNames(string prefix) {
+            var css = ConfigurationManager.ConnectionStrings;
+            for (var i = 0; i < css.Count; i++) {
+                var cs = css[i];
+                if (!cs.Name.StartsWith(prefix + ".", StringComparison.OrdinalIgnoreCase)) continue;
+                byte n;
+                if (byte.TryParse(cs.Name.Split('.')[1], out n)) {
+                    yield return new KeyValuePair<byte, string>(n, cs.Name);
+                } else {
+                    throw new ApplicationException("Wrong format of connection string: " + cs.Name);
+                }
+            }
+        }
+
     }
+
+    //public class DataConfiguration : DbMigrationsConfiguration<DataContext> {
+    //    public DataConfiguration() {
+    //        AutomaticMigrationsEnabled = true;
+    //    }
+    //}
+
+    //public class DistributedDataConfiguration : DbMigrationsConfiguration<DistributedDataContext> {
+    //    public DistributedDataConfiguration() {
+    //        AutomaticMigrationsEnabled = true;
+    //    }
+    //}
+
 }

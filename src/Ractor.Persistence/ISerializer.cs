@@ -6,6 +6,7 @@ namespace Ractor {
     public interface ISerializer {
         byte[] Serialize<T>(T value);
         T Deserialize<T>(byte[] bytes);
+        T DeepClone<T>(T value);
     }
 
 

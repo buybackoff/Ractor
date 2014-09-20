@@ -12,7 +12,7 @@ namespace Ractor {
         /// 
         /// </summary>
         public static List<T> ItemAsList<T>(this T o) {
-            return new List<T>
+            return new List<T>()
             {
                            o
                        };

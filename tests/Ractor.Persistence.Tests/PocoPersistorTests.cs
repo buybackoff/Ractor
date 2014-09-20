@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using NUnit.Framework;
-using ServiceStack.OrmLite;
 
 namespace Ractor.Persistence.Tests {
 
@@ -30,34 +29,26 @@ namespace Ractor.Persistence.Tests {
         public IPocoPersistor Persistor { get; set; }
 
         public PocoPersistorTests() {
-            //var shards = new Dictionary<ushort, string> {
-            //    {0, "App_Data/0.sqlite"}
+
+            //var shards = new Dictionary<byte, string> {
+            //    {1, "Server=localhost;Database=fredis.0;Uid=test;Pwd=test"},
+            //    {2, "Server=localhost;Database=fredis.1;Uid=test;Pwd=test"},
+            //    {3, "Server=localhost;Database=fredis.2;Uid=test;Pwd=test"},
+            //    {4, "Server=localhost;Database=fredis.3;Uid=test;Pwd=test"}
             //    //,{1, "App_Data/1.sqlite"}
             //};
-            //Persistor = new BasePocoPersistor(SqliteDialect.Provider, "App_Data/main.sqlite", shards);
+            //"Server=localhost;Database=fredis;Uid=test;Pwd=test", shards, null, SequentialGuidType.SequentialAsBinary);
 
-            var shards = new Dictionary<byte, string> {
-                {1, "Server=localhost;Database=fredis.0;Uid=test;Pwd=test"},
-                {2, "Server=localhost;Database=fredis.1;Uid=test;Pwd=test"},
-                {3, "Server=localhost;Database=fredis.2;Uid=test;Pwd=test"},
-                {4, "Server=localhost;Database=fredis.3;Uid=test;Pwd=test"}
-                //,{1, "App_Data/1.sqlite"}
-            };
-            Persistor = new BasePocoPersistor(MySqlDialect.Provider,
-                "Server=localhost;Database=fredis;Uid=test;Pwd=test", shards, null, SequentialGuidType.SequentialAsBinary);
+            Persistor = new BasePocoPersistor(guidType: SequentialGuidType.SequentialAsBinary);
         }
 
 
         [Test]
         public void CouldCreateTableAndCrudDataObject() {
-            
-            Persistor.CreateTable<DataObject>(true);
-
             for (int i = 0; i < 10; i++) {
                 var dobj = new DataObject() {
                     Value = "inserted"
                 };
-
                 Persistor.Insert(dobj);
 
                 var fromDb = Persistor.GetById<DataObject>(dobj.Id);
@@ -72,9 +63,6 @@ namespace Ractor.Persistence.Tests {
 
         [Test]
         public void CouldCreateTableAndCrudDistributedDataObject() {
-
-            Persistor.CreateTable<RootAsset>(true);
-
             for (int i = 0; i < 1; i++) {
 
                 var dobj = new RootAsset() {
@@ -97,8 +85,6 @@ namespace Ractor.Persistence.Tests {
 
         [Test]
         public void CouldCreateTableAndInsertManyDataObject() {
-
-            Persistor.CreateTable<DataObject>(true);
             var sw = new Stopwatch();
             sw.Start();
             var list = new List<DataObject>();
@@ -113,24 +99,20 @@ namespace Ractor.Persistence.Tests {
             Persistor.Insert(list);
             sw.Stop();
             Console.WriteLine("Elapsed: " + sw.ElapsedMilliseconds);
-            
         }
 
          [Test]
         public void RandomTest() {
             for (int i = 0; i < 100; i++) { Console.WriteLine((new Random()).Next(0, 2)); }
-            
         }
 
         [Test]
         public void CouldCreateTableAndInsertManyDistributedDataObject() {
 
-            Persistor.CreateTable<RootAsset>(true);
             var sw = new Stopwatch();
             sw.Start();
             var list = new List<RootAsset>();
             for (int i = 0; i < 100000; i++) {
-
                 var dobj = new RootAsset() {
                     Value = "inserted"
                 };

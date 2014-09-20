@@ -1,76 +1,86 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Data;
-using System.Diagnostics;
-using System.Globalization;
+using System.Data.Entity;
 using System.Linq;
 using System.Linq.Expressions;
-using System.Reflection;
-using ServiceStack;
-using ServiceStack.OrmLite;
 
 namespace Ractor {
     /// <summary>
-    /// Base implementation of IPocoPersistor using ServiceStack.ORMLite v4
+    /// Base implementation of IPocoPersistor using Entity Framework 6
     /// </summary>
     public class BasePocoPersistor : IPocoPersistor {
-        private readonly SequentialGuidType _guidType = SequentialGuidType.SequentialAsString;
-        private readonly IOrmLiteDialectProvider _provider;
-
-        /// <summary>
-        /// 
-        /// </summary>
-        internal OrmLiteConnectionFactory DbFactory { get; set; }
-
-        private readonly Dictionary<ushort, string> _shards = new Dictionary<ushort, string>();
+        private readonly string _connectionName;
+        private readonly SequentialGuidType _guidType;
+        private readonly Dictionary<byte, string> _shards = new Dictionary<byte, string>();
         private readonly HashSet<byte> _readOnlyShards = new HashSet<byte>();
         private List<byte> _writableShards;
-
         private byte NumberOfShards { get; set; }
 
         /// <summary>
-        /// Base implementation of IPocoPersistor using ServiceStack.ORMLite v4
+        /// Base implementation of IPocoPersistor using Entity Framework 6
         /// </summary>
-        /// <param name="provider"></param>
-        /// <param name="mainConnectionString">Connection String for central DB (relational data with complex joins, limited growth, stable usage, settings, etc)</param>
-        /// <param name="shardConnectionStringsStartFrom1">Connection string for shards, keys MUST START FROM ONE and be consecutive</param>
-        /// <param name="readOnlyShards">No new Guids will be generated for these shards. Updates and rooted inserts will throw.</param>
-        /// <param name="guidType"></param>
-        public BasePocoPersistor(IOrmLiteDialectProvider provider,
-            string mainConnectionString,
-            Dictionary<byte, string> shardConnectionStringsStartFrom1,
-            byte[] readOnlyShards = null,
-            SequentialGuidType guidType = SequentialGuidType.SequentialAsString) {
-            _provider = provider;
+        /// <param name="connectionName">Connection name in .config files (default is 'Ractor', it
+        /// is also used as a prefix for zero-based distributed connections, e.g. Ractor.0 )</param>
+        /// <param name="readOnlyShards"></param>
+        /// <param name="guidType">Use AtEnd only for MS SQL Server, for MySQL and others DBMS without 
+        /// native GUID types use binary</param>
+        /// <param name="migrationDataLossAllowed"></param>
+        public BasePocoPersistor(string connectionName = "Ractor",
+            IEnumerable<byte> readOnlyShards = null,
+            SequentialGuidType guidType = SequentialGuidType.SequentialAsBinary,
+            bool migrationDataLossAllowed = false) {
+            // Validate name presence
+            _connectionName = Config.DataConnectionName(connectionName);
+
+            DataContext.UpdateAutoMigrations(_connectionName, migrationDataLossAllowed);
+
             _guidType = guidType;
             if (readOnlyShards != null) {
                 foreach (var readOnlyShard in readOnlyShards) { _readOnlyShards.Add(readOnlyShard); }
             }
-            if (_readOnlyShards.Count >= shardConnectionStringsStartFrom1.Count)
+            _shards = Config.DistibutedDataConnectionNames(_connectionName).ToDictionary(x => x.Key, y => y.Value);
+            if (_readOnlyShards.Count >= _shards.Count)
                 throw new ArgumentException("Too few writable shards!");
-
-
-            DbFactory = CreateDbFactory(mainConnectionString);
             // check and register shards
-            using (var db = DbFactory.OpenDbConnection()) {
-                db.SqlScalar<int>("SELECT 1+1"); // check DB engine is working
+            using (var ctx = GetContext()) {
+                var two = ctx.Database.SqlQuery<int>("SELECT 1+1").SingleOrDefault(); // check DB engine is working
+                if (two != 2) throw new ApplicationException("Connection string is not working: " + connectionName);
             }
-            CheckShardsAndSetEpoch(shardConnectionStringsStartFrom1);
+
+            CheckShardsAndSetEpoch(migrationDataLossAllowed);
         }
 
-        private OrmLiteConnectionFactory CreateDbFactory(string connectionString) {
-            // TODO unit test
-            return new OrmLiteConnectionFactory(connectionString, _provider);
+        /// <summary>
+        /// Get new DataContext instance
+        /// </summary>
+        private DataContext GetContext() {
+            var ctx = new DataContext(_connectionName);
+            ctx.Configuration.AutoDetectChangesEnabled = false;
+            ctx.Configuration.ProxyCreationEnabled = false;
+            return ctx;
         }
 
-        private void CheckShardsAndSetEpoch(Dictionary<byte, string> shardConnectionStrings) {
-            var sortedShards = shardConnectionStrings.OrderBy(kvp => kvp.Key).ToList();
+        /// <summary>
+        /// Get new DistributedDataContext instance for specified shard id
+        /// </summary>
+        /// <param name="bucket"></param>
+        /// <returns></returns>
+        private DistributedDataContext GetContext(byte bucket) {
+            var ctx = new DistributedDataContext(_shards[bucket]);
+            ctx.Configuration.AutoDetectChangesEnabled = false;
+            return ctx;
+        }
+
+        private void CheckShardsAndSetEpoch(bool migrationDataLossAllowed) {
+            var sortedShards = _shards.OrderBy(kvp => kvp.Key).ToList();
             var numberOfShards = sortedShards.Count;
             if (numberOfShards > 254) throw new ArgumentException("Too many shards!");
             NumberOfShards = (byte)numberOfShards;
-            _writableShards = shardConnectionStrings.Keys.Except(_readOnlyShards).ToList();
+            _writableShards = _shards.Keys.Except(_readOnlyShards).ToList();
             if (_writableShards.Count == 0) throw new ApplicationException("No writable shards");
-            var i = 1;
+            // one based
+            var i = 0;
             foreach (var keyValuePair in sortedShards) {
                 if (i != keyValuePair.Key) {
                     // TODO unit test
@@ -78,67 +88,32 @@ namespace Ractor {
                 }
                 i++;
             }
-
-            foreach (var keyValuePair in sortedShards) {
-                var key = keyValuePair.Key.ToString(CultureInfo.InvariantCulture);
-                var factory = CreateDbFactory(keyValuePair.Value);
-                // test factory
-                using (var sdb = factory.OpenDbConnection()) {
-                    var two = sdb.SqlScalar<int>("SELECT 1+1");
-                    // TODO unit test
+            foreach (var key in sortedShards.Select(keyValuePair => keyValuePair.Key)) {
+                DistributedDataContext.UpdateAutoMigrations(_shards[key], migrationDataLossAllowed);
+                using (var ctx = GetContext(key)) {
+                    var two = ctx.Database.SqlQuery<int>("SELECT 1+1").SingleOrDefault(); // check DB engine is working
                     if (two != 2) throw new ApplicationException("Shard " + key + " doesn't work");
                 }
-                _shards.Add(keyValuePair.Key, keyValuePair.Value);
-                DbFactory.RegisterConnection(key, factory);
             }
         }
-
-        private static void CreateTableOnConnection<T>(bool overwrite, IDbConnection db) where T : IDataObject, new() {
-            var createTableAttribute = typeof(T).GetCustomAttributes<CreateTableAttribute>(true) .FirstOrDefault();
-            var createScript = createTableAttribute != null ? createTableAttribute.Sql : null;
-            if (!string.IsNullOrWhiteSpace(createScript)) {
-                if (overwrite) db.DropTable<T>();
-                db.ExecuteSql(createScript);
-            } else { db.CreateTable<T>(overwrite); }
-        }
-
 
         /// <summary>
-        /// 
+        /// Insert
         /// </summary>
-        public void CreateTable<T>(bool overwrite = false) where T : IDataObject, new() {
-            bool isDistributed = typeof(IDistributedDataObject).IsAssignableFrom(typeof(T));
-
-            if (_readOnlyShards.Count > 0) throw new ReadOnlyException("Cannot create table with read-only shards!");
-
-            if (isDistributed) {
-                foreach (var storedShard in _shards) {
-                    using (var db = DbFactory.OpenDbConnection(storedShard.Key.ToString(CultureInfo.InvariantCulture))) {
-                        CreateTableOnConnection<T>(overwrite, db);
-                    }
-                }
-            } else {
-                using (var db = DbFactory.OpenDbConnection()) {
-                    CreateTableOnConnection<T>(overwrite, db);
-                }
-            }
-
-        }
-
-
-        public void Insert<T>(T item) where T : IDataObject, new() {
+        public void Insert<T>(T item) where T : class, IDataObject, new() {
             var list = item.ItemAsList();
             Insert(list);
         }
 
-
-        public void Insert<T>(List<T> items) where T : IDataObject, new() {
+        /// <summary>
+        /// Insert
+        /// </summary>
+        public void Insert<T>(List<T> items) where T : class, IDataObject, new() {
             if (items == null) throw new ArgumentNullException("items");
             var length = items.Count;
             if (length == 0) return;
 
             items.ForEach(x => CheckOrGenerateGuid(ref x, true));
-
 
             var isDistributed = typeof(IDistributedDataObject).IsAssignableFrom(typeof(T));
 
@@ -153,9 +128,10 @@ namespace Ractor {
                     .WithExecutionMode(ParallelExecutionMode.ForceParallelism)
                     .ForAll(lu => {
                         var basket = lu.ToList();
-                        using (var db = DbFactory.OpenDbConnection(lu.Key.ToString(CultureInfo.InvariantCulture))) {
+                        using (var db = GetContext(lu.Key)) {
                             try {
-                                db.InsertAll(basket);
+                                db.Set<T>().AddRange(basket);
+                                db.SaveChanges();
                             } catch (Exception e) {
                                 internalError = e;
                             }
@@ -163,28 +139,27 @@ namespace Ractor {
                     });
 
                 if (internalError != null) throw internalError;
-
             } else {
-                using (var db = DbFactory.OpenDbConnection()) {
-                    db.InsertAll(items);
+                using (var db = GetContext()) {
+                    db.Set<T>().AddRange(items);
+                    db.SaveChanges();
                 }
             }
         }
 
         /// <summary>
-        /// 
+        /// Soft-update
         /// </summary>
         [Obsolete("Try to avoid data mutation")]
-        public void Update<T>(T item) where T : IDataObject, new() {
+        public void Update<T>(T item) where T : class, IDataObject, new() {
             Update(item.ItemAsList());
         }
 
 
         /// <summary>
-        /// 
+        /// Soft-update
         /// </summary>
-        [Obsolete("Try to avoid data mutation")]
-        public void Update<T>(List<T> items) where T : IDataObject, new() {
+        public void Update<T>(List<T> items) where T : class, IDataObject, new() {
             if (items == null) throw new ArgumentNullException("items");
             var length = items.Count;
             if (length == 0) return;
@@ -200,62 +175,66 @@ namespace Ractor {
                 }
 
                 var baskets = items.ToLookup(i => i.Id.Bucket()).ToList();
-                var hasErrors = false;
 
-                var result = baskets
+                baskets
                     .AsParallel()
                     .WithDegreeOfParallelism(baskets.Count())
                     .WithExecutionMode(ParallelExecutionMode.ForceParallelism)
-                    .Select(lu => {
-                        using (var db = DbFactory.OpenDbConnection(lu.Key.ToString(CultureInfo.InvariantCulture)))
-                        using (var trans = db.OpenTransaction()) {
-                            try {
-                                foreach (var ddo in lu) {
-                                    var guid = ddo.Id;
-                                    db.Update(ddo, x => ((IDistributedDataObject)x).Id == guid); // TODO unit test that casting works here
-                                }
-                                trans.Commit();
-                            } catch {
-                                Trace.TraceError("Update error on shard " + lu.Key);
-                                trans.Rollback();
-                                hasErrors = true;
-                            }
+                    .ForAll(lu => {
+                        using (var db = GetContext(lu.Key)) {
+                            SoftUpdate(lu, db);
                         }
-                        return lu.ToList();
-                    }).SelectMany(x => x).ToList();
+                    });
+            } else { using (var db = GetContext()) { SoftUpdate(items, db); } }
+        }
 
-                if (hasErrors) throw new DataException("Could not update data");
+        private void SoftUpdate<T>(IEnumerable<T> items, DbContext db) where T : class, IDataObject, new() {
+            // TODO which isolation scope?
+            using (var dbTransaction = db.Database.BeginTransaction()) {
+                try {
+                    foreach (var newItem in items) {
+                        var id = newItem.Id;
+                        // previous state, could be cached
+                        var oldPrevious = this.GetById<T>(id); // could be null
+                        if (oldPrevious != null) {
+                            // object to store as previous in a new record
+                            var newPrevious = oldPrevious.DeepClone();
+                            CheckOrGenerateGuid(ref newPrevious, true, null, true);
+                            newPrevious.IsActive = false;
+                            // now new previous has new Id and inactive state, with all other props cloned
+                            var newPreviousId = newPrevious.Id;
+                            newItem.PreviousId = newPreviousId;
 
-                // ReSharper disable once RedundantAssignment
-                items = result;
-            } else {
-                using (var db = DbFactory.OpenDbConnection())
-                using (var trans = db.OpenTransaction()) {
-                    try {
-                        db.UpdateAll(items);
-                        trans.Commit();
-                    } catch {
-                        trans.Rollback();
-                        throw;
+                            // Update oldPrevious with newItem
+                            db.Set<T>().Attach(oldPrevious);
+                            db.Entry(oldPrevious).CurrentValues.SetValues(newItem);
+                            db.Set<T>().Add(newPrevious);
+                        } else {
+                            // here we could deal with deleted (GetByID = null for deleted)
+                            // but addition will throw
+                            db.Set<T>().Add(newItem);
+                        }
                     }
+                    db.SaveChanges();
+                    dbTransaction.Commit();
+                } catch (Exception) {
+                    dbTransaction.Rollback();
                 }
             }
         }
 
 
         /// <summary>
-        /// 
+        /// Soft-delete
         /// </summary>
-        [Obsolete("Try to avoid data mutation")]
-        public void Delete<T>(T item) where T : IDataObject, new() {
+        public void Delete<T>(T item) where T : class, IDataObject, new() {
             Delete(item.ItemAsList());
         }
 
         /// <summary>
-        /// 
+        /// Soft-delete
         /// </summary>
-        [Obsolete("Try to avoid data mutation")]
-        public void Delete<T>(List<T> items) where T : IDataObject, new() {
+        public void Delete<T>(List<T> items) where T : class, IDataObject, new() {
             if (items == null) throw new ArgumentNullException("items");
             var length = items.Count;
             if (length == 0) return;
@@ -265,62 +244,75 @@ namespace Ractor {
 
             if (isDistributed) {
                 var baskets = items.ToLookup(i => i.Id.Bucket()).ToList();
-                var hasErrors = false;
-
-                var result = baskets
+                baskets
                     .AsParallel()
                     .WithDegreeOfParallelism(baskets.Count())
                     .WithExecutionMode(ParallelExecutionMode.ForceParallelism)
-                    .Select(lu => {
-                        using (var db = DbFactory.OpenDbConnection(lu.Key.ToString(CultureInfo.InvariantCulture)))
-                        using (var trans = db.OpenTransaction()) {
-                            try {
-                                foreach (var ddo in lu) {
-                                    var guid = ddo.Id;
-                                    db.Delete<T>(x => ((IDistributedDataObject)x).Id == guid); // TODO unit test that casting works here
-                                }
-                                //db.DeleteAll(basket);
-                                trans.Commit(); // 
-                            } catch {
-                                Trace.TraceError("Delete error on shard " + lu.Key);
-                                trans.Rollback();
-                                hasErrors = true;
+                    .ForAll(lu => {
+                        using (var db = GetContext(lu.Key)) {
+                            foreach (var item in lu) {
+                                item.IsActive = false;
+                                item.PreviousId = default(Guid); // Zero guid
+                                db.Set<T>().Attach(item);
+                                db.Entry(item).State = EntityState.Modified;
+                                db.Entry(item).Property(x => x.IsActive).IsModified = true;
+                                db.Entry(item).Property(x => x.PreviousId).IsModified = true;
                             }
+                            db.SaveChanges();
                         }
-                        return lu.ToList();
-                    }).SelectMany(x => x).ToList();
-
-                if (hasErrors) throw new DataException("Could not delete data");
-                // ReSharper disable once RedundantAssignment
-                items = result;
+                    });
             } else {
-                using (var db = DbFactory.OpenDbConnection())
-                using (var trans = db.OpenTransaction()) {
-                    try {
-                        db.Delete(items);
-                        trans.Commit();
-                    } catch {
-                        trans.Rollback();
-                        throw;
+                using (var db = GetContext()) {
+                    foreach (var item in items) {
+                        item.IsActive = false;
+                        item.PreviousId = default(Guid); // Zero guid
+                        db.Set<T>().Attach(item);
+                        db.Entry(item).State = EntityState.Modified;
+                        db.Entry(item).Property(x => x.IsActive).IsModified = true;
+                        db.Entry(item).Property(x => x.PreviousId).IsModified = true;
                     }
+                    db.SaveChanges();
                 }
             }
         }
 
-        public List<T> Select<T>(Expression<Func<T, bool>> predicate = null) where T : IDataObject, new() {
+        /// <summary>
+        /// 
+        /// </summary>
+        public List<T> Select<T>(Expression<Func<T, bool>> predicate = null) where T : class, IDataObject, new() {
 
-            return QueryOperation<T, List<T>>(db => predicate == null ? db.Select<T>() : db.Select(predicate), result => result.SelectMany(x => x).ToList());
+            return Query<T, List<T>>(db => (predicate == null ? db : db.Where(predicate)).ToList(), result => result.SelectMany(x => x).ToList());
         }
 
-
-        public long Count<T>() where T : IDataObject, new() {
-            return QueryOperation<T, long>(db => db.Count<T>(),
-                result => result.Aggregate(0L, (acc, i) => acc + i));
+        // TODO simplify for single id and add private method to check for inactive state
+        /// <summary>
+        /// 
+        /// </summary>
+        public T GetById<T>(Guid guid) where T : class, IDataObject, new() {
+            return GetByIds<T>(guid.ItemAsList()).SingleOrDefault();
         }
 
-        // TODO add aggregation Func
-        // TODO this is SS specific, should be private but convenient to have it for now
-        private TR QueryOperation<T, TR>(Func<IDbConnection, TR> operation, Func<List<TR>, TR> aggregation = null, List<ushort> shards = null) where T : IDataObject, new() {
+        /// <summary>
+        /// 
+        /// </summary>
+        public List<T> GetByIds<T>(List<Guid> guids) where T : class, IDataObject, new() {
+            return Query<T, List<T>>(db => db.Where(t => guids.Contains(t.Id)).ToList(), result => result.SelectMany(x => x).ToList());
+        }
+
+        /// <summary>
+        /// 
+        /// </summary>
+        public long Count<T>() where T : class, IDataObject, new() {
+            return Query<T, long>(db => db.Count(),
+                result => result.Sum());
+        }
+
+        /// <summary>
+        ///  
+        /// </summary>
+        public TR Query<T, TR>(Func<IQueryable<T>, TR> query,
+            Func<List<TR>, TR> aggregation, IEnumerable<byte> shards = null)
+            where T : class, IDataObject, new() {
 
             var isDistributed = typeof(IDistributedDataObject).IsAssignableFrom(typeof(T));
 
@@ -331,80 +323,47 @@ namespace Ractor {
 
                 var result = luShards
                     .AsParallel()
-                    .WithDegreeOfParallelism(Math.Min(_shards.Count, 64))
-                    .WithExecutionMode(ParallelExecutionMode.ForceParallelism)
-                    .Select(dbName => {
-                        using (var db = DbFactory.OpenDbConnection(dbName.Key.ToString(CultureInfo.InvariantCulture))) {
-                            return operation(db);
-                        }
-                    }).ToList();
-                if (aggregation == null) throw new ApplicationException("No aggregation function for distributed data objects");
-                var flatResult = aggregation(result);
-                return flatResult;
-            }
-
-            // TODO this doesn't feel right
-            if (aggregation != null) throw new ApplicationException("Aggregation function is not expected");
-            if (shards != null) throw new ApplicationException("Shards parameter is not expected");
-
-
-            using (var db = DbFactory.OpenDbConnection()) {
-                return operation(db);
-            }
-        }
-
-
-        public List<T> Select<T>(string sqlFilter, params object[] filterParams) where T : IDataObject, new() {
-            var isDistributed = typeof(IDistributedDataObject).IsAssignableFrom(typeof(T));
-
-            if (isDistributed) {
-                var result = _shards
-                    .AsParallel()
                     .WithDegreeOfParallelism(_shards.Count)
                     .WithExecutionMode(ParallelExecutionMode.ForceParallelism)
                     .Select(dbName => {
-                        using (var db = DbFactory.OpenDbConnection(dbName.Key.ToString(CultureInfo.InvariantCulture))) {
-                            return db.Select<T>(sqlFilter, filterParams);
+                        using (var db = GetContext(dbName.Key)) {
+                            return query(db.Set<T>().Where(x => x.IsActive));
                         }
                     }).ToList();
-
-                var flatResult = result.SelectMany(x => x).ToList();
-                return flatResult;
+                return aggregation(result);
             }
-
-            using (var db = DbFactory.OpenDbConnection()) {
-                return db.Select<T>(sqlFilter, filterParams);
+            using (var db = GetContext()) {
+                return aggregation(query(db.Set<T>().Where(x => x.IsActive)).ItemAsList());
             }
         }
 
 
-        /// <summary>
-        /// 
-        /// </summary>
-        public void ExecuteSql(string sql, bool distributed = false) {
-            if (_readOnlyShards.Count > 0) throw new ReadOnlyException("Cannot execute SQL with read-only shards!");
+        // Method could be desctructive, cannot reply on DBMS permissions only
+        // That is why soft-delete/update and no public destructive methods
+        //private void ExecuteSql(string sql, bool distributed = false) {
+        //    if (_readOnlyShards.Count > 0) throw new ReadOnlyException("Cannot execute SQL with read-only shards!");
 
-            if (distributed) {
-                _shards
-                    .AsParallel()
-                    .WithDegreeOfParallelism(_shards.Count)
-                    .WithExecutionMode(ParallelExecutionMode.ForceParallelism)
-                    .Each(dbName => {
-                        using (var db = DbFactory.OpenDbConnection(dbName.Key.ToString(CultureInfo.InvariantCulture))) {
-                            db.ExecuteSql(sql);
-                        }
-                    });
-                return;
-            }
+        //    if (distributed) {
+        //        _shards
+        //            .AsParallel()
+        //            .WithDegreeOfParallelism(_shards.Count)
+        //            .WithExecutionMode(ParallelExecutionMode.ForceParallelism)
+        //            .Each(dbName => {
+        //                using (var db = GetContext(dbName.Key)) {
+        //                    db.Database.ExecuteSqlCommand(sql);
+        //                }
+        //            });
+        //        return;
+        //    }
 
-            using (var db = DbFactory.OpenDbConnection()) {
-                db.ExecuteSql(sql);
-            }
+        //    using (var db = GetContext()) {
+        //        db.Database.ExecuteSqlCommand(sql);
+        //    }
 
-        }
+        //}
 
-        internal void CheckOrGenerateGuid<T>(ref T item, bool onlyWritable, DateTime? utcDateTime = null) where T : IDataObject {
-            if (item.Id != default(Guid)) {
+        internal void CheckOrGenerateGuid<T>(ref T item, bool onlyWritable, DateTime? utcDateTime = null, bool replace = false) where T : IDataObject {
+            if (item.Id != default(Guid) && !replace) {
                 var bucket = item.Id.Bucket();
                 if (bucket > NumberOfShards) throw new ApplicationException("Wrong Guid bucket");
                 if (onlyWritable && _readOnlyShards.Contains(bucket)) throw new ReadOnlyException("Could not write to shard: " + bucket);
@@ -415,7 +374,8 @@ namespace Ractor {
                 if (distributed.GetRootGuid() == default(Guid)
                     || distributed.GetRootGuid().Bucket() == 0) {
                     // this will generate guids only for writable buckets
-                    var randomWritableBucket = _writableShards[(byte)(new Random()).Next(0, _writableShards.Count)]; // no '-1', maxValue is exlusive
+                    var randomWritableBucket =
+                        _writableShards[(byte)(new Random()).Next(0, _writableShards.Count)]; // no '-1', maxValue is exlusive
                     item.Id = GuidGenerator.NewBucketGuid(randomWritableBucket, _guidType, utcDateTime);
                 } else {
                     var bucket = distributed.GetRootGuid().Bucket();
@@ -430,41 +390,11 @@ namespace Ractor {
         }
 
         /// <summary>
-        /// Generate new Guid for an item if Guid was not set, or return existing.
+        /// Generate new Guid for an item if Guid was not set, or keep existing.
         /// </summary>
-        public void GenerateGuid<T>(ref T item, DateTime? utcDateTime = null) where T : IDataObject {
-            CheckOrGenerateGuid(ref item, false, utcDateTime);
+        public void GenerateGuid<T>(ref T item, DateTime? utcDateTime = null, bool replace = false) where T : IDataObject {
+            CheckOrGenerateGuid(ref item, false, utcDateTime, replace);
         }
-
-
-
-        public List<T> GetByIds<T>(List<Guid> guids) where T : IDataObject, new() {
-            var isDistributed = typeof(IDistributedDataObject).IsAssignableFrom(typeof(T));
-
-            if (isDistributed) {
-                var baskets = guids.ToLookup(i => i.Bucket()).ToList();
-                var result = baskets
-                    .AsParallel()
-                    .WithDegreeOfParallelism(baskets.Count())
-                    .WithExecutionMode(ParallelExecutionMode.ForceParallelism)
-                    .Select(lu => {
-                        var shardedGuids = lu.ToList();
-                        using (var db = DbFactory.OpenDbConnection(lu.Key.ToString(CultureInfo.InvariantCulture))) {
-                            return db.SelectByIds<T>(shardedGuids);
-                        }
-                    }).SelectMany(x => x).ToList();
-
-                return result;
-            }
-            using (var db = DbFactory.OpenDbConnection()) {
-                return db.SelectByIds<T>(guids);
-            }
-        }
-
-        public T GetById<T>(Guid guid) where T : IDataObject, new() {
-            return GetByIds<T>(guid.ItemAsList()).Single();
-        }
-
 
 
     }
