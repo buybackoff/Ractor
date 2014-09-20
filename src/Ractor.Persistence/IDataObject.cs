@@ -13,7 +13,7 @@ namespace Ractor {
         /// <summary>
         /// Flag for soft-delete
         /// </summary>
-        bool IsActive { get; set; }
+        bool IsDeleted { get; set; }
 
         /// <summary>
         /// Id of the previous version, which is a newly generated timestamped Guid. If this 

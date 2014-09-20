@@ -9,8 +9,8 @@ namespace Ractor {
     /// <summary>
     /// Dynamic context with all IDataObjects loaded into current AppDomain
     /// </summary>
-    internal class DataContext : DbContext {
-
+    internal class DataContext : DbContext { //}, IDbContextFactory<DataContext> {
+        public DataContext() : base() { }
         /// <summary>
         /// 
         /// </summary>
@@ -22,11 +22,13 @@ namespace Ractor {
             // Use IDataObject.Id as primary key
             modelBuilder.Types<IDataObject>().Configure(c => {
                 c.HasKey(e => e.Id);
-                //c.Property(p => p.PreviousId).IsRequired();
             });
             
+
             var entityMethod = typeof(DbModelBuilder).GetMethod("Entity");
-            var types = AppDomain.CurrentDomain.GetAssemblies()
+            var types = AppDomain.CurrentDomain
+                .GetAssemblies()
+                .Except(this.GetType().Assembly.ItemAsList())
                 .SelectMany(s => s.GetTypes())
                 .Where(p =>
                     typeof(IDataObject).IsAssignableFrom(p)
@@ -46,10 +48,14 @@ namespace Ractor {
             var config = new DbMigrationsConfiguration<DataContext> {
                 AutomaticMigrationsEnabled = true,
                 AutomaticMigrationDataLossAllowed = migrationDataLossAllowed,
-                TargetDatabase = new DbConnectionInfo(name)
+                TargetDatabase = new DbConnectionInfo(name),
             };
             var migrator = new DbMigrator(config);
             migrator.Update();
+        }
+
+        public DataContext Create() {
+            return new DataContext("Ractor");
         }
     }
 
@@ -57,6 +63,8 @@ namespace Ractor {
     /// Dynamic context with all IDistributedDataObjects loaded into current AppDomain
     /// </summary>
     internal class DistributedDataContext : DbContext {
+        public DistributedDataContext() : base() {}
+
         /// <summary>
         /// 
         /// </summary>
@@ -69,7 +77,9 @@ namespace Ractor {
             modelBuilder.Types<IDistributedDataObject>().Configure(c => c.HasKey(e => e.Id));
 
             var entityMethod = typeof(DbModelBuilder).GetMethod("Entity");
-            var types = AppDomain.CurrentDomain.GetAssemblies()
+            var types = AppDomain.CurrentDomain
+                .GetAssemblies()
+                .Except(this.GetType().Assembly.ItemAsList())
                 .SelectMany(s => s.GetTypes())
                 .Where(p =>
                     typeof(IDistributedDataObject).IsAssignableFrom(p)
@@ -89,8 +99,8 @@ namespace Ractor {
             var config = new DbMigrationsConfiguration<DistributedDataContext> {
                 AutomaticMigrationsEnabled = true,
                 AutomaticMigrationDataLossAllowed = migrationDataLossAllowed,
-                TargetDatabase = new DbConnectionInfo(name)
-            };
+                TargetDatabase = new DbConnectionInfo(name),
+            }; 
             var migrator = new DbMigrator(config);
             migrator.Update();
         }

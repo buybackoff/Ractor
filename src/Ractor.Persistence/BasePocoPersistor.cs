@@ -200,7 +200,7 @@ namespace Ractor {
                             // object to store as previous in a new record
                             var newPrevious = oldPrevious.DeepClone();
                             CheckOrGenerateGuid(ref newPrevious, true, null, true);
-                            newPrevious.IsActive = false;
+                            newPrevious.IsDeleted = true;
                             // now new previous has new Id and inactive state, with all other props cloned
                             var newPreviousId = newPrevious.Id;
                             newItem.PreviousId = newPreviousId;
@@ -251,11 +251,11 @@ namespace Ractor {
                     .ForAll(lu => {
                         using (var db = GetContext(lu.Key)) {
                             foreach (var item in lu) {
-                                item.IsActive = false;
+                                item.IsDeleted = true;
                                 item.PreviousId = default(Guid); // Zero guid
                                 db.Set<T>().Attach(item);
                                 db.Entry(item).State = EntityState.Modified;
-                                db.Entry(item).Property(x => x.IsActive).IsModified = true;
+                                db.Entry(item).Property(x => x.IsDeleted).IsModified = true;
                                 db.Entry(item).Property(x => x.PreviousId).IsModified = true;
                             }
                             db.SaveChanges();
@@ -264,11 +264,11 @@ namespace Ractor {
             } else {
                 using (var db = GetContext()) {
                     foreach (var item in items) {
-                        item.IsActive = false;
+                        item.IsDeleted = true;
                         item.PreviousId = default(Guid); // Zero guid
                         db.Set<T>().Attach(item);
                         db.Entry(item).State = EntityState.Modified;
-                        db.Entry(item).Property(x => x.IsActive).IsModified = true;
+                        db.Entry(item).Property(x => x.IsDeleted).IsModified = true;
                         db.Entry(item).Property(x => x.PreviousId).IsModified = true;
                     }
                     db.SaveChanges();
@@ -327,13 +327,14 @@ namespace Ractor {
                     .WithExecutionMode(ParallelExecutionMode.ForceParallelism)
                     .Select(dbName => {
                         using (var db = GetContext(dbName.Key)) {
-                            return query(db.Set<T>().Where(x => x.IsActive));
+                            return query(db.Set<T>().Where(x => !x.IsDeleted));
                         }
                     }).ToList();
                 return aggregation(result);
             }
             using (var db = GetContext()) {
-                return aggregation(query(db.Set<T>().Where(x => x.IsActive)).ItemAsList());
+                var result = query(db.Set<T>().Where(x => !x.IsDeleted)).ItemAsList();
+                return aggregation(result);
             }
         }
 

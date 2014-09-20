@@ -1,13 +1,38 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Data.Common;
+using System.Data.Entity;
+using System.Data.Entity.Migrations.History;
 using System.Diagnostics;
 using System.Linq;
 using NUnit.Framework;
 
 namespace Ractor.Persistence.Tests {
+    public class MySqlConfiguration : DbConfiguration {
+        public MySqlConfiguration() {
+            SetHistoryContext(
+                "MySql.Data.MySqlClient", (conn, schema) => new MySqlHistoryContext(conn, schema));
+        }
+    }
+
+    public class MySqlHistoryContext : HistoryContext {
+        public MySqlHistoryContext(
+            DbConnection existingConnection,
+            string defaultSchema)
+            : base(existingConnection, defaultSchema) {
+        }
+
+        protected override void OnModelCreating(DbModelBuilder modelBuilder) {
+            base.OnModelCreating(modelBuilder);
+            
+            modelBuilder.Entity<HistoryRow>().Property(h => h.MigrationId).HasMaxLength(100).IsRequired();
+            modelBuilder.Entity<HistoryRow>().Property(h => h.ContextKey).HasMaxLength(200).IsRequired();
+        }
+    }
 
     public class DataObject : BaseDataObject {
         public string Value { get; set; }
+        public string NewValue { get; set; }
     }
 
     public class RootAsset : BaseDistributedDataObject {
@@ -16,35 +41,21 @@ namespace Ractor.Persistence.Tests {
 
     public class DependentAsset : BaseDistributedDataObject {
         public string Value { get; set; }
-        public Guid RootAssetGuid { get; set; }
+        public Guid RootAssetId { get; set; }
 
         public override Guid GetRootGuid() {
-            return RootAssetGuid;
+            return RootAssetId;
         }
     }
 
     [TestFixture]
     public class PocoPersistorTests {
 
-        public IPocoPersistor Persistor { get; set; }
-
-        public PocoPersistorTests() {
-
-            //var shards = new Dictionary<byte, string> {
-            //    {1, "Server=localhost;Database=fredis.0;Uid=test;Pwd=test"},
-            //    {2, "Server=localhost;Database=fredis.1;Uid=test;Pwd=test"},
-            //    {3, "Server=localhost;Database=fredis.2;Uid=test;Pwd=test"},
-            //    {4, "Server=localhost;Database=fredis.3;Uid=test;Pwd=test"}
-            //    //,{1, "App_Data/1.sqlite"}
-            //};
-            //"Server=localhost;Database=fredis;Uid=test;Pwd=test", shards, null, SequentialGuidType.SequentialAsBinary);
-
-            Persistor = new BasePocoPersistor(guidType: SequentialGuidType.SequentialAsBinary);
-        }
-
-
+        
         [Test]
         public void CouldCreateTableAndCrudDataObject() {
+            var Persistor = new BasePocoPersistor(guidType: SequentialGuidType.SequentialAsBinary);
+
             for (int i = 0; i < 10; i++) {
                 var dobj = new DataObject() {
                     Value = "inserted"
@@ -63,6 +74,7 @@ namespace Ractor.Persistence.Tests {
 
         [Test]
         public void CouldCreateTableAndCrudDistributedDataObject() {
+            var Persistor = new BasePocoPersistor(guidType: SequentialGuidType.SequentialAsBinary);
             for (int i = 0; i < 1; i++) {
 
                 var dobj = new RootAsset() {
@@ -85,6 +97,7 @@ namespace Ractor.Persistence.Tests {
 
         [Test]
         public void CouldCreateTableAndInsertManyDataObject() {
+            var Persistor = new BasePocoPersistor(guidType: SequentialGuidType.SequentialAsBinary);
             var sw = new Stopwatch();
             sw.Start();
             var list = new List<DataObject>();
@@ -108,7 +121,7 @@ namespace Ractor.Persistence.Tests {
 
         [Test]
         public void CouldCreateTableAndInsertManyDistributedDataObject() {
-
+            var Persistor = new BasePocoPersistor(guidType: SequentialGuidType.SequentialAsBinary);
             var sw = new Stopwatch();
             sw.Start();
             var list = new List<RootAsset>();
@@ -126,7 +139,7 @@ namespace Ractor.Persistence.Tests {
 
         [Test]
         public void CouldSelectManyDistributedDataObject() {
-
+            var Persistor = new BasePocoPersistor(guidType: SequentialGuidType.SequentialAsBinary);
             //Persistor.CreateTable<RootAsset>(true);
             //var list = new List<RootAsset>();
             //for (int i = 0; i < 100000; i++) {

@@ -15,7 +15,7 @@ namespace Ractor {
         // remove UNIQUE constraint since it nonsense on Guid column (http://stackoverflow.com/questions/1705008/simple-proof-that-guid-is-not-unique)
         public virtual Guid Id { get; set; }
 
-        public bool IsActive { get; set; }
+        public bool IsDeleted { get; set; }
         public Guid? PreviousId { get; set; }
 
         public DateTimeOffset LastModified() {
