@@ -5,12 +5,12 @@ open System.Runtime.CompilerServices
 [<assembly: AssemblyTitleAttribute("Ractor")>]
 [<assembly: AssemblyProductAttribute("Ractor")>]
 [<assembly: AssemblyDescriptionAttribute("Redis based distributed actors + Dead simple API for distributed POCOs persistence")>]
-[<assembly: AssemblyVersionAttribute("0.2.6")>]
-[<assembly: AssemblyFileVersionAttribute("0.2.6")>]
+[<assembly: AssemblyVersionAttribute("0.3.0")>]
+[<assembly: AssemblyFileVersionAttribute("0.3.0")>]
 [<assembly: InternalsVisibleToAttribute("Ractor.CS.Tests")>]
 [<assembly: InternalsVisibleToAttribute("Ractor.Tests")>]
 [<assembly: InternalsVisibleToAttribute("Ractor.Profiler")>]
 do ()
 
 module internal AssemblyVersionInformation =
-    let [<Literal>] Version = "0.2.6"
+    let [<Literal>] Version = "0.3.0"
