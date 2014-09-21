@@ -35,9 +35,9 @@ worker nodes will not affect the system in any way. This setup gives an elastic,
 **Ractor.Persistence** is a collection of APIs for POCOs and blobs persistence and a strongly typed Redis
 client based on excellent [Stackexchange.Redis](https://github.com/StackExchange/StackExchange.Redis) 
 library. The typed Redis client has strong opinion about keys schema inside Redis and uses a concept of
-root/owner objects to store dependent objects/collections. POCO/database persistor base implementation
-wraps around ServiceStack.ORMLite, however there is no binary dependency and any ORM could be plugged 
-in. Blob persistor saves large data objects to files or S3.
+root/owner objects to store dependent objects/collections. POCO/database persistor is implemented on top 
+of Entity Framework 6 (with automatic migrations enabled for non-destructive schema changes). 
+Blob persistor saves large data objects to files or S3.
 
 
 Process-oriented programming
@@ -88,7 +88,3 @@ You may obtain a copy of the License at
 
 This software is distributed under the License is distributed on an "AS IS" BASIS,
 WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-
-StackExchange.Redis is licensed separately; see https://github.com/StackExchange/StackExchange.Redis/blob/master/LICENSE.
-ServiceStackV3 is licensed separately; see https://github.com/ServiceStack/ServiceStack/blob/master/license.txt.
-Redis is licensed separately; see http://redis.io/topics/license. 

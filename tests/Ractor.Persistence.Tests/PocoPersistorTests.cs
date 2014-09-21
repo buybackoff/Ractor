@@ -37,10 +37,12 @@ namespace Ractor.Persistence.Tests {
 
     public class RootAsset : BaseDistributedDataObject {
         public string Value { get; set; }
+        public string NewValue { get; set; }
     }
 
     public class DependentAsset : BaseDistributedDataObject {
         public string Value { get; set; }
+        public string NewValue { get; set; }
         public Guid RootAssetId { get; set; }
 
         public override Guid GetRootGuid() {
@@ -54,7 +56,7 @@ namespace Ractor.Persistence.Tests {
         
         [Test]
         public void CouldCreateTableAndCrudDataObject() {
-            var Persistor = new BasePocoPersistor(guidType: SequentialGuidType.SequentialAsBinary);
+            var Persistor = new DatabasePersistor(guidType: SequentialGuidType.SequentialAsBinary);
 
             for (int i = 0; i < 10; i++) {
                 var dobj = new DataObject() {
@@ -74,7 +76,7 @@ namespace Ractor.Persistence.Tests {
 
         [Test]
         public void CouldCreateTableAndCrudDistributedDataObject() {
-            var Persistor = new BasePocoPersistor(guidType: SequentialGuidType.SequentialAsBinary);
+            var Persistor = new DatabasePersistor(guidType: SequentialGuidType.SequentialAsBinary);
             for (int i = 0; i < 1; i++) {
 
                 var dobj = new RootAsset() {
@@ -97,7 +99,7 @@ namespace Ractor.Persistence.Tests {
 
         [Test]
         public void CouldCreateTableAndInsertManyDataObject() {
-            var Persistor = new BasePocoPersistor(guidType: SequentialGuidType.SequentialAsBinary);
+            var Persistor = new DatabasePersistor(guidType: SequentialGuidType.SequentialAsBinary);
             var sw = new Stopwatch();
             sw.Start();
             var list = new List<DataObject>();
@@ -121,7 +123,7 @@ namespace Ractor.Persistence.Tests {
 
         [Test]
         public void CouldCreateTableAndInsertManyDistributedDataObject() {
-            var Persistor = new BasePocoPersistor(guidType: SequentialGuidType.SequentialAsBinary);
+            var Persistor = new DatabasePersistor(guidType: SequentialGuidType.SequentialAsBinary);
             var sw = new Stopwatch();
             sw.Start();
             var list = new List<RootAsset>();
@@ -139,7 +141,7 @@ namespace Ractor.Persistence.Tests {
 
         [Test]
         public void CouldSelectManyDistributedDataObject() {
-            var Persistor = new BasePocoPersistor(guidType: SequentialGuidType.SequentialAsBinary);
+            var Persistor = new DatabasePersistor(guidType: SequentialGuidType.SequentialAsBinary);
             //Persistor.CreateTable<RootAsset>(true);
             //var list = new List<RootAsset>();
             //for (int i = 0; i < 100000; i++) {

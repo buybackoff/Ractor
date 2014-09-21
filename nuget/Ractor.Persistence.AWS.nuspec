@@ -22,6 +22,6 @@
   </metadata>
   <files>
     <file src="..\bin\Ractor.Persistence.AWS.dll" target="lib/net40" />
-    <file src="..\bin\Ractor.Persistence.AWS.pdb" target="lib/net40" />
+    <file src="..\bin\Ractor.Persistence.AWS.xml" target="lib/net40" />
   </files>
 </package>

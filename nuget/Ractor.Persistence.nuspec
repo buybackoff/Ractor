@@ -16,12 +16,14 @@
     <tags>@tags@</tags>
     <dependencies>
       <dependency id="StackExchange.Redis" />
-      <dependency id="ServiceStack.OrmLite.SqlServer" />
+      <dependency id="EntityFramework" />
+      <dependency id="Newtonsoft.Json" />
+      <dependency id="NEST" />
       <dependency id="FSharp.Core.Microsoft.Signed" />
     </dependencies>
   </metadata>
   <files>
-    <file src="..\bin\Ractor.Persistence.dll" target="lib/net40" />
-    <file src="..\bin\Ractor.Persistence.pdb" target="lib/net40" />
+    <file src="..\bin\Ractor.Persistence.dll" target="lib/net45" />
+    <file src="..\bin\Ractor.Persistence.xml" target="lib/net45" />
   </files>
 </package>

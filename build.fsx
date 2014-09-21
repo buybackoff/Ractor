@@ -64,9 +64,8 @@ let summaryPersistence = "Ractor.Persistence is a collection of APIs for POCOs a
 client based on excellent Stackexchange.Redis library."
 let descriptionPersistence = summaryPersistence + """
 The typed Redis client has strong opinion about keys schema inside Redis and uses a 
-concept of root/owner objects to store dependent objects/collections. POCO/database 
-persistor base implementation wraps around ServiceStack.ORMLite, however there is no 
-binary dependency and any ORM could be plugged in. Blob persistor saves large data 
+concept of root/owner objects to store dependent objects/collections. POCO/database persistor is implemented on top 
+of Entity Framework 6 (with automatic migrations enabled for non-destructive schema changes). Blob persistor saves large data 
 objects to files or S3."""
 let tagsPersistence = "F# .NET fsharp redis akka distributed JVM interop persistence DB database shards"
 

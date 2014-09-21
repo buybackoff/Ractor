@@ -9,7 +9,7 @@ namespace Ractor {
     /// <summary>
     /// Base implementation of IPocoPersistor using Entity Framework 6
     /// </summary>
-    public class BasePocoPersistor : IPocoPersistor {
+    public class DatabasePersistor : IPocoPersistor {
         private readonly string _connectionName;
         private readonly SequentialGuidType _guidType;
         private readonly Dictionary<byte, string> _shards = new Dictionary<byte, string>();
@@ -26,7 +26,7 @@ namespace Ractor {
         /// <param name="guidType">Use AtEnd only for MS SQL Server, for MySQL and others DBMS without 
         /// native GUID types use binary</param>
         /// <param name="migrationDataLossAllowed"></param>
-        public BasePocoPersistor(string connectionName = "Ractor",
+        public DatabasePersistor(string connectionName = "Ractor",
             IEnumerable<byte> readOnlyShards = null,
             SequentialGuidType guidType = SequentialGuidType.SequentialAsBinary,
             bool migrationDataLossAllowed = false) {

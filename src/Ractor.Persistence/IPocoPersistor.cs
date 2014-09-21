@@ -21,33 +21,21 @@ namespace Ractor {
 
 
         /// <summary>
-        /// Obsolete warning is a reminder to re-design database as an immutable value
-        /// Updates and deletes should never happen (store current state snapshots in cache, not in a DB)
-        /// http://www.infoq.com/presentations/Datomic-Database-Value slide at 28:10
+        /// 
         /// </summary>
-        [Obsolete]
         void Update<T>(T item) where T : class, IDataObject, new();
         /// <summary>
-        /// Obsolete warning is a reminder to re-design database as an immutable value
-        /// Updates and deletes should never happen (store current state snapshots in cache, not in a DB)
-        /// http://www.infoq.com/presentations/Datomic-Database-Value slide at 28:10
+        /// 
         /// </summary>
-        [Obsolete]
         void Update<T>(List<T> items) where T : class, IDataObject, new();
 
         /// <summary>
-        /// Obsolete warning is a reminder to re-design database as an immutable value
-        /// Updates and deletes should never happen (store current state snapshots in cache, not in a DB)
-        /// http://www.infoq.com/presentations/Datomic-Database-Value slide at 28:10
+        /// 
         /// </summary>
-        [Obsolete]
         void Delete<T>(T item) where T : class, IDataObject, new();
         /// <summary>
-        /// Obsolete warning is a reminder to re-design database as an immutable value
-        /// Updates and deletes should never happen (store current state snapshots in cache, not in a DB)
-        /// http://www.infoq.com/presentations/Datomic-Database-Value slide at 28:10
+        /// 
         /// </summary>
-        [Obsolete]
         void Delete<T>(List<T> items) where T : class, IDataObject, new();
 
         // TODO Select() for select all
@@ -58,7 +46,7 @@ namespace Ractor {
         List<T> Select<T>(Expression<Func<T, bool>> predicate = null) where T : class, IDataObject, new();
 
         /// <summary>
-        /// Generate new Guid for an item if Guid was not set, or return existing.
+        /// Generate new Guid for an item if Guid was not set, or keep existing.
         /// </summary>
         void GenerateGuid<T>(ref T item, DateTime? utcDateTime = null, bool replace = false) where T : IDataObject;
 

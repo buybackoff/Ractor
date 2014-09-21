@@ -84,7 +84,7 @@
     <Compile Include="BaseBlobPersistor.cs" />
     <Compile Include="BaseDataObject.cs" />
     <Compile Include="BaseDistributedDataObject.cs" />
-    <Compile Include="BasePocoPersistor.cs" />
+    <Compile Include="DatabasePersistor.cs" />
     <Compile Include="CacheContractAttribute.cs">
       <DependentUpon>Attributes.cs</DependentUpon>
     </Compile>
@@ -139,7 +139,6 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="app.config" />
-    <None Include="EF6.md" />
     <None Include="packages.config" />
     <Compile Include="Redis.Commands.cs">
       <DependentUpon>Redis.cs</DependentUpon>

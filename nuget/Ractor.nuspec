@@ -21,6 +21,6 @@
   </metadata>
   <files>
     <file src="..\bin\Ractor.dll" target="lib/net40" />
-    <file src="..\bin\Ractor.pdb" target="lib/net40" />
+    <file src="..\bin\Ractor.xml" target="lib/net40" />
   </files>
 </package>

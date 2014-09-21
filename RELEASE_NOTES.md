@@ -1,3 +1,13 @@
+#### 0.3.0 - August 21 2014
+* Use Entity Framework 6 with dynamic contexts and **automatic migrations** 
+for non-destructive schema changes
+* Use Entity Framework 6 for CRUD operations
+* Soft-delete and soft-update, no destructive public methods on persistor
+* Remove all ServiceStack dependencies
+
+TODO
+Add custom migrations as described [here](http://romiller.com/2013/02/15/extending-and-customizing-code-first-models-part-2-of-2/).
+
 #### 0.2.6 - August 21 2014
 * Fixed resultId naming bug when the same actor 'x' runs like: 
 `(x.ParallelWith(x)).ContinueWith(x.ParallelWith(x))` 
