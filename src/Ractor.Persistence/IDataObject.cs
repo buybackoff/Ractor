@@ -1,10 +1,19 @@
 ﻿using System;
 
 namespace Ractor {
+
+    /// <summary>
+    /// Marker interface for EF context automigration
+    /// </summary>
+    public interface IData
+    {
+
+    }
+
     /// <summary>
     /// Structured data objects stored in RDBMSs or Redis schema with separate fields and foreign keys
     /// </summary>
-    public interface IDataObject {
+    public interface IDataObject : IData {
         /// <summary>
         /// Code-generated unique ID. For distributed objects it contains shard id.
         /// </summary>

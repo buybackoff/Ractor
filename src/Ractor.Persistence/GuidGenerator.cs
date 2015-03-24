@@ -72,7 +72,7 @@ namespace Ractor {
         }
         
         internal static byte[] GuidSequentialArray(byte bucket, SequentialGuidType guidType, DateTime? utcDateTime = null) {
-            if (bucket > 63) throw new ArgumentOutOfRangeException("bucket", "Bucket is too large! 64 buckets ought to be enough for anybody!");
+            //if (bucket > 63) throw new ArgumentOutOfRangeException("bucket", "Bucket is too large! 64 buckets ought to be enough for anybody!");
             
             var bytes = new byte[16];
             Rng.GetBytes(bytes);

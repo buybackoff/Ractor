@@ -7,9 +7,9 @@ using System.Linq;
 namespace Ractor {
 
     /// <summary>
-    /// Dynamic context with all IDataObjects loaded into current AppDomain
+    /// Dynamic context with all IData loaded into current AppDomain
     /// </summary>
-    internal class DataContext : DbContext { //}, IDbContextFactory<DataContext> {
+    public class DataContext : DbContext { //}, IDbContextFactory<DataContext> {
         public DataContext() : base() { }
         /// <summary>
         /// 
@@ -31,7 +31,7 @@ namespace Ractor {
                 .Except(this.GetType().Assembly.ItemAsList())
                 .SelectMany(s => s.GetTypes())
                 .Where(p =>
-                    typeof(IDataObject).IsAssignableFrom(p)
+                    typeof(IData).IsAssignableFrom(p)
                     && !typeof(IDistributedDataObject).IsAssignableFrom(p)
                     && p.IsClass);
 
@@ -62,7 +62,7 @@ namespace Ractor {
     /// <summary>
     /// Dynamic context with all IDistributedDataObjects loaded into current AppDomain
     /// </summary>
-    internal class DistributedDataContext : DbContext {
+    public class DistributedDataContext : DbContext {
         public DistributedDataContext() : base() {}
 
         /// <summary>

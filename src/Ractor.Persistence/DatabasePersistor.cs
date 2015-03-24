@@ -9,10 +9,11 @@ namespace Ractor {
     /// <summary>
     /// Base implementation of IPocoPersistor using Entity Framework 6
     /// </summary>
-    public class DatabasePersistor : IPocoPersistor {
+    public class DatabasePersistor
+    {
         private readonly string _connectionName;
         private readonly SequentialGuidType _guidType;
-        private readonly Dictionary<byte, string> _shards = new Dictionary<byte, string>();
+        private readonly Dictionary<byte, string> _shards;
         private readonly HashSet<byte> _readOnlyShards = new HashSet<byte>();
         private List<byte> _writableShards;
         private byte NumberOfShards { get; set; }
@@ -54,7 +55,7 @@ namespace Ractor {
         /// <summary>
         /// Get new DataContext instance
         /// </summary>
-        private DataContext GetContext() {
+        public DataContext GetContext() {
             var ctx = new DataContext(_connectionName);
             ctx.Configuration.AutoDetectChangesEnabled = false;
             ctx.Configuration.ProxyCreationEnabled = false;
@@ -66,7 +67,7 @@ namespace Ractor {
         /// </summary>
         /// <param name="bucket"></param>
         /// <returns></returns>
-        private DistributedDataContext GetContext(byte bucket) {
+        public DistributedDataContext GetContext(byte bucket) {
             var ctx = new DistributedDataContext(_shards[bucket]);
             ctx.Configuration.AutoDetectChangesEnabled = false;
             return ctx;

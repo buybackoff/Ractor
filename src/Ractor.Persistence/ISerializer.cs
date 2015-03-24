@@ -8,7 +8,5 @@ namespace Ractor {
         T Deserialize<T>(byte[] bytes);
         T DeepClone<T>(T value);
     }
-
-
     
 }

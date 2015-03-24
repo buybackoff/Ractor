@@ -7,7 +7,8 @@ namespace Ractor {
     /// <summary>
     /// Persists POCOs that implement IDataObject and are decorated with Ractor attributes
     /// </summary>
-    public interface IPocoPersistor {
+    public interface IPocoPersistor 
+    {
 
         /// <summary>
         /// Insert a new single item of type T and set its primary key
@@ -60,6 +61,15 @@ namespace Ractor {
         /// 
         /// </summary>
         List<T> GetByIds<T>(List<Guid> guids) where T : class, IDataObject, new();
+
+
+        /// <summary>
+        /// Get a new instance of DataContext, which is an EF dynamic context with all IData types that are loaded into current AppDomain
+        /// </summary>
+        DataContext GetContext();
+
+
+        DistributedDataContext GetContext(byte bucket);
 
 
     }

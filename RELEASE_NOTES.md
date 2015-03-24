@@ -1,3 +1,7 @@
+#### 0.3.1 - August 21 2014
+* Make public DataContext, which is an EF dynamic context with all IData types that are loaded into current AppDomain
+* Update NuGet dependencies
+
 #### 0.3.0 - August 21 2014
 * Use Entity Framework 6 with dynamic contexts and **automatic migrations** 
 for non-destructive schema changes
