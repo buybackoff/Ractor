@@ -1,10 +1,13 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations.Schema;
 using System.Data.Common;
 using System.Data.Entity;
 using System.Data.Entity.Migrations.History;
 using System.Diagnostics;
 using System.Linq;
+using System.Runtime.InteropServices;
 using NUnit.Framework;
 
 namespace Ractor.Persistence.Tests {
@@ -27,7 +30,45 @@ namespace Ractor.Persistence.Tests {
             
             modelBuilder.Entity<HistoryRow>().Property(h => h.MigrationId).HasMaxLength(100).IsRequired();
             modelBuilder.Entity<HistoryRow>().Property(h => h.ContextKey).HasMaxLength(200).IsRequired();
+
         }
+    }
+
+    [StructLayout(LayoutKind.Sequential)]
+    public class DataRecord : IData
+    {
+        [Key, Column(Order = 0)]
+        public Int16 Source { get; set; }
+        [Key, Column(Order = 1)] 
+        public Int32 Entity { get; set; }
+        [Key, Column(Order = 2)]
+        public Int64 Relationship { get; set; }
+        [Key, Column(Order = 3)]
+        public Int32 Metric { get; set; }
+        [Key, Column(Order = 4)]
+        public DateTime Period { get; set; }
+        [Key, Column(Order = 5)]
+        public DateTime ObservationTime { get; set; }
+
+        public double Value { get; set; }
+    }
+
+    [StructLayout(LayoutKind.Sequential)]
+    public class TextRecord : IData {
+        [Key, Column(Order = 0)]
+        public Int16 Source { get; set; }
+        [Key, Column(Order = 1)]
+        public Int32 Entity { get; set; }
+        [Key, Column(Order = 2)]
+        public Int64 Relationship { get; set; }
+        [Key, Column(Order = 3)]
+        public Int32 Metric { get; set; }
+        [Key, Column(Order = 4)]
+        public DateTime Period { get; set; }
+        [Key, Column(Order = 5)]
+        public DateTime ObservationTime { get; set; }
+
+        public string Value { get; set; }
     }
 
     public class DataObject : BaseDataObject {
@@ -52,6 +93,30 @@ namespace Ractor.Persistence.Tests {
 
     [TestFixture]
     public class PocoPersistorTests {
+
+        [Test]
+        public void CouldInsertDataRecords(){
+            var Persistor = new DatabasePersistor(guidType: SequentialGuidType.SequentialAsBinary);
+
+            var list = new List<DataRecord>();
+
+
+            for (int i = 0; i < 100000; i++) {
+                var dobj = new DataRecord() {
+                    Source = 0,
+                    Entity = i*10,
+                    Relationship = i*10,
+                    Metric = i/100,
+                    Period = DateTime.Today,
+                    ObservationTime = DateTime.Now,
+                    Value = 123 + ((double)i)/100.0
+                };
+                list.Add(dobj);
+                
+            }
+
+            Persistor.Insert(list);
+        }
 
         
         [Test]

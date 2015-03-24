@@ -6,7 +6,7 @@ using System.Threading;
 namespace Ractor {
 
     /// <summary>
-    /// Bytes layout that affects sorting. With SSDs phisical order shouldn't matter that much,
+    /// Bytes layout that affects sorting. With SSDs physical order shouldn't matter that much,
     /// so default is Binary to save space.
     /// </summary>
     public enum SequentialGuidType : byte {

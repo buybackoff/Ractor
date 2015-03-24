@@ -1,3 +1,7 @@
+#### 0.3.2 - August 21 2014
+* IData as the most basic POCO without any pre-defined property (marker interface).
+
+
 #### 0.3.1 - August 21 2014
 * Make public DataContext, which is an EF dynamic context with all IData types that are loaded into current AppDomain
 * Update NuGet dependencies

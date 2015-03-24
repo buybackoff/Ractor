@@ -9,7 +9,7 @@ namespace Ractor {
     /// <summary>
     /// Base implementation of IPocoPersistor using Entity Framework 6
     /// </summary>
-    public class DatabasePersistor
+    public class DatabasePersistor : IPocoPersistor
     {
         private readonly string _connectionName;
         private readonly SequentialGuidType _guidType;
@@ -101,7 +101,7 @@ namespace Ractor {
         /// <summary>
         /// Insert
         /// </summary>
-        public void Insert<T>(T item) where T : class, IDataObject, new() {
+        public void Insert<T>(T item) where T : class, IData, new() {
             var list = item.ItemAsList();
             Insert(list);
         }
@@ -109,18 +109,27 @@ namespace Ractor {
         /// <summary>
         /// Insert
         /// </summary>
-        public void Insert<T>(List<T> items) where T : class, IDataObject, new() {
+        public void Insert<T>(List<T> items) where T : class, IData, new() {
             if (items == null) throw new ArgumentNullException("items");
             var length = items.Count;
             if (length == 0) return;
 
-            items.ForEach(x => CheckOrGenerateGuid(ref x, true));
+            var isDataObject = typeof(IDataObject).IsAssignableFrom(typeof(T));
+            if (isDataObject)
+            {
+                foreach (var item in items)
+                {
+                    var itemAsDo = item as IDataObject;
+                    CheckOrGenerateGuid(ref itemAsDo, true);
+                }
+            }
+
 
             var isDistributed = typeof(IDistributedDataObject).IsAssignableFrom(typeof(T));
 
             if (isDistributed) {
 
-                var baskets = items.ToLookup(i => i.Id.Bucket()).ToList();
+                var baskets = items.ToLookup(i => (i as IDistributedDataObject).Id.Bucket()).ToList();
                 Exception internalError = null;
 
                 baskets
@@ -313,9 +322,10 @@ namespace Ractor {
         /// </summary>
         public TR Query<T, TR>(Func<IQueryable<T>, TR> query,
             Func<List<TR>, TR> aggregation, IEnumerable<byte> shards = null)
-            where T : class, IDataObject, new() {
+            where T : class, IData, new() {
 
             var isDistributed = typeof(IDistributedDataObject).IsAssignableFrom(typeof(T));
+            var isDataObject = typeof(IDataObject).IsAssignableFrom(typeof(T));
 
             if (isDistributed) {
                 var luShards = shards == null
@@ -328,13 +338,20 @@ namespace Ractor {
                     .WithExecutionMode(ParallelExecutionMode.ForceParallelism)
                     .Select(dbName => {
                         using (var db = GetContext(dbName.Key)) {
-                            return query(db.Set<T>().Where(x => !x.IsDeleted));
+                            return query(db.Set<T>().Where(x => !(x as IDistributedDataObject).IsDeleted));
                         }
                     }).ToList();
                 return aggregation(result);
             }
+            if (isDataObject)
+            {
+                using (var db = GetContext()) {
+                    var result = query(db.Set<T>().Where(x => !(x as IDataObject).IsDeleted)).ItemAsList();
+                    return aggregation(result);
+                }
+            }
             using (var db = GetContext()) {
-                var result = query(db.Set<T>().Where(x => !x.IsDeleted)).ItemAsList();
+                var result = query(db.Set<T>()).ItemAsList();
                 return aggregation(result);
             }
         }

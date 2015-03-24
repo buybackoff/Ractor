@@ -13,12 +13,12 @@ namespace Ractor {
         /// <summary>
         /// Insert a new single item of type T and set its primary key
         /// </summary>
-        void Insert<T>(T item) where T : class, IDataObject, new();
+        void Insert<T>(T item) where T : class, IData, new();
 
         /// <summary>
         /// Insert new items of type T and set their primary/guid keys
         /// </summary>
-        void Insert<T>(List<T> items) where T : class, IDataObject, new();
+        void Insert<T>(List<T> items) where T : class, IData, new();
 
 
         /// <summary>
