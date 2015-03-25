@@ -71,7 +71,7 @@ namespace Ractor.Persistence.Tests {
         public string Value { get; set; }
     }
 
-    public class DataObject : BaseDataObject {
+    public class TestDataObject : BaseDataObject {
         public string Value { get; set; }
         public string NewValue { get; set; }
     }
@@ -124,17 +124,17 @@ namespace Ractor.Persistence.Tests {
             var Persistor = new DatabasePersistor(guidType: SequentialGuidType.SequentialAsBinary);
 
             for (int i = 0; i < 10; i++) {
-                var dobj = new DataObject() {
+                var dobj = new TestDataObject() {
                     Value = "inserted"
                 };
                 Persistor.Insert(dobj);
 
-                var fromDb = Persistor.GetById<DataObject>(dobj.Id);
+                var fromDb = Persistor.GetById<TestDataObject>(dobj.Id);
                 Assert.AreEqual("inserted", fromDb.Value);
 
                 fromDb.Value = "updated";
                 Persistor.Update(fromDb);
-                fromDb = Persistor.GetById<DataObject>(dobj.Id);
+                fromDb = Persistor.GetById<TestDataObject>(dobj.Id);
                 Assert.AreEqual("updated", fromDb.Value);
             }
         }
@@ -167,10 +167,10 @@ namespace Ractor.Persistence.Tests {
             var Persistor = new DatabasePersistor(guidType: SequentialGuidType.SequentialAsBinary);
             var sw = new Stopwatch();
             sw.Start();
-            var list = new List<DataObject>();
+            var list = new List<TestDataObject>();
             for (int i = 0; i < 100000; i++) {
 
-                var dobj = new DataObject() {
+                var dobj = new TestDataObject() {
                     Value = "inserted"
                 };
                 //Persistor.Insert(dobj);

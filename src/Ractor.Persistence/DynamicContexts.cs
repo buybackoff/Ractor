@@ -1,6 +1,8 @@
 ﻿using System;
+using System.ComponentModel.DataAnnotations.Schema;
 using System.Data.Entity;
 using System.Data.Entity.Infrastructure;
+using System.Data.Entity.Infrastructure.Annotations;
 using System.Data.Entity.Migrations;
 using System.Linq;
 
@@ -14,16 +16,20 @@ namespace Ractor {
         /// <summary>
         /// 
         /// </summary>
-        internal DataContext(string name) : base(name) {
+        internal DataContext(string name)
+            : base(name) {
             // TODO move migrations here?
         }
 
         protected override void OnModelCreating(DbModelBuilder modelBuilder) {
-            // Use IDataObject.Id as primary key
+            // Use IDataObject.Guid as primary key
             modelBuilder.Types<IDataObject>().Configure(c => {
                 c.HasKey(e => e.Id);
+                c.Property(p => p.Id)
+                    .HasDatabaseGeneratedOption(DatabaseGeneratedOption.Identity).IsRequired()
+                    .HasColumnAnnotation("Index", new IndexAnnotation(new IndexAttribute("LogicalId")));
             });
-            
+
 
             var entityMethod = typeof(DbModelBuilder).GetMethod("Entity");
             var types = AppDomain.CurrentDomain
@@ -33,7 +39,7 @@ namespace Ractor {
                 .Where(p =>
                     typeof(IData).IsAssignableFrom(p)
                     && !typeof(IDistributedDataObject).IsAssignableFrom(p)
-                    && p.IsClass);
+                    && p.IsClass && !p.IsAbstract);
 
             foreach (var t in types) {
                 entityMethod.MakeGenericMethod(t)
@@ -63,18 +69,25 @@ namespace Ractor {
     /// Dynamic context with all IDistributedDataObjects loaded into current AppDomain
     /// </summary>
     public class DistributedDataContext : DbContext {
-        public DistributedDataContext() : base() {}
+        public DistributedDataContext() : base() { }
 
         /// <summary>
         /// 
         /// </summary>
-        internal DistributedDataContext(string name) : base(name) {
+        internal DistributedDataContext(string name)
+            : base(name) {
             // TODO move migrations here?
         }
 
         protected override void OnModelCreating(DbModelBuilder modelBuilder) {
-            // Use IDistributedDataObject.Id as primary key
-            modelBuilder.Types<IDistributedDataObject>().Configure(c => c.HasKey(e => e.Id));
+            // Use IDistributedDataObject.Guid as primary key
+            modelBuilder.Types<IDistributedDataObject>().Configure(c =>
+            {
+                c.HasKey(e => e.Id);
+                c.Property(p => p.Id)
+                    .HasDatabaseGeneratedOption(DatabaseGeneratedOption.Identity).IsRequired()
+                    .HasColumnAnnotation("Index", new IndexAnnotation(new IndexAttribute("LogicalId")));
+            });
 
             var entityMethod = typeof(DbModelBuilder).GetMethod("Entity");
             var types = AppDomain.CurrentDomain
@@ -83,7 +96,7 @@ namespace Ractor {
                 .SelectMany(s => s.GetTypes())
                 .Where(p =>
                     typeof(IDistributedDataObject).IsAssignableFrom(p)
-                    && p.IsClass);
+                    && p.IsClass && !p.IsAbstract);
 
             foreach (var t in types) {
                 entityMethod.MakeGenericMethod(t)
@@ -100,11 +113,11 @@ namespace Ractor {
                 AutomaticMigrationsEnabled = true,
                 AutomaticMigrationDataLossAllowed = migrationDataLossAllowed,
                 TargetDatabase = new DbConnectionInfo(name),
-            }; 
+            };
             var migrator = new DbMigrator(config);
             migrator.Update();
         }
     }
 
-    
+
 }

@@ -1,3 +1,6 @@
+#### 0.3.3 - March 25 2015
+* Fix F#.Core dep and pub date
+
 #### 0.3.2 - August 21 2014
 * IData as the most basic POCO without any pre-defined property (marker interface).
 

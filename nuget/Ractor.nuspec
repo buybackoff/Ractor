@@ -16,7 +16,7 @@
     <tags>@tags@</tags>
     <dependencies>
       <dependency id="Ractor.Persistence" />
-      <dependency id="FSharp.Core.Microsoft.Signed" />
+      <dependency id="FSharp.Core" />
     </dependencies>
   </metadata>
   <files>

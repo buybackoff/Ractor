@@ -19,7 +19,7 @@
       <dependency id="EntityFramework" />
       <dependency id="Newtonsoft.Json" />
       <dependency id="NEST" />
-      <dependency id="FSharp.Core.Microsoft.Signed" />
+      <dependency id="FSharp.Core" />
     </dependencies>
   </metadata>
   <files>

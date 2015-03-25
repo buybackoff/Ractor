@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Data;
 using System.Data.Entity;
+using System.Diagnostics;
 using System.Linq;
 using System.Linq.Expressions;
 
@@ -55,6 +56,7 @@ namespace Ractor {
         /// <summary>
         /// Get new DataContext instance
         /// </summary>
+        [Obsolete("This will be internal")]
         public DataContext GetContext() {
             var ctx = new DataContext(_connectionName);
             ctx.Configuration.AutoDetectChangesEnabled = false;
@@ -67,9 +69,11 @@ namespace Ractor {
         /// </summary>
         /// <param name="bucket"></param>
         /// <returns></returns>
+        [Obsolete("This will be internal")]
         public DistributedDataContext GetContext(byte bucket) {
             var ctx = new DistributedDataContext(_shards[bucket]);
             ctx.Configuration.AutoDetectChangesEnabled = false;
+            ctx.Configuration.ProxyCreationEnabled = false;
             return ctx;
         }
 
@@ -203,21 +207,23 @@ namespace Ractor {
             using (var dbTransaction = db.Database.BeginTransaction()) {
                 try {
                     foreach (var newItem in items) {
-                        var id = newItem.Id;
+                        var guid = newItem.Id;
                         // previous state, could be cached
-                        var oldPrevious = this.GetById<T>(id); // could be null
-                        if (oldPrevious != null) {
+                        var existingItem = this.GetById<T>(guid); // could be null
+                        if (existingItem != null) {
+
                             // object to store as previous in a new record
-                            var newPrevious = oldPrevious.DeepClone();
+                            var newPrevious = existingItem.DeepClone();
                             CheckOrGenerateGuid(ref newPrevious, true, null, true);
                             newPrevious.IsDeleted = true;
-                            // now new previous has new Id and inactive state, with all other props cloned
+                            // now new previous has new Guid and inactive state, with all other props cloned
                             var newPreviousId = newPrevious.Id;
                             newItem.PreviousId = newPreviousId;
 
-                            // Update oldPrevious with newItem
-                            db.Set<T>().Attach(oldPrevious);
-                            db.Entry(oldPrevious).CurrentValues.SetValues(newItem);
+                            // Update existing with newItem properties
+                            db.Set<T>().Attach(existingItem);
+                            db.Entry(existingItem).CurrentValues.SetValues(newItem);
+
                             db.Set<T>().Add(newPrevious);
                         } else {
                             // here we could deal with deleted (GetByID = null for deleted)
@@ -338,7 +344,7 @@ namespace Ractor {
                     .WithExecutionMode(ParallelExecutionMode.ForceParallelism)
                     .Select(dbName => {
                         using (var db = GetContext(dbName.Key)) {
-                            return query(db.Set<T>().Where(x => !(x as IDistributedDataObject).IsDeleted));
+                            return query(((IQueryable<IDistributedDataObject>)db.Set<T>()).Where(x => !x.IsDeleted).Select(o => (T)o));
                         }
                     }).ToList();
                 return aggregation(result);
@@ -346,7 +352,7 @@ namespace Ractor {
             if (isDataObject)
             {
                 using (var db = GetContext()) {
-                    var result = query(db.Set<T>().Where(x => !(x as IDataObject).IsDeleted)).ItemAsList();
+                    var result = query(((IQueryable<IDataObject>)db.Set<T>()).Where(x => !x.IsDeleted).Select(o => (T)o)).ItemAsList();
                     return aggregation(result);
                 }
             }
