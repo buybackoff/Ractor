@@ -12,12 +12,17 @@ namespace Ractor {
     /// Dynamic context with all IData loaded into current AppDomain
     /// </summary>
     public class DataContext : DbContext { //}, IDbContextFactory<DataContext> {
+
+        // TODO refactor to make it instance
+        public static DbMigrationsConfiguration MigrationsConfiguration { get; set; }
+
         public DataContext() : base() { }
         /// <summary>
         /// 
         /// </summary>
         internal DataContext(string name)
-            : base(name) {
+            : base(name)
+        {
             // TODO move migrations here?
         }
 
@@ -50,12 +55,16 @@ namespace Ractor {
         /// <summary>
         /// Run Automatic migrations
         /// </summary>
-        internal static void UpdateAutoMigrations(string name, bool migrationDataLossAllowed = false) {
-            var config = new DbMigrationsConfiguration<DataContext> {
+        internal static void UpdateAutoMigrations(string name) {
+            DbMigrationsConfiguration config = MigrationsConfiguration ?? new DbMigrationsConfiguration<DataContext> {
                 AutomaticMigrationsEnabled = true,
-                AutomaticMigrationDataLossAllowed = migrationDataLossAllowed,
-                TargetDatabase = new DbConnectionInfo(name),
+                AutomaticMigrationDataLossAllowed = false,
+                //TargetDatabase = new DbConnectionInfo(name),
+
             };
+            Console.WriteLine("Migrator: " + config.GetType().ToString());
+            config.TargetDatabase = new DbConnectionInfo(name);
+            config.
             var migrator = new DbMigrator(config);
             migrator.Update();
         }
@@ -69,6 +78,9 @@ namespace Ractor {
     /// Dynamic context with all IDistributedDataObjects loaded into current AppDomain
     /// </summary>
     public class DistributedDataContext : DbContext {
+
+        public static DbMigrationsConfiguration MigrationsConfiguration { get; set; }
+
         public DistributedDataContext() : base() { }
 
         /// <summary>
@@ -108,10 +120,10 @@ namespace Ractor {
         /// <summary>
         /// Run Automatic migrations
         /// </summary>
-        internal static void UpdateAutoMigrations(string name, bool migrationDataLossAllowed = false) {
-            var config = new DbMigrationsConfiguration<DistributedDataContext> {
+        internal static void UpdateAutoMigrations(string name) {
+            var config = MigrationsConfiguration ?? new DbMigrationsConfiguration<DistributedDataContext> {
                 AutomaticMigrationsEnabled = true,
-                AutomaticMigrationDataLossAllowed = migrationDataLossAllowed,
+                AutomaticMigrationDataLossAllowed = false,
                 TargetDatabase = new DbConnectionInfo(name),
             };
             var migrator = new DbMigrator(config);

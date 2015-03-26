@@ -28,7 +28,7 @@ let main argv =
     let incr = Incrementer()
 
     let limit = 10000
-
+    
     let sw = Stopwatch.StartNew()
     
     let mutable value = 0
