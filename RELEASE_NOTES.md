@@ -1,3 +1,6 @@
+#### 0.3.4 - March 27 2015
+* Update migration loginc (see Persistor tests for MySQL examples)
+
 #### 0.3.3 - March 25 2015
 * Fix F#.Core dep and pub date
 

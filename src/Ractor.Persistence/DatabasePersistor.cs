@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Data;
 using System.Data.Entity;
+using System.Data.Entity.Migrations;
 using System.Diagnostics;
 using System.Linq;
 using System.Linq.Expressions;
@@ -29,13 +30,14 @@ namespace Ractor {
         /// native GUID types use binary</param>
         /// <param name="migrationDataLossAllowed"></param>
         public DatabasePersistor(string connectionName = "Ractor",
+            DbMigrationsConfiguration<DataContext> migrationConfig = null,
             IEnumerable<byte> readOnlyShards = null,
             SequentialGuidType guidType = SequentialGuidType.SequentialAsBinary) {
             // Validate name presence
             _connectionName = Config.DataConnectionName(connectionName);
 
             // TODO delete this line when migrations are tested
-            DataContext.UpdateAutoMigrations(_connectionName);
+            DataContext.UpdateAutoMigrations(_connectionName, migrationConfig);
 
             _guidType = guidType;
             if (readOnlyShards != null) {

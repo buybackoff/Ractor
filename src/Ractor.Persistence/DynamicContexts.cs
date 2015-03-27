@@ -4,6 +4,7 @@ using System.Data.Entity;
 using System.Data.Entity.Infrastructure;
 using System.Data.Entity.Infrastructure.Annotations;
 using System.Data.Entity.Migrations;
+using System.Data.Entity.ModelConfiguration.Conventions;
 using System.Linq;
 
 namespace Ractor {
@@ -13,20 +14,24 @@ namespace Ractor {
     /// </summary>
     public class DataContext : DbContext { //}, IDbContextFactory<DataContext> {
 
-        // TODO refactor to make it instance
-        public static DbMigrationsConfiguration MigrationsConfiguration { get; set; }
+        private string _name;
 
         public DataContext() : base() { }
+
         /// <summary>
         /// 
         /// </summary>
         internal DataContext(string name)
             : base(name)
         {
+            _name = name;
             // TODO move migrations here?
         }
 
         protected override void OnModelCreating(DbModelBuilder modelBuilder) {
+
+            modelBuilder.Conventions.Remove<PluralizingTableNameConvention>();
+
             // Use IDataObject.Guid as primary key
             modelBuilder.Types<IDataObject>().Configure(c => {
                 c.HasKey(e => e.Id);
@@ -34,7 +39,6 @@ namespace Ractor {
                     .HasDatabaseGeneratedOption(DatabaseGeneratedOption.Identity).IsRequired()
                     .HasColumnAnnotation("Index", new IndexAnnotation(new IndexAttribute("LogicalId")));
             });
-
 
             var entityMethod = typeof(DbModelBuilder).GetMethod("Entity");
             var types = AppDomain.CurrentDomain
@@ -55,16 +59,16 @@ namespace Ractor {
         /// <summary>
         /// Run Automatic migrations
         /// </summary>
-        internal static void UpdateAutoMigrations(string name) {
-            DbMigrationsConfiguration config = MigrationsConfiguration ?? new DbMigrationsConfiguration<DataContext> {
+        internal static void UpdateAutoMigrations(string name, DbMigrationsConfiguration<DataContext> migrationConfig) {
+            DbMigrationsConfiguration config = migrationConfig ?? new DbMigrationsConfiguration<DataContext> {
                 AutomaticMigrationsEnabled = true,
                 AutomaticMigrationDataLossAllowed = false,
                 //TargetDatabase = new DbConnectionInfo(name),
 
             };
             Console.WriteLine("Migrator: " + config.GetType().ToString());
+            config.ContextType = typeof (DataContext);
             config.TargetDatabase = new DbConnectionInfo(name);
-            config.
             var migrator = new DbMigrator(config);
             migrator.Update();
         }
@@ -79,6 +83,7 @@ namespace Ractor {
     /// </summary>
     public class DistributedDataContext : DbContext {
 
+        // TODO refactor to make it instance
         public static DbMigrationsConfiguration MigrationsConfiguration { get; set; }
 
         public DistributedDataContext() : base() { }

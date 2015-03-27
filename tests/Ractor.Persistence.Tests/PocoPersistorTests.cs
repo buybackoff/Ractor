@@ -4,17 +4,33 @@ using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 using System.Data.Common;
 using System.Data.Entity;
+using System.Data.Entity.Migrations;
 using System.Data.Entity.Migrations.History;
 using System.Diagnostics;
 using System.Linq;
 using System.Runtime.InteropServices;
+using MySql.Data.Entity;
 using NUnit.Framework;
 
 namespace Ractor.Persistence.Tests {
+    public class MySqlMigrationsConfiguration : DbMigrationsConfiguration<DataContext>
+    {
+        //<Ractor.DataContext>
+        public MySqlMigrationsConfiguration()
+        {
+            this.AutomaticMigrationsEnabled = true;
+            this.AutomaticMigrationDataLossAllowed = true; // NB!!! set to false on live data
+            SetSqlGenerator("MySql.Data.MySqlClient", new MySqlMigrationSqlGenerator());
+                // This will add our MySQLClient as SQL Generator
+            CodeGenerator = new MySqlMigrationCodeGenerator();
+        }
+    }
+
     public class MySqlConfiguration : DbConfiguration {
+
         public MySqlConfiguration() {
-            SetHistoryContext(
-                "MySql.Data.MySqlClient", (conn, schema) => new MySqlHistoryContext(conn, schema));
+            //Database.SetInitializer(new MigrateDatabaseToLatestVersion<DataContext, MySqlMigrationsConfiguration>());
+            SetHistoryContext("MySql.Data.MySqlClient", (conn, schema) => new MySqlHistoryContext(conn, schema));
         }
     }
 
@@ -27,10 +43,8 @@ namespace Ractor.Persistence.Tests {
 
         protected override void OnModelCreating(DbModelBuilder modelBuilder) {
             base.OnModelCreating(modelBuilder);
-            
             modelBuilder.Entity<HistoryRow>().Property(h => h.MigrationId).HasMaxLength(100).IsRequired();
             modelBuilder.Entity<HistoryRow>().Property(h => h.ContextKey).HasMaxLength(200).IsRequired();
-
         }
     }
 
@@ -96,7 +110,7 @@ namespace Ractor.Persistence.Tests {
 
         [Test]
         public void CouldInsertDataRecords(){
-            var Persistor = new DatabasePersistor(guidType: SequentialGuidType.SequentialAsBinary);
+            var Persistor = new DatabasePersistor(migrationConfig: new MySqlMigrationsConfiguration(), guidType: SequentialGuidType.SequentialAsBinary);
 
             var list = new List<DataRecord>();
 
@@ -168,7 +182,7 @@ namespace Ractor.Persistence.Tests {
             var sw = new Stopwatch();
             sw.Start();
             var list = new List<TestDataObject>();
-            for (int i = 0; i < 100000; i++) {
+            for (int i = 0; i < 1000; i++) {
 
                 var dobj = new TestDataObject() {
                     Value = "inserted"
