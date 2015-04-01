@@ -1,7 +1,7 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-# Visual Studio 2013
-VisualStudioVersion = 12.0.30501.0
+# Visual Studio 14
+VisualStudioVersion = 14.0.22609.0
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = ".nuget", ".nuget", "{1F1B4F0F-2998-4D74-865B-9122611C2B14}"
 	ProjectSection(SolutionItems) = preProject
@@ -52,6 +52,8 @@ Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "Profiler", "tests\Profiler\
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Ractor.Persistence.AWS", "src\Ractor.Persistence.AWS\Ractor.Persistence.AWS.csproj", "{A9877785-2F07-405F-AF69-496C1315030C}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Ractor.Persistence.Tests.Postgres", "tests\Ractor.Persistence.Tests.Postgres\Ractor.Persistence.Tests.Postgres.csproj", "{D1FBF36D-D25C-4048-978A-46AC802C5145}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -101,6 +103,12 @@ Global
 		{A9877785-2F07-405F-AF69-496C1315030C}.Release|Any CPU.Build.0 = Release|Any CPU
 		{A9877785-2F07-405F-AF69-496C1315030C}.Signed|Any CPU.ActiveCfg = Release|Any CPU
 		{A9877785-2F07-405F-AF69-496C1315030C}.Signed|Any CPU.Build.0 = Release|Any CPU
+		{D1FBF36D-D25C-4048-978A-46AC802C5145}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{D1FBF36D-D25C-4048-978A-46AC802C5145}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{D1FBF36D-D25C-4048-978A-46AC802C5145}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{D1FBF36D-D25C-4048-978A-46AC802C5145}.Release|Any CPU.Build.0 = Release|Any CPU
+		{D1FBF36D-D25C-4048-978A-46AC802C5145}.Signed|Any CPU.ActiveCfg = Release|Any CPU
+		{D1FBF36D-D25C-4048-978A-46AC802C5145}.Signed|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -112,5 +120,6 @@ Global
 		{3842EBE5-E76E-40DE-A375-905970DD0F30} = {ED8079DD-2B06-4030-9F0F-DC548F98E1C4}
 		{1DE3B85A-3932-4D95-B87A-E6EDF7367D62} = {ED8079DD-2B06-4030-9F0F-DC548F98E1C4}
 		{83AEA85D-E3FC-4E94-94AD-8D1A51EAAEF4} = {ED8079DD-2B06-4030-9F0F-DC548F98E1C4}
+		{D1FBF36D-D25C-4048-978A-46AC802C5145} = {ED8079DD-2B06-4030-9F0F-DC548F98E1C4}
 	EndGlobalSection
 EndGlobal
