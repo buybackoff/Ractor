@@ -31,6 +31,7 @@ namespace Ractor {
         /// <param name="migrationDataLossAllowed"></param>
         public DatabasePersistor(string connectionName = "Ractor",
             DbMigrationsConfiguration<DataContext> migrationConfig = null,
+            DbMigrationsConfiguration<DistributedDataContext> distributedMigrationConfig = null,
             IEnumerable<byte> readOnlyShards = null,
             SequentialGuidType guidType = SequentialGuidType.SequentialAsBinary) {
             // Validate name presence
@@ -52,7 +53,7 @@ namespace Ractor {
                 if (two != 2) throw new ApplicationException("Connection string is not working: " + connectionName);
             }
 
-            CheckShardsAndSetEpoch();
+            CheckShardsAndSetEpoch(distributedMigrationConfig);
         }
 
         /// <summary>
@@ -79,7 +80,7 @@ namespace Ractor {
             return ctx;
         }
 
-        private void CheckShardsAndSetEpoch() {
+        private void CheckShardsAndSetEpoch(DbMigrationsConfiguration<DistributedDataContext> config) {
             var sortedShards = _shards.OrderBy(kvp => kvp.Key).ToList();
             var numberOfShards = sortedShards.Count;
             if (numberOfShards > 254) throw new ArgumentException("Too many shards!");
@@ -96,7 +97,7 @@ namespace Ractor {
                 i++;
             }
             foreach (var key in sortedShards.Select(keyValuePair => keyValuePair.Key)) {
-                DistributedDataContext.UpdateAutoMigrations(_shards[key]);
+                DistributedDataContext.UpdateAutoMigrations(_shards[key], config);
                 using (var ctx = GetContext(key)) {
                     var two = ctx.Database.SqlQuery<int>("SELECT 1+1").SingleOrDefault(); // check DB engine is working
                     if (two != 2) throw new ApplicationException("Shard " + key + " doesn't work");
