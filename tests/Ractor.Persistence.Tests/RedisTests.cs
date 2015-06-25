@@ -22,6 +22,70 @@ namespace Ractor.Persistence.Tests {
         }
 
         [Test]
+        public void TestSortedSetAdd()
+        {
+            var r = GetRedis();
+
+            var root = "testroot";
+            var fullRoot = "String:i:testroot:sets:String";
+
+            var dict = new Dictionary<string, double>();
+
+            for (int i = 0; i < 10; i++)
+            {
+                dict.Add(i.ToString(), (double)i);
+            }
+            var value1 = 10;
+            var result1 = r.SSAdd<string, string>(root, dict);
+            Console.WriteLine("SortedSetAdd1 " + result1);
+            r.Del(fullRoot);
+
+            var value2 = 10;
+            var result2 = r.SSAddAsync<string, string>(root, dict).Result;
+            Console.WriteLine("SortedSetAdd2 " + result2);
+            r.Del(fullRoot);
+
+            var val = "10";
+            var score = 0.0;
+            var result3 = r.SSAdd<string, string>(root, val, score);
+            Console.WriteLine("SortedSetAdd3 " + result3);
+            r.Del(fullRoot);
+
+            var result4 = r.SSAddAsync<string, string>(root, val, score).Result;
+            Console.WriteLine("SortedSetAdd4 " + result4);
+            r.Del(fullRoot);
+
+
+            var value5 = 10;
+            var result5 = r.SSAdd<string>(root, dict);
+            Console.WriteLine("SortedSetAdd5 " + result5);
+            r.Del(root);
+
+            var value6 = 10;
+            var result6 = r.SSAddAsync<string>(root, dict).Result;
+            Console.WriteLine("SortedSetAdd6 " + result6);
+            r.Del(root);
+
+            var result7 = r.SSAdd<string>(root, val, score);
+            Console.WriteLine("SortedSetAdd7 " + result7);
+            r.Del(root);
+
+            var result8 = r.SSAddAsync<string>(root, val, score).Result;
+            Console.WriteLine("SortedSetAdd8 " + result8);
+            r.Del(root);
+
+            Assert.AreEqual(result1, value1);
+            Assert.AreEqual(result2, value2);
+            Assert.True(result3);
+            Assert.True(result4);
+
+            Assert.AreEqual(result5, value5);
+            Assert.AreEqual(result6, value6);
+            Assert.True(result7);
+            Assert.True(result8);
+        }
+
+        [Test]
         public void TestStringSetGet() {
             var r = GetRedis();
 
