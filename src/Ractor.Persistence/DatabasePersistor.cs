@@ -19,7 +19,6 @@ namespace Ractor {
         private readonly HashSet<byte> _readOnlyShards = new HashSet<byte>();
         private List<byte> _writableShards;
         private byte NumberOfShards { get; set; }
-
         /// <summary>
         /// Base implementation of IPocoPersistor using Entity Framework 6
         /// </summary>
@@ -36,7 +35,6 @@ namespace Ractor {
             SequentialGuidType guidType = SequentialGuidType.SequentialAsBinary) {
             // Validate name presence
             _connectionName = Config.DataConnectionName(connectionName);
-
             // TODO delete this line when migrations are tested
             DataContext.UpdateAutoMigrations(_connectionName, migrationConfig);
 

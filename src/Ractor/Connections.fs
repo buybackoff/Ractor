@@ -6,6 +6,8 @@ open System.Threading
 open System.Threading.Tasks
 open Ractor
 
+// TODO move to the persistence project
+
 // TODO System messages
 // TODO tags for conditional execution - start only if some tags in environment are set
 // e.g. AWS tags for crawlers, app servers, front ends - the deployment code should be 

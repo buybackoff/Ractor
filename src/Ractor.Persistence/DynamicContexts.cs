@@ -18,7 +18,9 @@ namespace Ractor
 
 		private string _name;
 
-		public DataContext() : base() { }
+	    public static Action<DbModelBuilder> OnModelCreatingAction { get; set; }
+
+	    public DataContext() : base() { }
 
 		/// <summary>
 		/// 
@@ -27,7 +29,7 @@ namespace Ractor
 			: base(name)
 		{
 			_name = name;
-			// TODO move migrations here?
+		    // TODO move migrations here?
 		}
 
 		protected override void OnModelCreating(DbModelBuilder modelBuilder)
@@ -59,6 +61,11 @@ namespace Ractor
 				entityMethod.MakeGenericMethod(t)
 				  .Invoke(modelBuilder, new object[] { });
 			}
+
+		    if (OnModelCreatingAction != null)
+		    {
+                OnModelCreatingAction(modelBuilder);
+		    }
 		}
 
 		/// <summary>
@@ -95,7 +102,10 @@ namespace Ractor
 		// TODO refactor to make it instance
 		public static DbMigrationsConfiguration MigrationsConfiguration { get; set; }
 
-		public DistributedDataContext() : base() { }
+        public static Action<DbModelBuilder> OnModelCreatingAction { get; set; }
+
+
+        public DistributedDataContext() : base() { }
 
 		/// <summary>
 		/// 
@@ -131,7 +141,12 @@ namespace Ractor
 				entityMethod.MakeGenericMethod(t)
 				  .Invoke(modelBuilder, new object[] { });
 			}
-		}
+
+            if (OnModelCreatingAction != null) {
+                OnModelCreatingAction(modelBuilder);
+            }
+
+        }
 
 
 		/// <summary>

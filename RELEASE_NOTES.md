@@ -1,3 +1,9 @@
+#### 0.3.7 - July 6 2015
+* Inject OnModelCreating action for DataContext as static property
+
+#### 0.3.6 - July 6 2015
+* Inject OnModelCreating action for DataContext
+
 #### 0.3.5 - March 27 2015
 * Update migration config
 
