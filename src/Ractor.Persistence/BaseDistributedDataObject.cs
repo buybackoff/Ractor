@@ -6,7 +6,6 @@ namespace Ractor {
     /// <summary>
     /// Base implementation of IDistributedDataObject
     /// </summary>
-    [DataContract]
     public abstract class BaseDistributedDataObject : BaseDataObject, IDistributedDataObject {
 
         /// <summary>

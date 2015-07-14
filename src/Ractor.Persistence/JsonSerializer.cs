@@ -1,6 +1,8 @@
 ﻿using System.Collections.Generic;
 using System.Text;
 using Newtonsoft.Json;
+using System.IO;
+using System.Runtime.Serialization.Formatters.Binary;
 
 namespace Ractor {
     // TODO how to correctly deal with null? throw here or pass downstream?
@@ -59,8 +61,17 @@ namespace Ractor {
         /// <summary>
         /// 
         /// </summary>
-        public static T DeepClone<T>(this T value){
-            return JsonConvert.DeserializeObject<T>(JsonConvert.SerializeObject(value));
+        public static T DeepClone<T>(this T value)
+        {
+            //using (var ms = new MemoryStream()) {
+            //    var formatter = new BinaryFormatter();
+            //    formatter.Serialize(ms, value);
+            //    ms.Position = 0;
+
+            //    return (T)formatter.Deserialize(ms);
+            //}
+            var json = JsonConvert.SerializeObject(value); //, typeof(T), new JsonSerializerSettings());
+            return JsonConvert.DeserializeObject<T>(json);
         }
     }
 

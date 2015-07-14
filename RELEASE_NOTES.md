@@ -1,3 +1,6 @@
+#### 0.4.0 - July 14 2015
+* Convenient migrations per table.
+
 #### 0.3.9 - July 14 2015
 * Make migrations optional and off by default. 
 TODO need to rework migration stuff, in my usage the lib is turning into 

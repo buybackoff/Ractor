@@ -29,7 +29,7 @@ namespace Ractor {
         /// Guid of the previous version, which is a newly generated timestamped Guid. If this 
         /// property is not null then PreviousGuid contains last modified time
         /// </summary>
-        Guid? PreviousId { get; set; }
+        Guid PreviousId { get; set; }
 
 
         /// <summary>

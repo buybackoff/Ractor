@@ -4,8 +4,11 @@ using System.Data.Entity;
 using System.Data.Entity.Infrastructure;
 using System.Data.Entity.Infrastructure.Annotations;
 using System.Data.Entity.Migrations;
+using System.Data.Entity.ModelConfiguration;
 using System.Data.Entity.ModelConfiguration.Conventions;
+using System.Diagnostics;
 using System.Linq;
+using System.Collections.Generic;
 
 namespace Ractor
 {
@@ -18,7 +21,7 @@ namespace Ractor
 
 		private string _name;
 
-	    public static Action<DbModelBuilder> OnModelCreatingAction { get; set; }
+	    //public static Action<DbModelBuilder> OnModelCreatingAction { get; set; }
 
 	    public DataContext() : base() { }
 
@@ -29,7 +32,6 @@ namespace Ractor
 			: base(name)
 		{
 			_name = name;
-		    // TODO move migrations here?
 		}
 
 		protected override void OnModelCreating(DbModelBuilder modelBuilder)
@@ -46,45 +48,49 @@ namespace Ractor
 					.HasColumnAnnotation("Index", new IndexAnnotation(new IndexAttribute("LogicalId")));
 			});
 
-			var entityMethod = typeof(DbModelBuilder).GetMethod("Entity");
-			var types = AppDomain.CurrentDomain
-				.GetAssemblies()
-				.Except(this.GetType().Assembly.ItemAsList())
-				.SelectMany(s => s.GetTypes())
-				.Where(p =>
-					typeof(IData).IsAssignableFrom(p)
-					&& !typeof(IDistributedDataObject).IsAssignableFrom(p)
-					&& p.IsClass && !p.IsAbstract);
+		    var types = GetDataTypes();
 
-			foreach (var t in types)
+            foreach (var t in types)
 			{
-				entityMethod.MakeGenericMethod(t)
-				  .Invoke(modelBuilder, new object[] { });
+			    modelBuilder.RegisterEntityType(t);
 			}
 
-		    if (OnModelCreatingAction != null)
-		    {
-                OnModelCreatingAction(modelBuilder);
-		    }
+		    //if (OnModelCreatingAction != null)
+		    //{
+      //          OnModelCreatingAction(modelBuilder);
+		    //}
 		}
+
+	    public static List<Type> GetDataTypes()
+	    {
+            return AppDomain.CurrentDomain
+                .GetAssemblies()
+                .Except(typeof(DataContext).Assembly.ItemAsList())
+                .SelectMany(s => s.GetTypes())
+                .Where(p =>
+                    typeof(IData).IsAssignableFrom(p)
+                    && !typeof(IDistributedDataObject).IsAssignableFrom(p)
+                    && p.IsClass && !p.IsAbstract).ToList();
+        }
 
 		/// <summary>
 		/// Run Automatic migrations
 		/// </summary>
-		internal static void UpdateAutoMigrations(string name, DbMigrationsConfiguration<DataContext> migrationConfig)
-		{
-			DbMigrationsConfiguration config = migrationConfig ?? new DbMigrationsConfiguration<DataContext>
-			{
-				AutomaticMigrationsEnabled = true,
-				AutomaticMigrationDataLossAllowed = false,
-				//TargetDatabase = new DbConnectionInfo(name),
+		internal static void UpdateAutoMigrations(string name, DbMigrationsConfiguration migrationConfig) //<DataContext>
+        {
+            var types = GetDataTypes();
+            foreach (var t in types)
+            {
+                var d1 = typeof(SingleTableContext<>);
+                Type[] typeArgs = { t };
+                var makeme = d1.MakeGenericType(typeArgs);
+                object[] args = { name };
+                object o = Activator.CreateInstance(makeme, args);
 
-			};
-			Console.WriteLine("Migrator: " + config.GetType().ToString());
-			config.ContextType = typeof(DataContext);
-			config.TargetDatabase = new DbConnectionInfo(name);
-			var migrator = new DbMigrator(config);
-			migrator.Update();
+                var migrationMethod = makeme.GetMethod("UpdateAutoMigrations");
+                var methods = makeme.GetMethods(); //System.Reflection.BindingFlags.NonPublic);
+                migrationMethod.Invoke(o, new object[] { name, migrationConfig });
+            }
 		}
 
 		public DataContext Create()
@@ -93,17 +99,14 @@ namespace Ractor
 		}
 	}
 
-	/// <summary>
-	/// Dynamic context with all IDistributedDataObjects loaded into current AppDomain
-	/// </summary>
-	public class DistributedDataContext : DbContext
+
+
+    /// <summary>
+    /// Dynamic context with all IDistributedDataObjects loaded into current AppDomain
+    /// </summary>
+    public class DistributedDataContext : DbContext
 	{
-
-		// TODO refactor to make it instance
-		public static DbMigrationsConfiguration MigrationsConfiguration { get; set; }
-
-        public static Action<DbModelBuilder> OnModelCreatingAction { get; set; }
-
+        //public static Action<DbModelBuilder> OnModelCreatingAction { get; set; }
 
         public DistributedDataContext() : base() { }
 
@@ -113,10 +116,19 @@ namespace Ractor
 		internal DistributedDataContext(string name)
 			: base(name)
 		{
-			// TODO move migrations here?
 		}
 
-		protected override void OnModelCreating(DbModelBuilder modelBuilder)
+        public static List<Type> GetDataTypes() {
+            return AppDomain.CurrentDomain
+                .GetAssemblies()
+                .Except(typeof(DistributedDataContext).Assembly.ItemAsList())
+                .SelectMany(s => s.GetTypes())
+                .Where(p =>
+                    typeof(IDistributedDataObject).IsAssignableFrom(p)
+                    && p.IsClass && !p.IsAbstract).ToList();
+        }
+
+        protected override void OnModelCreating(DbModelBuilder modelBuilder)
 		{
 			// Use IDistributedDataObject.Guid as primary key
 			modelBuilder.Types<IDistributedDataObject>().Configure(c =>
@@ -125,49 +137,121 @@ namespace Ractor
 				c.Property(p => p.Id)
 					.HasDatabaseGeneratedOption(DatabaseGeneratedOption.Identity).IsRequired()
 					.HasColumnAnnotation("Index", new IndexAnnotation(new IndexAttribute("LogicalId")));
-			});
+            });
 
-			var entityMethod = typeof(DbModelBuilder).GetMethod("Entity");
-			var types = AppDomain.CurrentDomain
-				.GetAssemblies()
-				.Except(this.GetType().Assembly.ItemAsList())
-				.SelectMany(s => s.GetTypes())
-				.Where(p =>
-					typeof(IDistributedDataObject).IsAssignableFrom(p)
-					&& p.IsClass && !p.IsAbstract);
-
-			foreach (var t in types)
+            var types = GetDataTypes();
+            var entityMethod = typeof(DbModelBuilder).GetMethod("Entity");
+            foreach (var t in types)
 			{
 				entityMethod.MakeGenericMethod(t)
 				  .Invoke(modelBuilder, new object[] { });
 			}
 
-            if (OnModelCreatingAction != null) {
-                OnModelCreatingAction(modelBuilder);
-            }
-
+            //if (OnModelCreatingAction != null) {
+            //    OnModelCreatingAction(modelBuilder);
+            //}
         }
-
 
 		/// <summary>
 		/// Run Automatic migrations
 		/// </summary>
-		internal static void UpdateAutoMigrations(string name, DbMigrationsConfiguration<DistributedDataContext> migrationConfig)
+		internal static void UpdateAutoMigrations(string name, DbMigrationsConfiguration migrationConfig)
 		{
+            var types = GetDataTypes();
+            foreach (var t in types) {
+                var d1 = typeof(SingleTableContext<>);
+                Type[] typeArgs = { t };
+                var makeme = d1.MakeGenericType(typeArgs);
+                object[] args = { name };
+                object o = Activator.CreateInstance(makeme, args);
 
-			DbMigrationsConfiguration config = migrationConfig ?? new DbMigrationsConfiguration<DistributedDataContext>
-			{
-				AutomaticMigrationsEnabled = true,
-				AutomaticMigrationDataLossAllowed = false,
-				//TargetDatabase = new DbConnectionInfo(name),
-			};
-			Console.WriteLine("Migrator: " + config.GetType().ToString());
-			config.ContextType = typeof(DistributedDataContext);
-			config.TargetDatabase = new DbConnectionInfo(name);
-			var migrator = new DbMigrator(config);
-			migrator.Update();
+                var migrationMethod = makeme.GetMethod("UpdateAutoMigrations");
+                var methods = makeme.GetMethods(); //System.Reflection.BindingFlags.NonPublic);
+                migrationMethod.Invoke(o, new object[] { name, migrationConfig });
+            }
 		}
 	}
+
+
+
+    /// <summary>
+    /// Dynamic context with all IData loaded into current AppDomain
+    /// </summary>
+    public class SingleTableContext<T> : DbContext, IDbContextFactory<SingleTableContext<T>> where T : class {
+
+        private string _name;
+        private Type _ty;
+
+        public static Action<EntityTypeConfiguration<T>> OnModelCreatingAction { get; set; }
+
+        public SingleTableContext() : base() {
+            _ty = typeof(T);
+        }
+
+        /// <summary>
+        /// 
+        /// </summary>
+        public SingleTableContext(string name) //, Type ty)
+            : base(name) {
+            _name = name;
+            _ty = typeof(T);
+        }
+
+        protected override void OnModelCreating(DbModelBuilder modelBuilder) {
+            modelBuilder.Conventions.Remove<PluralizingTableNameConvention>();
+            // Use IDataObject.Guid as primary key
+            modelBuilder.Types<IDataObject>().Configure(c => {
+                c.HasKey(e => e.Id);
+                c.Property(p => p.Id)
+                    .HasDatabaseGeneratedOption(DatabaseGeneratedOption.Identity).IsRequired()
+                    .HasColumnAnnotation("Index", new IndexAnnotation(new IndexAttribute("LogicalId")));
+            });
+            // Use IDistributedDataObject.Guid as primary key
+            modelBuilder.Types<IDistributedDataObject>().Configure(c => {
+                c.HasKey(e => e.Id);
+                c.Property(p => p.Id)
+                    .HasDatabaseGeneratedOption(DatabaseGeneratedOption.Identity).IsRequired()
+                    .HasColumnAnnotation("Index", new IndexAnnotation(new IndexAttribute("LogicalId")));
+            });
+
+            //modelBuilder.RegisterEntityType(_ty);
+            //var entityMethod = typeof(DbModelBuilder).GetMethod("Entity");
+
+            var econfig = modelBuilder.Entity<T>();
+            if (OnModelCreatingAction != null) {
+                OnModelCreatingAction(econfig);
+            }
+        }
+
+        /// <summary>
+        /// Run Automatic migrations
+        /// </summary>
+        public void UpdateAutoMigrations(string connectionName, DbMigrationsConfiguration migrationConfig) { // < DataContext >
+            // 
+            if (_ty.TypeInitializer != null)
+            {
+                var _tempType = Activator.CreateInstance<T>();
+                //_ty.TypeInitializer.Invoke(null, null);
+            }
+            DbMigrationsConfiguration config = migrationConfig ?? new DbMigrationsConfiguration //<DataContext>
+            {
+                AutomaticMigrationsEnabled = true,
+                AutomaticMigrationDataLossAllowed = false,
+            };
+            Trace.WriteLine("Migrating "+ _ty.Name + " with migrator config: " + config.GetType().ToString());
+            config.MigrationsAssembly = _ty.Assembly;
+            config.MigrationsNamespace = _ty.Namespace;
+            config.ContextKey = _ty.Name;
+            config.ContextType = this.GetType();
+            config.TargetDatabase = new DbConnectionInfo(connectionName);
+            var migrator = new DbMigrator(config);
+            migrator.Update();
+        }
+
+        public SingleTableContext<T> Create() {
+            return new SingleTableContext<T>();
+        }
+    }
 
 
 }

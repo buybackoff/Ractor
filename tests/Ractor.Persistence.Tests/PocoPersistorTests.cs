@@ -13,7 +13,7 @@ using MySql.Data.Entity;
 using NUnit.Framework;
 
 namespace Ractor.Persistence.Tests {
-    public class MySqlMigrationsConfiguration : DbMigrationsConfiguration<DataContext>
+    public class MySqlMigrationsConfiguration : DbMigrationsConfiguration //<DataContext>
     {
         //<Ractor.DataContext>
         public MySqlMigrationsConfiguration()
@@ -83,16 +83,25 @@ namespace Ractor.Persistence.Tests {
         public DateTime ObservationTime { get; set; }
 
         public string Value { get; set; }
+        public string Field { get; set; }
     }
 
+    [Serializable]
     public class TestDataObject : BaseDataObject {
+        static TestDataObject() {
+            SingleTableContext<TestDataObject>.OnModelCreatingAction = (econfig) => {
+                econfig.Property(tdo => tdo.DateTime).HasPrecision(6);
+            };
+        }
         public string Value { get; set; }
-        public string NewValue { get; set; }
+        public DateTime DateTime { get; set; }
+        public string Field { get; set; }
     }
 
     public class RootAsset : BaseDistributedDataObject {
         public string Value { get; set; }
         public string NewValue { get; set; }
+        
     }
 
     public class DependentAsset : BaseDistributedDataObject {
@@ -109,7 +118,11 @@ namespace Ractor.Persistence.Tests {
     public class PocoPersistorTests {
 
         [Test]
-        public void CouldInsertDataRecords(){
+        public void CouldInsertDataRecords()
+        {
+
+            
+
             var Persistor = new DatabasePersistor(migrationConfig: new MySqlMigrationsConfiguration(), guidType: SequentialGuidType.SequentialAsBinary);
 
             var list = new List<DataRecord>();
@@ -135,11 +148,12 @@ namespace Ractor.Persistence.Tests {
         
         [Test]
         public void CouldCreateTableAndCrudDataObject() {
-            var Persistor = new DatabasePersistor(guidType: SequentialGuidType.SequentialAsBinary);
+            var Persistor = new DatabasePersistor(guidType: SequentialGuidType.SequentialAsString, migrationConfig: new MySqlMigrationsConfiguration());
 
-            for (int i = 0; i < 10; i++) {
+            for (int i = 0; i < 1; i++) {
                 var dobj = new TestDataObject() {
-                    Value = "inserted"
+                    Value = "inserted",
+                    DateTime = DateTime.UtcNow
                 };
                 Persistor.Insert(dobj);
 
@@ -153,28 +167,28 @@ namespace Ractor.Persistence.Tests {
             }
         }
 
-        [Test]
-        public void CouldCreateTableAndCrudDistributedDataObject() {
-            var Persistor = new DatabasePersistor(guidType: SequentialGuidType.SequentialAsBinary);
-            for (int i = 0; i < 1; i++) {
+        //[Test]
+        //public void CouldCreateTableAndCrudDistributedDataObject() {
+        //    var Persistor = new DatabasePersistor(guidType: SequentialGuidType.SequentialAsBinary);
+        //    for (int i = 0; i < 1; i++) {
 
-                var dobj = new RootAsset() {
-                    Value = "inserted"
-                };
+        //        var dobj = new RootAsset() {
+        //            Value = "inserted"
+        //        };
 
-                Persistor.Insert(dobj);
+        //        Persistor.Insert(dobj);
 
-                var fromDb = Persistor.GetById<RootAsset>(dobj.Id);
-                Assert.AreEqual("inserted", fromDb.Value);
+        //        var fromDb = Persistor.GetById<RootAsset>(dobj.Id);
+        //        Assert.AreEqual("inserted", fromDb.Value);
 
-                Console.WriteLine(dobj.Id);
+        //        Console.WriteLine(dobj.Id);
 
-                fromDb.Value = "updated";
-                Persistor.Update(fromDb);
-                fromDb = Persistor.GetById<RootAsset>(dobj.Id);
-                Assert.AreEqual("updated", fromDb.Value);
-            }
-        }
+        //        fromDb.Value = "updated";
+        //        Persistor.Update(fromDb);
+        //        fromDb = Persistor.GetById<RootAsset>(dobj.Id);
+        //        Assert.AreEqual("updated", fromDb.Value);
+        //    }
+        //}
 
         [Test]
         public void CouldCreateTableAndInsertManyDataObject() {
@@ -200,45 +214,45 @@ namespace Ractor.Persistence.Tests {
             for (int i = 0; i < 100; i++) { Console.WriteLine((new Random()).Next(0, 2)); }
         }
 
-        [Test]
-        public void CouldCreateTableAndInsertManyDistributedDataObject() {
-            var Persistor = new DatabasePersistor(guidType: SequentialGuidType.SequentialAsBinary);
-            var sw = new Stopwatch();
-            sw.Start();
-            var list = new List<RootAsset>();
-            for (int i = 0; i < 100000; i++) {
-                var dobj = new RootAsset() {
-                    Value = "inserted"
-                };
-                list.Add(dobj);
-            }
-            Persistor.Insert(list);
-            sw.Stop();
-            Console.WriteLine("Elapsed: " + sw.ElapsedMilliseconds);
-        }
+        //[Test]
+        //public void CouldCreateTableAndInsertManyDistributedDataObject() {
+        //    var Persistor = new DatabasePersistor(guidType: SequentialGuidType.SequentialAsBinary);
+        //    var sw = new Stopwatch();
+        //    sw.Start();
+        //    var list = new List<RootAsset>();
+        //    for (int i = 0; i < 100000; i++) {
+        //        var dobj = new RootAsset() {
+        //            Value = "inserted"
+        //        };
+        //        list.Add(dobj);
+        //    }
+        //    Persistor.Insert(list);
+        //    sw.Stop();
+        //    Console.WriteLine("Elapsed: " + sw.ElapsedMilliseconds);
+        //}
 
 
-        [Test]
-        public void CouldSelectManyDistributedDataObject() {
-            var Persistor = new DatabasePersistor(guidType: SequentialGuidType.SequentialAsBinary);
-            //Persistor.CreateTable<RootAsset>(true);
-            //var list = new List<RootAsset>();
-            //for (int i = 0; i < 100000; i++) {
+        //[Test]
+        //public void CouldSelectManyDistributedDataObject() {
+        //    var Persistor = new DatabasePersistor(guidType: SequentialGuidType.SequentialAsBinary);
+        //    //Persistor.CreateTable<RootAsset>(true);
+        //    //var list = new List<RootAsset>();
+        //    //for (int i = 0; i < 100000; i++) {
 
-            //    var dobj = new RootAsset() {
-            //        Value = "inserted"
-            //    };
-            //    list.Add(dobj);
-            //}
-            //Persistor.Insert(list);
+        //    //    var dobj = new RootAsset() {
+        //    //        Value = "inserted"
+        //    //    };
+        //    //    list.Add(dobj);
+        //    //}
+        //    //Persistor.Insert(list);
 
-            var values = Persistor.Select<RootAsset>().Select(ra => ra.Id).ToList();
-            RootAsset a;
-            foreach (var value in values) {
-                a = Persistor.GetById<RootAsset>(value);
-            }
-            //Persistor.GetByIds<RootAsset>(values);
-        }
+        //    var values = Persistor.Select<RootAsset>().Select(ra => ra.Id).ToList();
+        //    RootAsset a;
+        //    foreach (var value in values) {
+        //        a = Persistor.GetById<RootAsset>(value);
+        //    }
+        //    //Persistor.GetByIds<RootAsset>(values);
+        //}
 
     }
 }

@@ -14,8 +14,8 @@ namespace Ractor {
     public class DatabasePersistor : IPocoPersistor
     {
         private readonly string _connectionName;
-        private readonly DbMigrationsConfiguration<DataContext> _migrationConfig;
-        private readonly DbMigrationsConfiguration<DistributedDataContext> _distributedMigrationConfig;
+        private readonly DbMigrationsConfiguration _migrationConfig; //<DataContext>
+        private readonly DbMigrationsConfiguration _distributedMigrationConfig; //<DistributedDataContext>
         private readonly SequentialGuidType _guidType;
         private readonly Dictionary<byte, string> _shards;
         private readonly HashSet<byte> _readOnlyShards = new HashSet<byte>();
@@ -31,10 +31,10 @@ namespace Ractor {
         /// native GUID types use binary</param>
         /// <param name="migrationDataLossAllowed"></param>
         public DatabasePersistor(string connectionName = "Ractor",
-            DbMigrationsConfiguration<DataContext> migrationConfig = null,
-            DbMigrationsConfiguration<DistributedDataContext> distributedMigrationConfig = null,
+            DbMigrationsConfiguration migrationConfig = null, //<DataContext> 
+            DbMigrationsConfiguration distributedMigrationConfig = null, //<DistributedDataContext>
             IEnumerable<byte> readOnlyShards = null,
-            SequentialGuidType guidType = SequentialGuidType.SequentialAsBinary, bool updateMigrations = false) {
+            SequentialGuidType guidType = SequentialGuidType.SequentialAsBinary, bool updateMigrations = true) {
             // Validate name presence
             _connectionName = Config.DataConnectionName(connectionName);
             // TODO delete this line when migrations are tested
@@ -44,7 +44,7 @@ namespace Ractor {
             }
 
             _migrationConfig = migrationConfig;
-            _distributedMigrationConfig = distributedMigrationConfig;
+            _distributedMigrationConfig = distributedMigrationConfig ?? _migrationConfig;
             _guidType = guidType;
             if (readOnlyShards != null) {
                 foreach (var readOnlyShard in readOnlyShards) { _readOnlyShards.Add(readOnlyShard); }
@@ -58,17 +58,17 @@ namespace Ractor {
                 if (two != 2) throw new ApplicationException("Connection string is not working: " + connectionName);
             }
 
-            CheckShardsAndSetEpoch(distributedMigrationConfig);
+            CheckShardsAndSetEpoch(_distributedMigrationConfig, updateMigrations);
         }
 
-        public void RunAutoMigrations()
-        {
-            DataContext.UpdateAutoMigrations(_connectionName, _migrationConfig);
-        }
+        //public void RunAutoMigrations()
+        //{
+        //    DataContext.UpdateAutoMigrations(_connectionName, _migrationConfig);
+        //}
 
-        public void RunDistributedAutoMigrations() {
-            DataContext.UpdateAutoMigrations(_connectionName, _migrationConfig);
-        }
+        //public void RunDistributedAutoMigrations() {
+        //    DataContext.UpdateAutoMigrations(_connectionName, _migrationConfig);
+        //}
 
         /// <summary>
         /// Get new DataContext instance
@@ -94,7 +94,7 @@ namespace Ractor {
             return ctx;
         }
 
-        private void CheckShardsAndSetEpoch(DbMigrationsConfiguration<DistributedDataContext> config) {
+        private void CheckShardsAndSetEpoch(DbMigrationsConfiguration config, bool updateMigrations) { //<DistributedDataContext>
             var sortedShards = _shards.OrderBy(kvp => kvp.Key).ToList();
             var numberOfShards = sortedShards.Count;
             if (numberOfShards > 254) throw new ArgumentException("Too many shards!");
@@ -111,7 +111,10 @@ namespace Ractor {
                 i++;
             }
             foreach (var key in sortedShards.Select(keyValuePair => keyValuePair.Key)) {
-                DistributedDataContext.UpdateAutoMigrations(_shards[key], config);
+                if (updateMigrations)
+                {
+                    DistributedDataContext.UpdateAutoMigrations(_shards[key], config);
+                }
                 using (var ctx = GetContext(key)) {
                     var two = ctx.Database.SqlQuery<int>("SELECT 1+1").SingleOrDefault(); // check DB engine is working
                     if (two != 2) throw new ApplicationException("Shard " + key + " doesn't work");
@@ -223,34 +226,40 @@ namespace Ractor {
             // TODO which isolation scope?
             using (var dbTransaction = db.Database.BeginTransaction()) {
                 try {
-                    foreach (var newItem in items) {
-                        var guid = newItem.Id;
+                    foreach (var it in items) {
+                        var replaceItem = it;
+                        var guid = replaceItem.Id;
                         // previous state, could be cached
                         var existingItem = this.GetById<T>(guid); // could be null
                         if (existingItem != null) {
 
                             // object to store as previous in a new record
-                            var newPrevious = existingItem.DeepClone();
-                            CheckOrGenerateGuid(ref newPrevious, true, null, true);
-                            newPrevious.IsDeleted = true;
+                            var historyItem = existingItem.DeepClone();
+                            //var newPreviousId = historyItem.Id;
+                            CheckOrGenerateGuid(ref historyItem, true, null, true);
+                            historyItem.IsDeleted = true;
                             // now new previous has new Guid and inactive state, with all other props cloned
-                            var newPreviousId = newPrevious.Id;
-                            newItem.PreviousId = newPreviousId;
+
+                            replaceItem.PreviousId = historyItem.Id;
 
                             // Update existing with newItem properties
                             db.Set<T>().Attach(existingItem);
-                            db.Entry(existingItem).CurrentValues.SetValues(newItem);
-
-                            db.Set<T>().Add(newPrevious);
+                            db.Entry(existingItem).CurrentValues.SetValues(replaceItem);
+                            this.Insert(historyItem);
+                            //db.Set<T>().Attach(historyItem);
+                            //db.Entry(historyItem).State = EntityState.Added;
+                            //db.Set<T>().Add(historyItem);
                         } else {
                             // here we could deal with deleted (GetByID = null for deleted)
                             // but addition will throw
-                            db.Set<T>().Add(newItem);
+                            db.Set<T>().Add(replaceItem);
                         }
                     }
                     db.SaveChanges();
                     dbTransaction.Commit();
-                } catch (Exception) {
+                } catch (Exception e)
+                {
+                    Trace.WriteLine(e.Message);
                     dbTransaction.Rollback();
                 }
             }
@@ -405,14 +414,16 @@ namespace Ractor {
         //}
 
         internal void CheckOrGenerateGuid<T>(ref T item, bool onlyWritable, DateTime? utcDateTime = null, bool replace = false) where T : IDataObject {
+            
+            var distributed = item as IDistributedDataObject;
             if (item.Id != default(Guid) && !replace) {
                 var bucket = item.Id.Bucket();
-                if (bucket > NumberOfShards) throw new ApplicationException("Wrong Guid bucket");
+                if (distributed != null && bucket > NumberOfShards) throw new ApplicationException("Wrong Guid bucket");
                 if (onlyWritable && _readOnlyShards.Contains(bucket)) throw new ReadOnlyException("Could not write to shard: " + bucket);
                 return;
             }
-            var distributed = item as IDistributedDataObject;
             if (distributed != null) {
+                
                 if (distributed.GetRootGuid() == default(Guid)
                     || distributed.GetRootGuid().Bucket() == 0) {
                     // this will generate guids only for writable buckets
