@@ -1,13 +1,11 @@
 ﻿using System;
 using System.Runtime.Serialization;
-using Nest;
 
 namespace Ractor {
     /// <summary>
     /// Base implementation of IDataObject
     /// </summary>
     [DataContract]
-    [ElasticType(IdProperty = "Guid")]
     public abstract class BaseDataObject : IDataObject {
 
         [DataMember]

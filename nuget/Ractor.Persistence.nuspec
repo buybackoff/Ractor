@@ -18,7 +18,6 @@
       <dependency id="StackExchange.Redis" />
       <dependency id="EntityFramework" />
       <dependency id="Newtonsoft.Json" />
-      <dependency id="NEST" />
       <dependency id="FSharp.Core" />
     </dependencies>
   </metadata>

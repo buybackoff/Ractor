@@ -14,6 +14,8 @@ namespace Ractor {
     public class DatabasePersistor : IPocoPersistor
     {
         private readonly string _connectionName;
+        private readonly DbMigrationsConfiguration<DataContext> _migrationConfig;
+        private readonly DbMigrationsConfiguration<DistributedDataContext> _distributedMigrationConfig;
         private readonly SequentialGuidType _guidType;
         private readonly Dictionary<byte, string> _shards;
         private readonly HashSet<byte> _readOnlyShards = new HashSet<byte>();
@@ -32,12 +34,17 @@ namespace Ractor {
             DbMigrationsConfiguration<DataContext> migrationConfig = null,
             DbMigrationsConfiguration<DistributedDataContext> distributedMigrationConfig = null,
             IEnumerable<byte> readOnlyShards = null,
-            SequentialGuidType guidType = SequentialGuidType.SequentialAsBinary) {
+            SequentialGuidType guidType = SequentialGuidType.SequentialAsBinary, bool updateMigrations = false) {
             // Validate name presence
             _connectionName = Config.DataConnectionName(connectionName);
             // TODO delete this line when migrations are tested
-            DataContext.UpdateAutoMigrations(_connectionName, migrationConfig);
+            if (updateMigrations)
+            {
+                DataContext.UpdateAutoMigrations(_connectionName, migrationConfig);
+            }
 
+            _migrationConfig = migrationConfig;
+            _distributedMigrationConfig = distributedMigrationConfig;
             _guidType = guidType;
             if (readOnlyShards != null) {
                 foreach (var readOnlyShard in readOnlyShards) { _readOnlyShards.Add(readOnlyShard); }
@@ -52,6 +59,15 @@ namespace Ractor {
             }
 
             CheckShardsAndSetEpoch(distributedMigrationConfig);
+        }
+
+        public void RunAutoMigrations()
+        {
+            DataContext.UpdateAutoMigrations(_connectionName, _migrationConfig);
+        }
+
+        public void RunDistributedAutoMigrations() {
+            DataContext.UpdateAutoMigrations(_connectionName, _migrationConfig);
         }
 
         /// <summary>

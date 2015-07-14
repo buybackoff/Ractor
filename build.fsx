@@ -147,7 +147,7 @@ Target "NuGet" (fun _ ->
             Summary = summary
             Description = description
             Version = release.NugetVersion
-            ReleaseNotes = String.Join(Environment.NewLine, release.Notes)
+            ReleaseNotes = String.Join(Environment.NewLine, release.Notes |> Seq.take 1)
             Tags = tags
             OutputPath = "bin"
             AccessKey = getBuildParamOrDefault "nugetkey" ""
@@ -162,7 +162,7 @@ Target "NuGet" (fun _ ->
             Summary = summaryPersistence
             Description = descriptionPersistence
             Version = release.NugetVersion
-            ReleaseNotes = String.concat " " release.Notes
+            ReleaseNotes = String.concat " " (release.Notes  |> Seq.take 1)
             Tags = tagsPersistence
             OutputPath = "bin"
             AccessKey = getBuildParamOrDefault "nugetkey" ""
@@ -177,7 +177,7 @@ Target "NuGet" (fun _ ->
             Summary = summaryPersistenceAWS
             Description = descriptionPersistenceAWS
             Version = release.NugetVersion
-            ReleaseNotes = String.concat " " release.Notes
+            ReleaseNotes = String.concat " " (release.Notes  |> Seq.take 1)
             Tags = tagsPersistenceAWS
             OutputPath = "bin"
             AccessKey = getBuildParamOrDefault "nugetkey" ""

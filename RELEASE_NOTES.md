@@ -1,3 +1,12 @@
+#### 0.3.9 - July 14 2015
+* Make migrations optional and off by default. 
+TODO need to rework migration stuff, in my usage the lib is turning into 
+a RAD tool rather than a smart-ass scheme, so different independent context would be useful (e.g. attributes to set context). 
+A single big context is a pain, consider using original EF approach, since R.P doesn't add a lot to RAD now.
+
+#### 0.3.8 - July 6 2015
+* Remove NEST, update dependencies
+
 #### 0.3.7 - July 6 2015
 * Inject OnModelCreating action for DataContext as static property
 
