@@ -9,6 +9,10 @@ namespace Ractor {
     /// </summary>
     public interface IPocoPersistor 
     {
+        /// <summary>
+        /// DB connection name that corresponds to a connection string name in app.config and to Ractor's name argument
+        /// </summary>
+        string ConnectionName { get; }
 
         /// <summary>
         /// Insert a new single item of type T and set its primary key

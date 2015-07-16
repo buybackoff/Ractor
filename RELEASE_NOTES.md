@@ -1,3 +1,6 @@
+#### 0.4.1 - July 15 2015
+* Add connection name to IPocoPersistor interface
+
 #### 0.4.0 - July 14 2015
 * Convenient migrations per table.
 

@@ -13,7 +13,7 @@ namespace Ractor {
     /// </summary>
     public class DatabasePersistor : IPocoPersistor
     {
-        private readonly string _connectionName;
+        public string ConnectionName { get; private set; }
         private readonly DbMigrationsConfiguration _migrationConfig; //<DataContext>
         private readonly DbMigrationsConfiguration _distributedMigrationConfig; //<DistributedDataContext>
         private readonly SequentialGuidType _guidType;
@@ -36,11 +36,11 @@ namespace Ractor {
             IEnumerable<byte> readOnlyShards = null,
             SequentialGuidType guidType = SequentialGuidType.SequentialAsBinary, bool updateMigrations = true) {
             // Validate name presence
-            _connectionName = Config.DataConnectionName(connectionName);
+            ConnectionName = Config.DataConnectionName(connectionName);
             // TODO delete this line when migrations are tested
             if (updateMigrations)
             {
-                DataContext.UpdateAutoMigrations(_connectionName, migrationConfig);
+                DataContext.UpdateAutoMigrations(ConnectionName, migrationConfig);
             }
 
             _migrationConfig = migrationConfig;
@@ -49,7 +49,7 @@ namespace Ractor {
             if (readOnlyShards != null) {
                 foreach (var readOnlyShard in readOnlyShards) { _readOnlyShards.Add(readOnlyShard); }
             }
-            _shards = Config.DistibutedDataConnectionNames(_connectionName).ToDictionary(x => x.Key, y => y.Value);
+            _shards = Config.DistibutedDataConnectionNames(ConnectionName).ToDictionary(x => x.Key, y => y.Value);
             if (_readOnlyShards.Count >= _shards.Count)
                 throw new ArgumentException("Too few writable shards!");
             // check and register shards
@@ -75,7 +75,7 @@ namespace Ractor {
         /// </summary>
         [Obsolete("This will be internal")]
         public DataContext GetContext() {
-            var ctx = new DataContext(_connectionName);
+            var ctx = new DataContext(ConnectionName);
             ctx.Configuration.AutoDetectChangesEnabled = false;
             ctx.Configuration.ProxyCreationEnabled = false;
             return ctx;
