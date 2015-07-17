@@ -53,10 +53,10 @@ namespace Ractor {
             if (_readOnlyShards.Count >= _shards.Count)
                 throw new ArgumentException("Too few writable shards!");
             // check and register shards
-            using (var ctx = GetContext()) {
-                var two = ctx.Database.SqlQuery<int>("SELECT 1+1").SingleOrDefault(); // check DB engine is working
-                if (two != 2) throw new ApplicationException("Connection string is not working: " + connectionName);
-            }
+            //using (var ctx = GetContext()) {
+            //    var two = ctx.Database.SqlQuery<int>("SELECT 1+1").SingleOrDefault(); // check DB engine is working
+            //    if (two != 2) throw new ApplicationException("Connection string is not working: " + connectionName);
+            //}
 
             CheckShardsAndSetEpoch(_distributedMigrationConfig, updateMigrations);
         }
@@ -115,10 +115,10 @@ namespace Ractor {
                 {
                     DistributedDataContext.UpdateAutoMigrations(_shards[key], config);
                 }
-                using (var ctx = GetContext(key)) {
-                    var two = ctx.Database.SqlQuery<int>("SELECT 1+1").SingleOrDefault(); // check DB engine is working
-                    if (two != 2) throw new ApplicationException("Shard " + key + " doesn't work");
-                }
+                //using (var ctx = GetContext(key)) {
+                //    var two = ctx.Database.SqlQuery<int>("SELECT 1+1").SingleOrDefault(); // check DB engine is working
+                //    if (two != 2) throw new ApplicationException("Shard " + key + " doesn't work");
+                //}
             }
         }
 
