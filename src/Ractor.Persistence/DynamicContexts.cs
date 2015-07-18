@@ -71,7 +71,7 @@ namespace Ractor
                 var types = AppDomain.CurrentDomain
                 .GetAssemblies()
                 .Except(typeof(DataContext).Assembly.ItemAsList())
-                .Where(a => !a.CodeBase.Contains("mscorlib.dll"))
+                //.Where(a => !a.CodeBase.Contains("mscorlib.dll"))
                 .SelectMany(s => s.GetTypes())
                 .Where(p =>
                     typeof(IData).IsAssignableFrom(p)
@@ -164,7 +164,7 @@ namespace Ractor
                 var types = AppDomain.CurrentDomain
                     .GetAssemblies()
                     .Except(typeof (DistributedDataContext).Assembly.ItemAsList())
-                    .Where(a => !a.CodeBase.Contains("mscorlib.dll"))
+                    //.Where(a => !a.CodeBase.Contains("mscorlib.dll"))
                     .SelectMany(s => s.GetTypes())
                     .Where(p =>
                         typeof (IDistributedDataObject).IsAssignableFrom(p)
