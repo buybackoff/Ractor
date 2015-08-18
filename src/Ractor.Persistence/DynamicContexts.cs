@@ -11,63 +11,55 @@ using System.Linq;
 using System.Collections.Generic;
 using System.Data.Entity.Validation;
 
-namespace Ractor
-{
+namespace Ractor {
 
-	/// <summary>
-	/// Dynamic context with all IData loaded into current AppDomain
-	/// </summary>
-	public class DataContext : DbContext
-	{ //}, IDbContextFactory<DataContext> {
+    /// <summary>
+    /// Dynamic context with all IData loaded into current AppDomain
+    /// </summary>
+    public class DataContext : DbContext { //}, IDbContextFactory<DataContext> {
 
-		private string _name;
+        private string _name;
 
-	    //public static Action<DbModelBuilder> OnModelCreatingAction { get; set; }
+        //public static Action<DbModelBuilder> OnModelCreatingAction { get; set; }
 
-	    public DataContext() : base() { }
+        public DataContext() : base() { }
 
-		/// <summary>
-		/// 
-		/// </summary>
-		internal DataContext(string name)
-			: base(name)
-		{
-			_name = name;
-		}
+        /// <summary>
+        /// 
+        /// </summary>
+        internal DataContext(string name)
+            : base(name) {
+            _name = name;
+        }
 
-		protected override void OnModelCreating(DbModelBuilder modelBuilder)
-		{
+        protected override void OnModelCreating(DbModelBuilder modelBuilder) {
 
-			modelBuilder.Conventions.Remove<PluralizingTableNameConvention>();
+            modelBuilder.Conventions.Remove<PluralizingTableNameConvention>();
 
-			// Use IDataObject.Guid as primary key
-			modelBuilder.Types<IDataObject>().Configure(c =>
-			{
-				c.HasKey(e => e.Id);
-				c.Property(p => p.Id)
-					.HasDatabaseGeneratedOption(DatabaseGeneratedOption.Identity).IsRequired()
-					.HasColumnAnnotation("Index", new IndexAnnotation(new IndexAttribute("LogicalId")));
-			});
+            // Use IDataObject.Guid as primary key
+            modelBuilder.Types<IDataObject>().Configure(c => {
+                c.HasKey(e => e.Id);
+                c.Property(p => p.Id)
+                    .HasDatabaseGeneratedOption(DatabaseGeneratedOption.Identity).IsRequired()
+                    .HasColumnAnnotation("Index", new IndexAnnotation(new IndexAttribute("LogicalId")));
+            });
 
-		    var types = GetDataTypes();
+            var types = GetDataTypes();
 
-            foreach (var t in types)
-			{
-			    modelBuilder.RegisterEntityType(t);
-			}
+            foreach (var t in types) {
+                modelBuilder.RegisterEntityType(t);
+            }
 
-		    //if (OnModelCreatingAction != null)
-		    //{
-      //          OnModelCreatingAction(modelBuilder);
-		    //}
-		}
+            //if (OnModelCreatingAction != null)
+            //{
+            //          OnModelCreatingAction(modelBuilder);
+            //}
+        }
         private static bool _typesLoaded = false;
         private static Dictionary<string, Type> _types = new Dictionary<string, Type>();
-	    public static List<Type> GetDataTypes()
-	    {
-	        if (!_typesLoaded)
-	        {
-                
+        public static List<Type> GetDataTypes() {
+            if (!_typesLoaded) {
+
                 var types = AppDomain.CurrentDomain
                 .GetAssemblies()
                 .Except(typeof(DataContext).Assembly.ItemAsList())
@@ -78,25 +70,23 @@ namespace Ractor
                     && !typeof(IDistributedDataObject).IsAssignableFrom(p)
                     && p.IsClass && !p.IsAbstract).ToList();
                 foreach (var t in types) {
-                    if (!_types.ContainsKey(t.Name))
-                    {
+                    if (!_types.ContainsKey(t.Name)) {
                         _types.Add(t.Name, t);
                     }
                 }
                 _typesLoaded = true;
             }
 
-	        return _types.Values.ToList();
-	    }
+            return _types.Values.ToList();
+        }
 
-		/// <summary>
-		/// Run Automatic migrations
-		/// </summary>
-		internal static void UpdateAutoMigrations(string name, DbMigrationsConfiguration migrationConfig) //<DataContext>
+        /// <summary>
+        /// Run Automatic migrations
+        /// </summary>
+        internal static void UpdateAutoMigrations(string name, DbMigrationsConfiguration migrationConfig) //<DataContext>
         {
             var types = GetDataTypes();
-            foreach (var t in types)
-            {
+            foreach (var t in types) {
                 var d1 = typeof(SingleTableContext<>);
                 Type[] typeArgs = { t };
                 var makeme = d1.MakeGenericType(typeArgs);
@@ -107,12 +97,11 @@ namespace Ractor
                 var methods = makeme.GetMethods(); //System.Reflection.BindingFlags.NonPublic);
                 migrationMethod.Invoke(o, new object[] { name, migrationConfig });
             }
-		}
+        }
 
-		public DataContext Create()
-		{
-			return new DataContext("Ractor");
-		}
+        public DataContext Create() {
+            return new DataContext("Ractor");
+        }
 
         //http://stackoverflow.com/questions/15820505/dbentityvalidationexception-how-can-i-easily-tell-what-caused-the-error
 
@@ -142,74 +131,64 @@ namespace Ractor
     /// <summary>
     /// Dynamic context with all IDistributedDataObjects loaded into current AppDomain
     /// </summary>
-    public class DistributedDataContext : DbContext
-	{
+    public class DistributedDataContext : DbContext {
         //public static Action<DbModelBuilder> OnModelCreatingAction { get; set; }
 
         public DistributedDataContext() : base() { }
 
-		/// <summary>
-		/// 
-		/// </summary>
-		internal DistributedDataContext(string name)
-			: base(name)
-		{
-		}
+        /// <summary>
+        /// 
+        /// </summary>
+        internal DistributedDataContext(string name)
+            : base(name) {
+        }
 
-        private static bool _typesLoaded = false;
         private static Dictionary<string, Type> _types = new Dictionary<string, Type>();
         public static List<Type> GetDataTypes() {
-            if (!_typesLoaded)
-            {
-                var types = AppDomain.CurrentDomain
-                    .GetAssemblies()
-                    .Except(typeof (DistributedDataContext).Assembly.ItemAsList())
-                    //.Where(a => !a.CodeBase.Contains("mscorlib.dll"))
-                    .SelectMany(s => s.GetTypes())
-                    .Where(p =>
-                        typeof (IDistributedDataObject).IsAssignableFrom(p)
-                        && p.IsClass && !p.IsAbstract).ToList();
+            var types = AppDomain.CurrentDomain
+                .GetAssemblies()
+                .Except(typeof(DistributedDataContext).Assembly.ItemAsList())
+                //.Where(a => !a.CodeBase.Contains("mscorlib.dll"))
+                .SelectMany(s => s.GetTypes())
+                .Where(p =>
+                    typeof(IDistributedDataObject).IsAssignableFrom(p)
+                    && p.IsClass && !p.IsAbstract).ToList();
 
-                foreach (var t in types) {
-                    if (!_types.ContainsKey(t.Name)) {
-                        _types.Add(t.Name, t);
-                    }
+            foreach (var t in types) {
+                if (!_types.ContainsKey(t.Name)) {
+                    _types.Add(t.Name, t);
                 }
-                _typesLoaded = true;
+
             }
 
             return _types.Values.ToList();
         }
 
-        protected override void OnModelCreating(DbModelBuilder modelBuilder)
-		{
-			// Use IDistributedDataObject.Guid as primary key
-			modelBuilder.Types<IDistributedDataObject>().Configure(c =>
-			{
-				c.HasKey(e => e.Id);
-				c.Property(p => p.Id)
-					.HasDatabaseGeneratedOption(DatabaseGeneratedOption.Identity).IsRequired()
-					.HasColumnAnnotation("Index", new IndexAnnotation(new IndexAttribute("LogicalId")));
+        protected override void OnModelCreating(DbModelBuilder modelBuilder) {
+            // Use IDistributedDataObject.Guid as primary key
+            modelBuilder.Types<IDistributedDataObject>().Configure(c => {
+                c.HasKey(e => e.Id);
+                c.Property(p => p.Id)
+                    .HasDatabaseGeneratedOption(DatabaseGeneratedOption.Identity).IsRequired()
+                    .HasColumnAnnotation("Index", new IndexAnnotation(new IndexAttribute("LogicalId")));
             });
 
             var types = GetDataTypes();
             var entityMethod = typeof(DbModelBuilder).GetMethod("Entity");
-            foreach (var t in types)
-			{
-				entityMethod.MakeGenericMethod(t)
-				  .Invoke(modelBuilder, new object[] { });
-			}
+            foreach (var t in types) {
+                entityMethod.MakeGenericMethod(t)
+                  .Invoke(modelBuilder, new object[] { });
+            }
 
             //if (OnModelCreatingAction != null) {
             //    OnModelCreatingAction(modelBuilder);
             //}
         }
 
-		/// <summary>
-		/// Run Automatic migrations
-		/// </summary>
-		internal static void UpdateAutoMigrations(string name, DbMigrationsConfiguration migrationConfig)
-		{
+        /// <summary>
+        /// Run Automatic migrations
+        /// </summary>
+        internal static void UpdateAutoMigrations(string name, DbMigrationsConfiguration migrationConfig) {
             var types = GetDataTypes();
             foreach (var t in types) {
                 var d1 = typeof(SingleTableContext<>);
@@ -222,7 +201,7 @@ namespace Ractor
                 var methods = makeme.GetMethods(); //System.Reflection.BindingFlags.NonPublic);
                 migrationMethod.Invoke(o, new object[] { name, migrationConfig });
             }
-		}
+        }
 
 
         //http://stackoverflow.com/questions/15820505/dbentityvalidationexception-how-can-i-easily-tell-what-caused-the-error
@@ -304,8 +283,7 @@ namespace Ractor
         /// </summary>
         public void UpdateAutoMigrations(string connectionName, DbMigrationsConfiguration migrationConfig) { // < DataContext >
             // 
-            if (_ty.TypeInitializer != null)
-            {
+            if (_ty.TypeInitializer != null) {
                 var _tempType = Activator.CreateInstance<T>();
                 //_ty.TypeInitializer.Invoke(null, null);
             }
@@ -314,7 +292,7 @@ namespace Ractor
                 AutomaticMigrationsEnabled = true,
                 AutomaticMigrationDataLossAllowed = false,
             };
-            Trace.WriteLine("Migrating "+ _ty.Name + " with migrator config: " + config.GetType().ToString());
+            Trace.WriteLine("Migrating " + _ty.Name + " with migrator config: " + config.GetType().ToString());
             config.MigrationsAssembly = _ty.Assembly;
             config.MigrationsNamespace = _ty.Namespace;
             config.ContextKey = _ty.Name;

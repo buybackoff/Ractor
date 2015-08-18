@@ -1,3 +1,7 @@
+#### 0.4.2 - August 18 2015
+* We have to check types on each context construction, otherwise we could miss types that were not yet loaded during
+persistor initialization.
+
 #### 0.4.1 - July 15 2015
 * Add connection name to IPocoPersistor interface
 
