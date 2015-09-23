@@ -58,24 +58,21 @@ namespace Ractor {
         private static bool _typesLoaded = false;
         private static Dictionary<string, Type> _types = new Dictionary<string, Type>();
         public static List<Type> GetDataTypes() {
-            if (!_typesLoaded) {
-
-                var types = AppDomain.CurrentDomain
-                .GetAssemblies()
-                .Except(typeof(DataContext).Assembly.ItemAsList())
-                //.Where(a => !a.CodeBase.Contains("mscorlib.dll"))
-                .SelectMany(s => s.GetTypes())
-                .Where(p =>
-                    typeof(IData).IsAssignableFrom(p)
-                    && !typeof(IDistributedDataObject).IsAssignableFrom(p)
-                    && p.IsClass && !p.IsAbstract).ToList();
-                foreach (var t in types) {
-                    if (!_types.ContainsKey(t.Name)) {
-                        _types.Add(t.Name, t);
-                    }
+            var types = AppDomain.CurrentDomain
+            .GetAssemblies()
+            .Except(typeof(DataContext).Assembly.ItemAsList())
+            //.Where(a => !a.CodeBase.Contains("mscorlib.dll"))
+            .SelectMany(s => s.GetTypes())
+            .Where(p =>
+                typeof(IData).IsAssignableFrom(p)
+                && !typeof(IDistributedDataObject).IsAssignableFrom(p)
+                && p.IsClass && !p.IsAbstract).ToList();
+            foreach (var t in types) {
+                if (!_types.ContainsKey(t.Name)) {
+                    _types.Add(t.Name, t);
                 }
-                _typesLoaded = true;
             }
+            _typesLoaded = true;
 
             return _types.Values.ToList();
         }

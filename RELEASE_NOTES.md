@@ -1,3 +1,6 @@
+#### 0.4.3 - September 23 2015
+* Have to reload types on every context creation. TODO reload on exception in GetContext().
+
 #### 0.4.2 - August 18 2015
 * We have to check types on each context construction, otherwise we could miss types that were not yet loaded during
 persistor initialization.
