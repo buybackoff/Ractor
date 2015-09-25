@@ -1,3 +1,6 @@
+#### 0.4.4 - September 25 2015
+* Just wrap type load into try/catch and ignore proxies and other voodoo stuff.
+
 #### 0.4.3 - September 23 2015
 * Have to reload types on every context creation. TODO reload on exception in GetContext().
 

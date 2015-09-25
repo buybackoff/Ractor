@@ -32,6 +32,7 @@ namespace Ractor {
             _name = name;
         }
 
+
         protected override void OnModelCreating(DbModelBuilder modelBuilder) {
 
             modelBuilder.Conventions.Remove<PluralizingTableNameConvention>();
@@ -58,23 +59,38 @@ namespace Ractor {
         private static bool _typesLoaded = false;
         private static Dictionary<string, Type> _types = new Dictionary<string, Type>();
         public static List<Type> GetDataTypes() {
-            var types = AppDomain.CurrentDomain
-            .GetAssemblies()
-            .Except(typeof(DataContext).Assembly.ItemAsList())
-            //.Where(a => !a.CodeBase.Contains("mscorlib.dll"))
-            .SelectMany(s => s.GetTypes())
-            .Where(p =>
-                typeof(IData).IsAssignableFrom(p)
-                && !typeof(IDistributedDataObject).IsAssignableFrom(p)
-                && p.IsClass && !p.IsAbstract).ToList();
-            foreach (var t in types) {
-                if (!_types.ContainsKey(t.Name)) {
-                    _types.Add(t.Name, t);
+            try {
+                var types = AppDomain.CurrentDomain
+                    .GetAssemblies()
+                    .Except(typeof(DataContext).Assembly.ItemAsList())
+                    //.Where(a => !a.CodeBase.Contains("mscorlib.dll"))
+                    .SelectMany(s => {
+                        try {
+                            return s.GetTypes();
+                        } catch {
+                            return new Type[] { };
+                        }
+                    })
+                    .Where(p => {
+                        try {
+                            return typeof(IData).IsAssignableFrom(p)
+                                   && !typeof(IDistributedDataObject).IsAssignableFrom(p)
+                                   && p.IsClass && !p.IsAbstract;
+                        } catch {
+                            return false;
+                        }
+                    }).ToList();
+                foreach (var t in types) {
+                    if (!_types.ContainsKey(t.Name)) {
+                        _types.Add(t.Name, t);
+                    }
                 }
-            }
-            _typesLoaded = true;
+                _typesLoaded = true;
 
-            return _types.Values.ToList();
+                return _types.Values.ToList();
+            } catch {
+                return new List<Type>();
+            }
         }
 
         /// <summary>
@@ -141,24 +157,38 @@ namespace Ractor {
         }
 
         private static Dictionary<string, Type> _types = new Dictionary<string, Type>();
-        public static List<Type> GetDataTypes() {
-            var types = AppDomain.CurrentDomain
-                .GetAssemblies()
-                .Except(typeof(DistributedDataContext).Assembly.ItemAsList())
-                //.Where(a => !a.CodeBase.Contains("mscorlib.dll"))
-                .SelectMany(s => s.GetTypes())
-                .Where(p =>
-                    typeof(IDistributedDataObject).IsAssignableFrom(p)
-                    && p.IsClass && !p.IsAbstract).ToList();
 
-            foreach (var t in types) {
-                if (!_types.ContainsKey(t.Name)) {
-                    _types.Add(t.Name, t);
+        public static List<Type> GetDataTypes() {
+            try {
+                var types = AppDomain.CurrentDomain
+                    .GetAssemblies()
+                    .Except(typeof(DistributedDataContext).Assembly.ItemAsList())
+                    //.Where(a => !a.CodeBase.Contains("mscorlib.dll"))
+                    .SelectMany(s => {
+                        try {
+                            return s.GetTypes();
+                        } catch {
+                            return new Type[] { };
+                        }
+                    })
+                    .Where(p => {
+                        try {
+                            return typeof(IDistributedDataObject).IsAssignableFrom(p)
+                                   && p.IsClass && !p.IsAbstract;
+                        } catch {
+                            return false;
+                        }
+                    }).ToList();
+                foreach (var t in types) {
+                    if (!_types.ContainsKey(t.Name)) {
+                        _types.Add(t.Name, t);
+                    }
                 }
 
+                return _types.Values.ToList();
+            } catch {
+                return new List<Type>();
             }
-
-            return _types.Values.ToList();
         }
 
         protected override void OnModelCreating(DbModelBuilder modelBuilder) {
