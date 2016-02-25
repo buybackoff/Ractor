@@ -1,3 +1,6 @@
+#### 0.4.5 - February 25 2016
+* Update dependencies.
+
 #### 0.4.4 - September 25 2015
 * Just wrap type load into try/catch and ignore proxies and other voodoo stuff.
 

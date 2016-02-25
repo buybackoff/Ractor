@@ -217,13 +217,15 @@ Target "All" DoNothing
 
 "Clean"
   ==> "RestorePackages"
-  ==> "AssemblyInfo"
-  ==> "Build"
+ // ==> "AssemblyInfo"
+ // ==> "Build"
  // ==> "RunTests"
   ==> "All"
 
-"All" 
-  ==> "NuGet"
+//"All" 
+//  ==> 
+"AssemblyInfo" ==>
+"NuGet"
   ==> "CleanDocs"
   ==> "GenerateDocs"
   ==> "ReleaseDocs"
