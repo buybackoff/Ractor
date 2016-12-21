@@ -1,8 +1,8 @@
 {
-	"version": "0.5.0",
+	"version": "0.5.1",
 	"description": "Ractor.Persistence",
 	"dependencies": {
-		"Ractor.Persistence": "0.5.0",
+		"Ractor.Persistence": "0.5.1",
 		"AWSSDK": "2.3.55.2"
 	},
 	"frameworks": {
@@ -29,7 +29,7 @@
 		"summary": "Redis based distributed actors + Dead simple API for distributed POCOs persistence",
 		"repository": { "url": "https://github.com/buybackoff/Ractor" },
 		"licenseUrl": "http://github.com/buybackoff/Ractor/blob/master/LICENSE.txt",
-		"iconUrl": "https://raw.githubusercontent.com/buybackoff/Ractor.CLR/master/docs/files/img/logo.png",
+		"iconUrl": "https://raw.githubusercontent.com/buybackoff/Ractor/master/docs/files/img/logo.png",
 		"projectUrl": "https://github.com/buybackoff/Ractor",
 		"tags": [
 			"Redis",

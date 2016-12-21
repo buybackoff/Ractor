@@ -1,8 +1,11 @@
 {
 
-	"version": "0.5.0",
+	"version": "0.5.1",
 	"description": "Ractor",
-
+	"dependencies": {
+		"Ractor.Persistence": "0.5.1",
+		"FSharp.Core": "3.1.2.5"
+	},
 	"buildOptions": {
 
 		"emitEntryPoint": false,
@@ -20,10 +23,7 @@
 			]
 		}
 	},
-	"dependencies": {
-		"Ractor.Persistence": "0.5.0",
-		"FSharp.Core": "3.1.2.5"
-	},
+
 	"tools": {
 		"dotnet-compile-fsc": {
 			"version": "1.0.0-preview2-*",
@@ -40,27 +40,24 @@
 				"System.Core": "",
 				"System.Data": "",
 				"System.Data.Linq": "",
-				"System.Numerics": "",
-				
+				"System.Numerics": ""
+
 			}
-		},
+		}
 
 	},
 	"authors": [ "Victor Baybekov" ],
 	"copyright": "Copyright 2016",
 	"packOptions": {
 		"owners": [ "Victor Baybekov" ],
-		"summary": "Series and Panels for Reactive and Exploratory Analysis of Data Streams",
-		"repository": { "url": "https://github.com/Spreads/Spreads" },
-		"licenseUrl": "http://github.com/Spreads/Spreads/blob/master/LICENSE.txt",
-		"iconUrl": "https://raw.githubusercontent.com/Spreads/Spreads.Docs/master/img/ZipN.png",
-		"projectUrl": "https://github.com/Spreads/Spreads",
+		"summary": "Redis based distributed actors + Dead simple API for distributed POCOs persistence",
+		"repository": { "url": "https://github.com/buybackoff/Ractor" },
+		"licenseUrl": "http://github.com/buybackoff/Ractor/blob/master/LICENSE.txt",
+		"iconUrl": "https://raw.githubusercontent.com/buybackoff/Ractor/master/docs/files/img/logo.png",
+		"projectUrl": "https://github.com/buybackoff/Ractor",
 		"tags": [
-			"Spreads",
-			"Data",
-			"Time Series",
-			"Data Frame"
+			"Redis",
+			"Actors"
 		]
-
 	}
 }
