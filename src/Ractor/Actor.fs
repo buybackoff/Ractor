@@ -91,7 +91,6 @@ open System.Threading
 open System.Threading.Tasks
 open System.Diagnostics
 open System.Runtime.Caching
-open System.Web.Hosting
 open System.Runtime.InteropServices
 open System.Runtime.CompilerServices
 open Ractor
@@ -230,7 +229,6 @@ type internal ActorImpl<'Task, 'TResult>
 
     let start() =
         if not started then 
-            HostingEnvironment.RegisterObject(this)
             let rec awaitMessage() = 
                 async { 
                     //Debug.Print("Awaiting message")
@@ -481,7 +479,6 @@ type internal ActorImpl<'Task, 'TResult>
         if started then 
             started <- false
             cts.Cancel |> ignore
-        HostingEnvironment.UnregisterObject(this)
     
 
     /// <summary>
@@ -749,8 +746,6 @@ type internal ActorImpl<'Task, 'TResult>
         member x.Dispose() = 
             cts.Cancel |> ignore
             cts.Dispose()
-    interface IRegisteredObject with
-        member x.Stop(immediate : bool) = x.Stop()
 
 
 

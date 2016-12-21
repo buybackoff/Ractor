@@ -8,7 +8,6 @@ open System.Threading
 open System.Threading.Tasks
 open System.Diagnostics
 open System.Runtime.Caching
-open System.Web.Hosting
 open System.Runtime.InteropServices
 open System.Runtime.CompilerServices
 open Ractor
