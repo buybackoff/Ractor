@@ -1,0 +1,39 @@
+{
+	"version": "0.5.0",
+	"description": "Ractor.Persistence",
+	"dependencies": {
+		"Ractor.Persistence": "0.5.0",
+		"AWSSDK": "2.3.55.2"
+	},
+	"frameworks": {
+		"net451": {}
+	},
+	"buildOptions": {
+		"warningsAsErrors": false,
+		"xmlDoc": true,
+		"compile": [ "../../src/Ractor.Persistence.AWS/**/*.cs" ],
+		"exclude": [
+
+		],
+		"define": [ "TRACE" ],
+		"nowarn": [],
+		"embed": {
+			"mappings": {
+			}
+		}
+	},
+	"authors": [ "Victor Baybekov" ],
+	"copyright": "Copyright 2016",
+	"packOptions": {
+		"owners": [ "Victor Baybekov" ],
+		"summary": "Redis based distributed actors + Dead simple API for distributed POCOs persistence",
+		"repository": { "url": "https://github.com/buybackoff/Ractor" },
+		"licenseUrl": "http://github.com/buybackoff/Ractor/blob/master/LICENSE.txt",
+		"iconUrl": "https://raw.githubusercontent.com/buybackoff/Ractor.CLR/master/docs/files/img/logo.png",
+		"projectUrl": "https://github.com/buybackoff/Ractor",
+		"tags": [
+			"Redis",
+			"Actors"
+		]
+	}
+}

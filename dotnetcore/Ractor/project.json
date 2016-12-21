@@ -1,0 +1,66 @@
+{
+
+	"version": "0.5.0",
+	"description": "Ractor",
+
+	"buildOptions": {
+
+		"emitEntryPoint": false,
+		"compilerName": "fsc",
+		"define": [],
+		"compile": {
+			"includeFiles": [
+				"../../src/Ractor/AssemblyInfo.fs",
+				"../../src/Ractor/Common.fs",
+				"../../src/Ractor/Logging.fs",
+				"../../src/Ractor/Connections.fs",
+				"../../src/Ractor/Actor.fs",
+				"../../src/Ractor/Collections.fs",
+				"../../src/Ractor/ActorExtensions.fs"
+			]
+		}
+	},
+	"dependencies": {
+		"Ractor.Persistence": "0.5.0",
+		"FSharp.Core": "3.1.2.5"
+	},
+	"tools": {
+		"dotnet-compile-fsc": {
+			"version": "1.0.0-preview2-*",
+			"imports": [
+				"dnxcore50"
+			]
+		},
+		"dotnet-mergenupkg": { "version": "1.0.*" }
+	},
+	"frameworks": {
+		"net451": {
+			"frameworkAssemblies": {
+				"System": "",
+				"System.Core": "",
+				"System.Data": "",
+				"System.Data.Linq": "",
+				"System.Numerics": "",
+				
+			}
+		},
+
+	},
+	"authors": [ "Victor Baybekov" ],
+	"copyright": "Copyright 2016",
+	"packOptions": {
+		"owners": [ "Victor Baybekov" ],
+		"summary": "Series and Panels for Reactive and Exploratory Analysis of Data Streams",
+		"repository": { "url": "https://github.com/Spreads/Spreads" },
+		"licenseUrl": "http://github.com/Spreads/Spreads/blob/master/LICENSE.txt",
+		"iconUrl": "https://raw.githubusercontent.com/Spreads/Spreads.Docs/master/img/ZipN.png",
+		"projectUrl": "https://github.com/Spreads/Spreads",
+		"tags": [
+			"Spreads",
+			"Data",
+			"Time Series",
+			"Data Frame"
+		]
+
+	}
+}

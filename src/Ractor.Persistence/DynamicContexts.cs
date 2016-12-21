@@ -300,9 +300,7 @@ namespace Ractor {
             //var entityMethod = typeof(DbModelBuilder).GetMethod("Entity");
 
             var econfig = modelBuilder.Entity<T>();
-            if (OnModelCreatingAction != null) {
-                OnModelCreatingAction(econfig);
-            }
+            OnModelCreatingAction?.Invoke(econfig);
         }
 
         /// <summary>
