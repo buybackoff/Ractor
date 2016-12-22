@@ -25,7 +25,7 @@ namespace Ractor {
             _redis = redis;
             _timeout = timeout;
             Id = id;
-            _prefix = (string.IsNullOrWhiteSpace(group) ? "" : "{" + group + "}") + id; // aware of Redis cluster with {}
+            _prefix = (string.IsNullOrWhiteSpace(group) ? "" : "{" + group + "}:") + id; // aware of Redis cluster with {}
             _inboxKey = _prefix + ":inbox";
             _pipelineKey = _prefix + ":pipeline";
             _lockKey = _prefix + ":lock";
