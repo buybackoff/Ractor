@@ -29,7 +29,7 @@ namespace Ractor {
             _inboxKey = _prefix + ":inbox";
             _pipelineKey = _prefix + ":pipeline";
             _lockKey = _prefix + ":lock";
-            _channelKey = _prefix + ":channel";
+            _channelKey = _prefix + ":inbox_channel";
 
             Task.Run(async () => {
                 while (!_cts.Token.IsCancellationRequested) {
@@ -84,12 +84,14 @@ namespace Ractor {
 
         public int Timeout => _timeout / 1000;
 
+        public string Prefix => _prefix;
+
         /// <summary>
         ///
         /// </summary>
         public async Task<bool> TrySendMessage(T message) {
             // TODO combine push and publish inside a lua script
-            var result = await _redis.LPushAsync<T>(_inboxKey, message, When.Always, true);
+            var result = await _redis.LPushAsync<T>(_inboxKey, message, When.Always, false);
             if (result <= 0) return false;
             await _redis.PublishAsync(_channelKey, "", false);
             return true;

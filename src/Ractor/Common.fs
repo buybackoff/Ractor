@@ -46,20 +46,7 @@ type IRactorPerformanceMonitor =
 //    new() = new AsyncAutoResetEvent2(true)
 
 
-[<Extension>]
-type TaskExtensions() =
-    [<Extension>]
-    static member WithTimeout(this : Task<'T>, timeout:int) : Task<'T> = 
-      if this.IsCompleted then this
-      else
-        let delay = Task.Delay(timeout)
-        let child =  
-          Task.WhenAny(this, delay)
-            .ContinueWith(fun (t:Task<Task>) -> 
-              if t.Result <> delay then this.Result
-              else raise (TimeoutException()) 
-            )
-        child
+
 
 type AsyncManualResetEvent internal (state:bool option) =
     //http://blogs.msdn.com/b/pfxteam/archive/2012/02/11/10266920.aspx
@@ -70,7 +57,7 @@ type AsyncManualResetEvent internal (state:bool option) =
 
     member this.WaitAsync() : Task = m_tcs.Task :> Task
     
-    member this.WaitAsync(timeout:int) = m_tcs.Task.WithTimeout(timeout)
+    //member this.WaitAsync(timeout:int) = m_tcs.Task.WithTimeout(timeout)
 
     member this.Set() = m_tcs.TrySetResult(true)
 
@@ -350,3 +337,29 @@ module TaskModule =
       member this.Run (f: unit -> Task<'T>) = f()
 
   let task = TaskBuilder(scheduler = TaskScheduler.Current)
+
+
+
+  [<Extension>]
+  type TaskExtensions() =
+      [<Extension>]
+      static member WithTimeout(this : Task<'T>, timeout:int) : Task<'T> = 
+        if this.IsCompleted then this
+        else
+          task {
+            let delay = Task.Delay(timeout)
+            let! child = Task.WhenAny(this, delay)
+            if child <> delay then return this.Result
+            else return raise (TimeoutException()) 
+          }
+
+      [<Extension>]
+      static member WithTimeout(this : Task, timeout:int) : Task<bool> = 
+        if this.IsCompleted then trueTask
+        else
+          task {
+            let delay = Task.Delay(timeout)
+            let! child = Task.WhenAny(this, delay)
+            if child <> delay then return! trueTask
+            else return! falseTask
+          }
