@@ -98,7 +98,7 @@ namespace Ractor.CS.Tests {
         }
 
         public static IEnumerable<int> GetThroughputSettings() {
-            yield return 1;
+            //yield return 1;
             yield return 5;
             yield return 10;
             yield return 15;
@@ -130,9 +130,8 @@ namespace Ractor.CS.Tests {
             }
 
             var sw = Stopwatch.StartNew();
-            var tks = clients.AsParallel()
-                .WithDegreeOfParallelism(numberOfClients)
-                .Select(c => c.PostAndGetResultAsync(Run));
+            var tks = clients
+                .Select(c => Task.Run(() => c.PostAndGetResultAsync(Run)));
 
             await Task.WhenAll(tks);
             //await Task.WhenAll(tasks.ToArray());
@@ -157,7 +156,8 @@ namespace Ractor.CS.Tests {
         }
 
         public class Client : Actor<object, bool> {
-            private readonly TaskCompletionSource<bool> _latch = new TaskCompletionSource<bool>();
+            public override bool Optimistic => false;
+
             private readonly Actor<object, object> _actor;
             public long Received;
             public long Repeat;
@@ -169,14 +169,15 @@ namespace Ractor.CS.Tests {
             }
 
             public override async Task<bool> Computation(object message) {
+                var tcs = new TaskCompletionSource<bool>();
                 for (int i = 0; i < Repeat; i++) {
                     Sent++;
                     var res = _actor.PostAndGetResult(Msg);
                     //if (res != Msg) throw new ApplicationException();
                     Received++;
                 }
-                _latch.TrySetResult(true);
-                return await _latch.Task;
+                tcs.TrySetResult(true);
+                return await tcs.Task;
             }
         }
 

@@ -4,7 +4,9 @@ open System
 open System.Collections.Generic
 open System.Threading
 open System.Threading.Tasks
-
+open System
+open System.Runtime.InteropServices
+open System.Runtime.CompilerServices
 
 
 type Message<'T>(value:'T, hasError:bool, error:Exception) = 
@@ -27,13 +29,51 @@ type IRactorPerformanceMonitor =
 
 
 
-type AsyncManualResetEvent () =
+//type AsyncAutoResetEvent2 (init:bool) =
+//    let sem = new SemaphoreSlim(1,1)
+//    do
+//      if not init then if not <| sem.Wait(0) then failwith "Could not set semaphore to zero"
+//    
+//    member this.WaitAsync() = sem.WaitAsync()
+//    member this.WaitAsync(timeout:int) = sem.WaitAsync(timeout)
+//
+//    member this.Set() = sem.Release()
+//    member this.Reset() = if not <| sem.Wait(0) then failwith "Could not set semaphore to zero"
+//
+//    interface IDisposable with
+//      member __.Dispose() = sem.Dispose()
+//
+//    new() = new AsyncAutoResetEvent2(true)
+
+
+[<Extension>]
+type TaskExtensions() =
+    [<Extension>]
+    static member WithTimeout(this : Task<'T>, timeout:int) : Task<'T> = 
+      if this.IsCompleted then this
+      else
+        let delay = Task.Delay(timeout)
+        let child =  
+          Task.WhenAny(this, delay)
+            .ContinueWith(fun (t:Task<Task>) -> 
+              if t.Result <> delay then this.Result
+              else raise (TimeoutException()) 
+            )
+        child
+
+type AsyncManualResetEvent internal (state:bool option) =
     //http://blogs.msdn.com/b/pfxteam/archive/2012/02/11/10266920.aspx
     [<VolatileFieldAttribute>]
     let mutable m_tcs = TaskCompletionSource<bool>()
+    do 
+      if state.IsSome then m_tcs.SetResult(state.Value)
 
-    member this.WaitAsync() = m_tcs.Task
+    member this.WaitAsync() : Task = m_tcs.Task :> Task
+    
+    member this.WaitAsync(timeout:int) = m_tcs.Task.WithTimeout(timeout)
+
     member this.Set() = m_tcs.TrySetResult(true)
+
     member this.Reset() =
             let rec loop () =
                 let tcs = m_tcs
@@ -43,6 +83,8 @@ type AsyncManualResetEvent () =
                 else
                     loop()
             loop ()
+    new() = AsyncManualResetEvent(None)
+    new(state:bool) = AsyncManualResetEvent(Some(state))
 
 type AsyncAutoResetEvent () =
     //http://blogs.msdn.com/b/pfxteam/archive/2012/02/11/10266923.aspx
@@ -59,7 +101,8 @@ type AsyncAutoResetEvent () =
             else
                 let ct = new CancellationTokenSource(timeout)
                 let tcs = new TaskCompletionSource<bool>()
-                ct.Token.Register(Action(fun _ -> tcs.TrySetResult(false) |> ignore)) |> ignore
+                let mutable registration = Unchecked.defaultof<_>
+                registration <- ct.Token.Register(Action(fun _ -> tcs.TrySetResult(false) |> ignore; registration.Dispose();ct.Dispose()))
                 m_waits.Enqueue(tcs)
                 tcs.Task
         finally
@@ -146,9 +189,7 @@ module unnestModule =
         let ((((((v1, v2), v3), v4), v5), v6), v7) = tuple
         v1, v2, v3, v4, v5, v6, v7
 
-open System
-open System.Runtime.InteropServices
-open System.Runtime.CompilerServices
+
 
 [<Extension>]
 type TuplesExtension() =
@@ -171,3 +212,141 @@ type TuplesExtension() =
     [<Extension>]
     static member Unnest(this : (((((('T1 * 'T2) * 'T3) * 'T4) * 'T5) * 'T6) * 'T7) ) = 
         unnest7 this
+
+
+
+[<AutoOpenAttribute>]
+module TaskModule =
+  // Reduced (compared to fsharpx) implementation from Spreads
+  let trueTask = Task.FromResult(true)
+  let falseTask = Task.FromResult(false)
+  let cancelledBoolTask = 
+    let tcs = new TaskCompletionSource<bool>()
+    tcs.SetCanceled()
+    tcs.Task
+
+  let inline bind  (f: 'T -> Task<'U>) (m: Task<'T>) =
+      if m.IsCompleted then f m.Result
+      else
+        let tcs = (Runtime.CompilerServices.AsyncTaskMethodBuilder<_>.Create()) // new TaskCompletionSource<_>() // NB do not allocate objects
+        let t = tcs.Task
+        let awaiter = m.GetAwaiter() // NB this is faster than ContinueWith
+        awaiter.OnCompleted(fun _ -> tcs.SetResult(f m.Result))
+        t.Unwrap()
+
+  let inline bindTimeout  (f: 'T -> Task<'U>) (m: Task<'T>) (timeout:int) =
+      if m.IsCompleted then f m.Result
+      else
+        let tcs = new TaskCompletionSource<Task<'U>>()
+        let t = tcs.Task
+        let ct = new CancellationTokenSource(timeout)
+        let mutable registration = Unchecked.defaultof<_>
+        registration <- ct.Token.Register(Action(fun _ -> tcs.TrySetException(TimeoutException()) |> ignore; registration.Dispose();ct.Dispose()))
+        let awaiter = m.GetAwaiter()
+        let u = f m.Result
+        awaiter.OnCompleted(fun _ -> tcs.TrySetResult(f m.Result) |> ignore)
+        t.Unwrap()
+
+  let inline doBind  (f: unit -> Task<'U>) (m: Task) =
+      if m.IsCompleted then f()
+      else
+        let tcs = (Runtime.CompilerServices.AsyncTaskMethodBuilder<_>.Create())
+        let t = tcs.Task
+        let awaiter = m.GetAwaiter()
+        awaiter.OnCompleted(fun _ -> tcs.SetResult(f()))
+        t.Unwrap()
+
+  let inline returnM a = Task.FromResult(a)
+  let inline returnMUnit () = trueTask :> Task
+
+  let inline bindBool  (f: bool -> Task<bool>) (m: Task<bool>) =
+      if m.IsCompleted then f m.Result
+      else
+        let tcs = (Runtime.CompilerServices.AsyncTaskMethodBuilder<_>.Create()) // new TaskCompletionSource<_>() // NB do not allocate objects
+        let t = tcs.Task
+        let awaiter = m.GetAwaiter() // NB this is faster than ContinueWith
+        awaiter.OnCompleted(fun _ -> tcs.SetResult(f m.Result))
+        t.Unwrap()
+
+  let inline returnMBool (a:bool) = if a then trueTask else falseTask
+    
+  type TaskBuilder(?continuationOptions, ?scheduler, ?cancellationToken) =
+      let contOptions = defaultArg continuationOptions TaskContinuationOptions.None
+      let scheduler = defaultArg scheduler TaskScheduler.Default
+      let cancellationToken = defaultArg cancellationToken CancellationToken.None
+
+      member this.Return x = returnM x
+      //member this.Return () = returnMUnit ()
+
+      member this.Zero() = returnM()
+
+      member this.ReturnFrom (a: Task<'T>) = a
+      //member this.ReturnFrom (a: Task) = a
+
+      member this.Bind(m:Task<'m>, f:'m->Task<'n>) = bind f m // bindWithOptions cancellationToken contOptions scheduler f m
+           
+      member this.Bind(m:Task, f:unit-> Task<'j>) = doBind f m
+
+      member this.Combine(comp1:Task<'m>, comp2:'m->Task<'n>) =
+          this.Bind(comp1, comp2)
+
+      member this.While(guard, m) =
+          let rec whileRec(guard, m) = 
+            if not(guard()) then this.Zero() else
+                this.Bind(m(), fun () -> whileRec(guard, m))
+          whileRec(guard, m)
+
+      member this.While(guardTask:unit->Task<bool>, body) =
+        let m = guardTask()
+        let onCompleted() =
+          this.Bind(body(), fun () -> this.While(guardTask, body))
+        if m.Status = TaskStatus.RanToCompletion then 
+          onCompleted()
+        else
+          let tcs =  new TaskCompletionSource<_>() // (Runtime.CompilerServices.AsyncTaskMethodBuilder<_>.Create())
+          let t = tcs.Task
+          let awaiter = m.GetAwaiter()
+          awaiter.OnCompleted(fun _ -> 
+            if m.IsFaulted then
+              tcs.SetException(m.Exception)
+            elif m.IsCanceled then
+              tcs.SetCanceled()
+            else
+              tcs.SetResult(onCompleted())
+            )
+          t.Unwrap()
+
+      member this.TryWith(body:unit -> Task<_>, catchFn:exn -> Task<_>) =  
+        try
+            body()
+              .ContinueWith(fun (t:Task<_>) ->
+                  match t.IsFaulted with
+                  | false -> returnM(t.Result)
+                  | true  -> catchFn(t.Exception.GetBaseException()))
+              .Unwrap()
+        with e -> catchFn(e)
+
+      member this.TryFinally(m, compensation) =
+          try this.ReturnFrom m
+          finally compensation()
+
+      member this.TryFinally(f, compensation) =
+          try this.ReturnFrom (f())
+          finally compensation()
+
+//      member this.TryFinally(m:Task, compensation) =
+//          try this.ReturnFrom m
+//          finally compensation()
+
+      member this.Using(res: #IDisposable, body: #IDisposable -> Task<_>) =
+          this.TryFinally(body res, fun () -> match res with null -> () | disp -> disp.Dispose())
+
+      member this.For(sequence: seq<_>, body) =
+          this.Using(sequence.GetEnumerator(),
+                                fun enum -> this.While(enum.MoveNext, fun () -> body enum.Current))
+
+      member this.Delay (f: unit -> Task<'T>) = f
+
+      member this.Run (f: unit -> Task<'T>) = f()
+
+  let task = TaskBuilder(scheduler = TaskScheduler.Current)
