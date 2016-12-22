@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Text;
+using System.Threading.Tasks;
 using Amazon;
 using Amazon.SQS;
 using Amazon.SQS.Model;
@@ -40,7 +41,7 @@ namespace Ractor.Persistence.AWS {
             attributes["MaximumMessageSize"] = "262144";
             attributes["MessageRetentionPeriod"] = "1209600";
             attributes["ReceiveMessageWaitTimeSeconds"] = "20";
-            attributes["VisibilityTimeout"] = "0";
+            attributes["VisibilityTimeout"] = $"3600"; // an hour
             var sqsRequest = new CreateQueueRequest {
                 QueueName = queueName,
                 Attributes = attributes
@@ -55,7 +56,9 @@ namespace Ractor.Persistence.AWS {
             _sqs.DeleteQueue(sqsDeleRequest);
         }
 
-        public bool TrySendMessage(T message) {
+        public int Timeout => 3600;
+
+        public async Task<bool> TrySendMessage(T message) {
             try {
                 var txt = Encoding.UTF8.GetString(Serializer.Serialize(message));
                 var sendMessageRequest = new SendMessageRequest {
@@ -63,7 +66,7 @@ namespace Ractor.Persistence.AWS {
                     MessageBody = txt
                 };
                 //Console.WriteLine("Send");
-                _sqs.SendMessage(sendMessageRequest);
+                var response = await _sqs.SendMessageAsync(sendMessageRequest);
                 return true;
             } catch {
                 return false;
@@ -72,39 +75,36 @@ namespace Ractor.Persistence.AWS {
 
 
 
-        public bool TryReceiveMessage(out Tuple<T, string> messageWithDeleteHandle) {
-            var res = default(T);
-            var handle = "";
-            messageWithDeleteHandle = new Tuple<T, string>(res, handle);
+        public async Task<QueueReceiveResult<T>> TryReceiveMessage() {
+
+            var qrr = new QueueReceiveResult<T>();
             try {
                 var receiveMessageRequest = new ReceiveMessageRequest {
                     QueueUrl = _queueUrl,
                     MaxNumberOfMessages = 1
                 };
-                var receiveMessageResponse = _sqs.ReceiveMessage(receiveMessageRequest);
+                var receiveMessageResponse = await _sqs.ReceiveMessageAsync(receiveMessageRequest);
                 //Console.WriteLine("Receive");
                 if (receiveMessageResponse.Messages.Count < 1)
-                    return false;
+                    return new QueueReceiveResult<T> { OK = false };
 
                 var message = receiveMessageResponse.Messages[0];
-                res = Serializer.Deserialize<T>(Encoding.UTF8.GetBytes(message.Body));
-
-                handle = message.ReceiptHandle;
-                messageWithDeleteHandle = new Tuple<T, string>(res, handle);
-                return true;
+                var res = Serializer.Deserialize<T>(Encoding.UTF8.GetBytes(message.Body));
+                var handle = message.ReceiptHandle;
+                return new QueueReceiveResult<T> { OK = true, Value = res, DeleteHandle = handle };
             } catch {
-                return false;
+                return new QueueReceiveResult<T> { OK = false };
             }
         }
 
 
-        public bool TryDeleteMessage(string deleteHandle) {
+        public async Task<bool> TryDeleteMessage(string deleteHandle) {
             try {
                 var deleteRequest = new DeleteMessageRequest {
                     QueueUrl = _queueUrl,
                     ReceiptHandle = deleteHandle
                 };
-                _sqs.DeleteMessage(deleteRequest);
+                var response = await _sqs.DeleteMessageAsync(deleteRequest);
                 //Console.WriteLine("Delete");
                 return true;
             } catch {

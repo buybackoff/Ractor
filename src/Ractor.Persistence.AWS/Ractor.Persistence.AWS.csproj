@@ -7,7 +7,7 @@
     <ProjectGuid>{A9877785-2F07-405F-AF69-496C1315030C}</ProjectGuid>
     <OutputType>Library</OutputType>
     <AppDesignerFolder>Properties</AppDesignerFolder>
-    <RootNamespace>Fredis.Persistence.AWS</RootNamespace>
+    <RootNamespace>Ractor.Persistence.AWS</RootNamespace>
     <AssemblyName>Ractor.Persistence.AWS</AssemblyName>
     <TargetFrameworkVersion>v4.5</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>

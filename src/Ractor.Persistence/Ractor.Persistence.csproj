@@ -75,6 +75,7 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="RedisQueue.cs" />
     <Compile Include="Attributes.cs" />
     <Compile Include="BaseBlobPersistor.cs" />
     <Compile Include="BaseDataObject.cs" />
@@ -131,6 +132,7 @@
     <Compile Include="TablePerHierarchyAttribute.cs">
       <DependentUpon>Attributes.cs</DependentUpon>
     </Compile>
+    <Compile Include="Utils.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="app.config" />

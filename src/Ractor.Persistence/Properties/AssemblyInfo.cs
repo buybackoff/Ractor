@@ -37,3 +37,4 @@ using System.Runtime.InteropServices;
 
 
 [assembly: InternalsVisibleTo("Ractor.Persistence.Tests")]
+[assembly: InternalsVisibleTo("Ractor.Persistence.AWS")]
