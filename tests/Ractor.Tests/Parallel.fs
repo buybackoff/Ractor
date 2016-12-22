@@ -6,7 +6,6 @@ open System.Text
 open System.Threading.Tasks
 open System.Collections.Generic
 open Ractor
-open Ractor.FSharp
 open System
 open System.Text
 open System.Diagnostics
@@ -18,8 +17,8 @@ open FsUnit
 type Slowpoke ()=
     inherit Actor<int,int>()
     override this.RedisConnectionString = "localhost"
-    override this.Computation(input) : Async<int> =  
-        async {
+    override this.Computation(input) : Task<int> =  
+        task {
                 //do! Async.Sleep(500)
                 Console.WriteLine("Incremented to: " + (input + 1).ToString())
                 return input + 1

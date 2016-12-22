@@ -6,7 +6,6 @@ open System.Text
 open System.Threading.Tasks
 open System.Collections.Generic
 open Ractor
-open Ractor.FSharp
 open System
 open System.Text
 open System.Diagnostics
@@ -17,29 +16,31 @@ open FsUnit
 type Greeter ()=
     inherit Actor<string,string>()
     override this.RedisConnectionString = "127.0.0.1:6379,resolveDns=true"
-    override this.Computation(input) : Async<string> =  
-        async {
+    override this.Computation(input) : Task<string> =  
+        task {
                 Console.WriteLine("Hello, " + input)
                 return "Hello, " + input
         }
     override this.AutoStart = false
+    override this.Optimistic = false
     override this.ResultTimeout = 50000 // milliseconds
 
 type Echo () =
     inherit Actor<string,string>()
     override this.RedisConnectionString = "127.0.0.1:6379,resolveDns=true"
-    override this.Computation(input) : Async<string> = 
-        async { 
+    override this.Computation(input) : Task<string> = 
+        task { 
             Console.WriteLine("Echo: " + input)
             return input 
             } 
+    override this.Optimistic = false
     //override this.AutoStart = true // true is default, no need to override
 
 type Incrementer ()=
     inherit Actor<int,int>()
     override this.RedisConnectionString = "127.0.0.1:6379,resolveDns=true"
-    override this.Computation(input) : Async<int> =  
-        async {
+    override this.Computation(input) : Task<int> =  
+        task {
                 //Console.WriteLine("Incremented to: " + (input + 1).ToString())
                 return input + 1
         }

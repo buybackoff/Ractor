@@ -5,7 +5,7 @@ open System.Linq
 open System.Text
 open System.Threading.Tasks
 open System.Collections.Generic
-open Ractor.FSharp
+open Ractor
 open System
 open System.Text
 open System.Diagnostics
@@ -17,8 +17,8 @@ open FsUnit
 type Incrementer ()=
     inherit Actor<int,int>()
     override this.RedisConnectionString = "localhost"
-    override this.Computation(input) : Async<int> =  
-        async {
+    override this.Computation(input) : Task<int> =  
+        task {
                 //Console.WriteLine("Incremented to: " + (input + 1).ToString())
                 return input + 1
         }
@@ -28,8 +28,8 @@ type Incrementer ()=
 type Adder ()=
     inherit Actor<int*int,int>()
     override this.RedisConnectionString = "localhost"
-    override this.Computation((input1, input2)) : Async<int> =  
-        async {
+    override this.Computation((input1, input2)) : Task<int> =  
+        task {
                 Console.WriteLine("Added to: " + (input1 + input2).ToString())
                 return input1 + input2
         }

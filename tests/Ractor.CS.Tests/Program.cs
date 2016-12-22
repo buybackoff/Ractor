@@ -28,8 +28,8 @@ namespace Ractor.CS.Tests {
         }
 
         private static void Main() {
-            //Start();
-            Queue();
+            Start();
+            //Queue();
             Console.ReadKey();
         }
 
@@ -98,7 +98,7 @@ namespace Ractor.CS.Tests {
         }
 
         public static IEnumerable<int> GetThroughputSettings() {
-            //yield return 1;
+            yield return 1;
             yield return 5;
             yield return 10;
             yield return 15;
