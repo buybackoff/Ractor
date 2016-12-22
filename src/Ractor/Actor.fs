@@ -171,16 +171,17 @@ type internal ActorImpl<'TInput, 'TResult>
     let mutable started = false
     let mutable cts = new CancellationTokenSource()
     let messageWaiter = new AsyncAutoResetEvent()
-    let localResultListeners = ConcurrentDictionary<string, AsyncManualResetEvent>()
-    let prefix = "{" + id + "}" // + ":Mailbox" // braces for Redis cluster, so all objects for an actor are on the same shard
+    let localResultListeners = ConcurrentDictionary<string, TaskCompletionSource<string>>()
+    let queue = new RedisQueue<Envelope<'TInput>>(redis, id, resultTimeout, "Actor") // TODO add groups
+    let prefix = queue.Prefix
     // list of incoming messages
-    let inboxKey = prefix + ":inbox" // TODO message is a tuple of resultId * callerId * payload
-    // hash of messages being processed
+//    let inboxKey = prefix + ":inbox" // TODO message is a tuple of resultId * callerId * payload
+//    // hash of messages being processed
     let pipelineKey = prefix + ":pipeline"    // prefix of results not yet claimed by callers
     let resultsKey = prefix + ":results" // TODO results must have "for" property
-    let channelKey = prefix + ":channel"
+    let channelKey = prefix + ":results_channel"
     let errorsKey = prefix + ":errors"
-    let lockKey = prefix + ":lock"
+    //let lockKey = prefix + ":lock"
 
     // HINCR acttor id on start and decr on stop
     static let runningActorsHash = "runningActors"
@@ -212,10 +213,10 @@ type internal ActorImpl<'TInput, 'TResult>
         }
     let waitForOpenGates (timeout:int) : Task<bool> = 
         task { 
-            let! hp = highPriorityGate.WaitAsync(timeout)
+            let! hp = highPriorityGate.WaitAsync().WithTimeout(timeout)
             let! lp =
                 if lowPriority then 
-                  lowPriorityGate.WaitAsync(timeout)
+                  lowPriorityGate.WaitAsync().WithTimeout(timeout)
                 else trueTask
             return hp && lp
         }
@@ -228,47 +229,29 @@ type internal ActorImpl<'TInput, 'TResult>
 
     static let actors = Dictionary<string, obj>()
 
+    let rec awaitMessage() = 
+      task {
+        let pipelineId = Guid.NewGuid().ToBase64String()
+        let hasLocal, localMessage = messageQueue.TryDequeue()
+        if hasLocal then 
+          Debug.Print("Took local message:"  + this.Id)
+          return localMessage
+        else
+          let! (qrr : QueueReceiveResult<Envelope<'TInput>>) = queue.TryReceiveMessage()
+          return qrr.Value, qrr.DeleteHandle
+      }
+
     let start() =
         if not started then 
-            let rec awaitMessage() = 
-                task { 
-                    //Debug.Print("Awaiting message")
-                    // move to safe place while processing
-                    let lua = @"
-                    local result = redis.call('RPOP', KEYS[1])
-                    if result ~= nil then
-                        redis.call('HSET', KEYS[2], KEYS[3], result)
-                    end
-                    return result"
-                    let pipelineId = Guid.NewGuid().ToBase64String()
-                    let hasLocal, localMessage = messageQueue.TryDequeue()
-                    if hasLocal then 
-                        Debug.Print("Took local message:"  + this.Id)
-                        return localMessage
-                    else 
-                        let! message = redis.EvalAsync<Envelope<'TInput>>
-                                                (lua, 
-                                                [|  redis.KeyNameSpace + ":" + inboxKey
-                                                    redis.KeyNameSpace + ":" + pipelineKey
-                                                    pipelineId |])
-                                       
-                        if Object.Equals(message, Unchecked.defaultof<Envelope<'TInput>>) then 
-                            let! signal = messageWaiter.WaitAsync(10000) // TODO timeout, if PubSub dropped notification, recheck the queue, but not very often
-                            if not signal then Debug.Print("Timeout in awaitMessage in: " + this.Id)
-                            return! awaitMessage()
-                        else 
-                            Debug.Print("Took Redis message: " + this.Id) 
-                            return message, pipelineId
-                }
             
             redis.Subscribe(channelKey, 
                             Action<string, string>(fun channel messageNotification -> 
                                 match messageNotification with
-                                | "" -> messageWaiter.Set() |> ignore
+                                | "" -> failwith "empty result id"
                                 | resultId -> 
                                     if localResultListeners.ContainsKey(resultId) then 
                                         //Debug.Print("Setting result handle: " + resultId)
-                                        localResultListeners.[resultId].Set() |> ignore
+                                        localResultListeners.[resultId].TrySetResult(resultId) |> ignore
                                     else
                                         ()
                                     // 1. we get all result ids and we must cache
@@ -300,7 +283,6 @@ type internal ActorImpl<'TInput, 'TResult>
 
                         let! (outMessage : Message<'TResult>) = computation(inMessage, resultId).WithTimeout(this.ResultTimeout)
 
-                        // NEW LOGIC
                         // first check if there are caller ids, if not then we have a simle call
                         if Array.isEmpty callerIds then
                             // if empty, notify result waiters
@@ -316,7 +298,7 @@ type internal ActorImpl<'TInput, 'TResult>
                                             Nullable(TimeSpan.FromMilliseconds(double resultTimeout)), When.Always, false)
                                             
                                     do! redis.PublishAsync<string>(channelKey, resultId, false)
-                                localResultListeners.[resultId].Set() |> ignore
+                                localResultListeners.[resultId].TrySetResult(resultId) |> ignore
                             else
                                 // alway store results in Redis if there is no local waiter, but fire and forget if in optimistic mode
                                 do!
@@ -353,66 +335,17 @@ type internal ActorImpl<'TInput, 'TResult>
                             // for each caller id we must pass current result to its inbox
                             // get it instance
 
-                        redis.HDel(pipelineKey, pipelineId, this.Optimistic) |> ignore
+                        queue.TryDeleteMessage(pipelineId) |> ignore
                     finally
                         Interlocked.Decrement(counter) |> ignore
                     return! loop()
                 }
-                
             loop() |> ignore
             started <- true
-
-    let rec replayStalePipeline() =
-        async {
-            // TODO test that a message is returned to inbox
-            // Using RPUSH so that task will be returned to the front of the queue
-            let pipelineScript = 
-                @"  local previousKey = KEYS[1]..':previousKeys'
-                    local currentKey = KEYS[1]..':currentKeys'
-                    local currentItems = redis.call('HKEYS', KEYS[1])
-                    local res = 0
-                    redis.call('DEL', currentKey)
-                    if redis.call('HLEN', KEYS[1]) > 0 then
-                       redis.call('SADD', currentKey, unpack(currentItems))
-                       local intersect
-                       if redis.call('SCARD', previousKey) > 0 then
-                           intersect = redis.call('SINTER', previousKey, currentKey)
-                           if #intersect > 0 then
-                                local values = redis.call('HMGET', KEYS[1], unpack(intersect))
-                                redis.call('RPUSH', KEYS[2], unpack(values))
-                                redis.call('HDEL', KEYS[1], unpack(intersect))
-                                res = #intersect
-                           end
-                       end
-                    end
-                    redis.call('DEL', previousKey)
-                    if #currentItems > 0 then
-                        redis.call('SADD', previousKey, unpack(currentItems))
-                    end
-                    return res
-                "
-            let expiry = Nullable<TimeSpan>(TimeSpan.FromMilliseconds(float garbageCollectionPeriod))
-            let entered = redis.Set<string>(lockKey, "collecting garbage", 
-                            expiry, When.NotExists, false)
-            //Console.WriteLine("checking if entered: " + entered.ToString())
-            let counts  =
-                if entered then
-                    let p =
-                        if started then
-                                redis.Eval(pipelineScript, [|redis.KeyNameSpace + ":" + pipelineKey; inboxKey|])
-                        else ()
-                    //Console.WriteLine("Collected pipelines: " + pipel.ToString() )
-                    p
-                else ()
-            //do! Async.Sleep(garbageCollectionPeriod)
-            do! Async.Sleep garbageCollectionPeriod
-            return! replayStalePipeline()
-            }
 
     do
         redis.Serializer <- JsonSerializer()
         checkGates() |> ignore
-        replayStalePipeline() |> Async.Start
         if autoStart then start()
 
     static member LoadMonitor
@@ -469,7 +402,7 @@ type internal ActorImpl<'TInput, 'TResult>
     member internal this.LowPriority = lowPriority
     member internal this.Optimistic = optimistic
 
-    member this.QueueLength = (int (redis.LLen(inboxKey))) + messageQueue.Count
+    //member this.QueueLength = (int (redis.LLen(inboxKey))) + messageQueue.Count
     
     member this.Start() : unit = start()
     
@@ -518,32 +451,28 @@ type internal ActorImpl<'TInput, 'TResult>
     member internal this.Post<'TInput>(envelope : Envelope<'TInput>) : Task<string> = 
         let resultId = envelope.ResultId
         let remotePost() = 
-            Console.WriteLine("Posted Redis message") 
-            // TODO combine push and publish inside a lua script
-            let res = 
-                task {
-                    do! redis.LPushAsync<Envelope<'TInput>>(inboxKey, envelope, When.Always, this.Optimistic) 
-                    return resultId
-                }
-            // no resultId here because we notify recievers to process a message and they in turn will notify 
-            // callers about results
-            redis.Publish<string>(channelKey, "", this.Optimistic) |> ignore
-            res
-        let localPost() = 
-            Debug.Print("Posted local message")
-            localResultListeners.TryAdd(resultId, AsyncManualResetEvent()) |> ignore 
-            let pipelineId = Guid.NewGuid().ToBase64String()
-            if not this.Optimistic then
-                redis.HSet<Envelope<'TInput>>(pipelineKey, pipelineId, envelope, When.Always, false) |> ignore
-            messageQueue.Enqueue(envelope, pipelineId)
-            messageWaiter.Set() |> ignore
-            Task.FromResult(resultId)
+            Console.WriteLine("Posted Redis message")
+            queue.TrySendMessage(envelope)
+              .ContinueWith(fun (t:Task<bool>) -> 
+                if not t.Result then failwith "cannot send a message" 
+                else resultId
+              )
+//        let localPost() = 
+//            Debug.Print("Posted local message")
+//            localResultListeners.TryAdd(resultId, TaskCompletionSource()) |> ignore 
+//            let pipelineId = Guid.NewGuid().ToBase64String()
+//            if not this.Optimistic then
+//                redis.HSet<Envelope<'TInput>>(pipelineKey, pipelineId, envelope, When.Always, false) |> ignore
+//            messageQueue.Enqueue(envelope, pipelineId)
+//            messageWaiter.Set() |> ignore
+//            Task.FromResult(resultId)
         match started with
         | true -> 
             task {
-                let! opened = waitForOpenGates 0
-                if opened then return! localPost()
-                else return! remotePost()
+                //let! opened = waitForOpenGates 0
+                //if opened then return! localPost()
+                //else 
+                return! remotePost()
             }    
         | _ -> remotePost()
           
@@ -600,12 +529,12 @@ type internal ActorImpl<'TInput, 'TResult>
             trueTask
         else 
             // in local case Post already added MRE and this line does nothing
-            localResultListeners.TryAdd(resultId, AsyncManualResetEvent()) |> ignore 
+            localResultListeners.TryAdd(resultId, TaskCompletionSource()) |> ignore 
             let listener = localResultListeners.[resultId]
             let rec awaitResult tryCount =
                 task {
                     let retryInterval = if this.ResultTimeout > 0 then this.ResultTimeout / 3 else 5000 // arbitrary large number
-                    let listenerTask = listener.WaitAsync(retryInterval)
+                    let listenerTask = (listener.Task :> Task).WithTimeout(retryInterval)
                     let hasCachedId = cache.Get(resultsKey + ":id:" + resultId) <> null
                     let signaled = ref false
                     if not hasCachedId then
