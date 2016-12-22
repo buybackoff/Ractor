@@ -91,22 +91,22 @@ namespace Ractor {
             var result = await GetDb().ScriptEvaluateAsync(script,
                 fullKeysWithPrefix == null ? null : fullKeysWithPrefix.Select(k => (RedisKey)(k)).ToArray(),
                 values == null ? null : values.Select(PackValueNullable).ToArray());
-            var type = typeof(TResult);
-            if (type == typeof(int)) {
-                return (TResult)((object)(int)(RedisValue)result);
-            }
-            if (type == typeof(long)) {
-                return (TResult)((object)(long)(RedisValue)result);
-            }
-            if (type == typeof(double)) {
-                return (TResult)((object)(double)(RedisValue)result);
-            }
-            if (type == typeof(bool)) {
-                return (TResult)((object)(bool)(RedisValue)result);
-            }
-            if (type == typeof(string)) {
-                return (TResult)((object)(string)(RedisValue)result);
-            }
+            //var type = typeof(TResult);
+            //if (type == typeof(int)) {
+            //    return (TResult)((object)(int)(RedisValue)result);
+            //}
+            //if (type == typeof(long)) {
+            //    return (TResult)((object)(long)(RedisValue)result);
+            //}
+            //if (type == typeof(double)) {
+            //    return (TResult)((object)(double)(RedisValue)result);
+            //}
+            //if (type == typeof(bool)) {
+            //    return (TResult)((object)(bool)(RedisValue)result);
+            //}
+            //if (type == typeof(string)) {
+            //    return (TResult)((object)(string)(RedisValue)result);
+            //}
             return UnpackResultNullable<TResult>((RedisValue)result);
         }
 

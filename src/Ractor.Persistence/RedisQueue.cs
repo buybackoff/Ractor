@@ -8,7 +8,7 @@ namespace Ractor {
     /// <summary>
     ///
     /// </summary>
-    public class RedisQueue<T> : IQueue<T>, IDisposable {
+    public class RedisQueue<T> : IQueue<T>, IDisposable where T : class {
         private readonly CancellationTokenSource _cts;
         private readonly Redis _redis;
         private readonly int _timeout;
@@ -25,7 +25,7 @@ namespace Ractor {
             _redis = redis;
             _timeout = timeout;
             Id = id;
-            _prefix = (group == null ? "" : "{" + group + "}") + id; // aware of Redis cluster with {}
+            _prefix = (string.IsNullOrWhiteSpace(group) ? "" : "{" + group + "}") + id; // aware of Redis cluster with {}
             _inboxKey = _prefix + ":inbox";
             _pipelineKey = _prefix + ":pipeline";
             _lockKey = _prefix + ":lock";
@@ -65,7 +65,8 @@ namespace Ractor {
                     //Console.WriteLine("checking if entered: " + entered.ToString())
                     if (entered && _started) {
                         var n = redis.Eval<int>(pipelineScript, new[] { redis.KeyNameSpace + ":" + _pipelineKey, _inboxKey });
-                        Console.WriteLine($"Collected pipelines: {n}");
+                        if (n > 0) await _redis.PublishAsync(_channelKey, "", false);
+                        Console.WriteLine($"Returned from pipeline: {n}");
                     }
 
                     await Task.Delay(_timeout);
@@ -74,7 +75,7 @@ namespace Ractor {
 
             redis.Subscribe(_channelKey,
                 new Action<string, string>((channel, messageNotification) => {
-                    if (messageNotification == "" && _semaphore.CurrentCount == 0) _semaphore.Release();
+                    if (messageNotification == "" && _semaphore.CurrentCount == 0) { _semaphore.Release(); }
                 }));
             _started = true;
         }
@@ -88,9 +89,9 @@ namespace Ractor {
         /// </summary>
         public async Task<bool> TrySendMessage(T message) {
             // TODO combine push and publish inside a lua script
-            var result = await _redis.LPushAsync<T>(_inboxKey, message, When.Always, false);
+            var result = await _redis.LPushAsync<T>(_inboxKey, message, When.Always, true);
             if (result <= 0) return false;
-            await _redis.PublishAsync(_channelKey, "", true);
+            await _redis.PublishAsync(_channelKey, "", false);
             return true;
         }
 
@@ -107,7 +108,7 @@ namespace Ractor {
                     return result";
 
             var pipelineId = Guid.NewGuid().ToBase64String();
-
+            var attemts = 0;
             while (!_cts.IsCancellationRequested) {
                 var message = await _redis.EvalAsync<T>
                     (lua, new[]
@@ -119,7 +120,10 @@ namespace Ractor {
 
                 if (EqualityComparer<T>.Default.Equals(message, default(T))) {
                     //timeout, if PubSub dropped notification, recheck the queue, but not very often
-                    await _semaphore.WaitAsync(10000);
+                    var timeout = (int)Math.Pow(2, Math.Min(attemts + 3, 13));
+                    await _semaphore.WaitAsync(timeout);
+                    attemts++;
+                    //Console.WriteLine($"Attempt: {attemts}");
                 } else {
                     return new QueueReceiveResult<T> {
                         OK = true,
@@ -135,7 +139,7 @@ namespace Ractor {
         ///
         /// </summary>
         public async Task<bool> TryDeleteMessage(string deleteHandle) {
-            return await _redis.HDelAsync(_pipelineKey, deleteHandle, false);
+            return await _redis.HDelAsync(_pipelineKey, deleteHandle, true);
         }
 
         /// <summary>

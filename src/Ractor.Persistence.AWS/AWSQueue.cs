@@ -7,7 +7,7 @@ using Amazon.SQS;
 using Amazon.SQS.Model;
 
 namespace Ractor.Persistence.AWS {
-    public class AWSQueue<T> : IQueue<T> {
+    public class AWSQueue<T> : IQueue<T> where T : class {
         public ISerializer Serializer { get; set; }
         readonly IAmazonSQS _sqs = AWSClientFactory.CreateAmazonSQSClient(RegionEndpoint.EUWest1);
         private readonly string _queueUrl;
