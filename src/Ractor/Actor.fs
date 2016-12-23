@@ -1,85 +1,5 @@
 ﻿#nowarn "760" // new for IDisposable
 
-// TODO lua script: combine separate calls into one script call where possible, e.g. in Post()
-
-// TODO Post() must handle errors, e.g. via GetResult in an async task
-// TODO!! do not drop messages when computation errored but put them back to the queue
-// and log/notify
-
-// TODO! ensure that we are alway reusing an existing Redis instance for each connection string
-// TODO Logstash/Kibana integration for logging
-
-
-namespace Ractor.FSharp
-open System
-open Ractor
-// TODO? PreserveOrder option is possible - is it needed?
-// should lock inbox while executing a computation
-// and unlock upon returning its result
-[<AbstractClassAttribute>]
-type Actor<'Task, 'TResult>() as this = 
-    inherit ActorBase()
-    let mutable extendedComputation : Message<'Task> * string -> Async<Message<'TResult>> = 
-        fun (inMessage,_) -> 
-            async {
-                if inMessage.HasError then return Message(Unchecked.defaultof<'TResult>,true,inMessage.Error) 
-                else
-                    let task = inMessage.Value
-                    try
-                        let! child = Async.StartChild(this.Computation(task), this.ResultTimeout)
-                        let! result = child
-                        return Message(result, false, null)
-                    with e -> 
-                        ActorBase.Logger.Error("Computation error", Some(e))
-                        return Message(Unchecked.defaultof<'TResult>,true,e)
-            }
-    /// <summary>
-    /// Where Ractors store messages and other service data (with namespace "R")
-    /// </summary>
-    abstract RedisConnectionString : string with get
-    override this.RedisConnectionString = "localhost"
-
-    /// <summary>
-    /// Where Ractors store data (with namespace set at RedisDataNamespace)
-    /// </summary>
-    abstract RedisDataConnectionString : string with get
-    override this.RedisDataConnectionString = this.RedisConnectionString
-    abstract RedisDataNamespace : string with get
-    override this.RedisDataNamespace = "data"
-
-    /// <summary>
-    /// One actor implementation instance per id.
-    /// </summary>
-    abstract InstanceId : string with get, set
-    override val InstanceId = "" with get, set
-    abstract Computation : 'Task -> Async<'TResult>
-    override this.Computation(input) = 
-        async { return Unchecked.defaultof<'TResult>}
-    /// <summary>
-    /// Time in milliseconds to wait for computation to finish and to wait before discarding unclaimed results.
-    /// </summary>
-    abstract ResultTimeout : int with get
-    override this.ResultTimeout with get() =  60000
-    abstract LowPriority : bool with get
-    override this.LowPriority with get() =  false
-    abstract AutoStart : bool with get
-    override this.AutoStart with get() = true
-    abstract Optimistic : bool with get
-    override this.Optimistic with get() = true
-    abstract GetKey : unit -> string
-    override this.GetKey() = this.GetType().FullName + (if String.IsNullOrEmpty(this.InstanceId) then "" else ":" + this.InstanceId)
-    // extended computation for continuations
-    member internal this.ExtendedComputation 
-        with get () = extendedComputation
-        and set v = extendedComputation <- v
-
-    member this.Cache with get () = Redis.Cache
-    member this.Redis with get () = Connections.GetOrCreateRedis(this.RedisDataConnectionString, this.RedisDataNamespace)
-    member this.GetRedis(id) = Connections.GetRedis(id)
-    member this.DB with get() = Connections.GetDB()
-    member this.GetDB(id) = Connections.GetRedis(id)
-    member this.BlobStorage with get() = Connections.GetBlobStorage()
-    member this.GetBlobStorage(id) = Connections.GetBlobStorage(id)
 
 namespace Ractor
 
@@ -422,44 +342,25 @@ type internal ActorImpl<'Task, 'TResult>
     static member Counter with get () = !counter
     static member val DefaultRedisConnectionString = "" with get, set
     static member ActorsRepo with get () = actors
-    static member Instance<'Task, 'TResult>(definition:obj) : ActorImpl<'Task, 'TResult> = 
+    static member Instance<'Task, 'TResult>(definition:Actor<'Task, 'TResult>) : ActorImpl<'Task, 'TResult> = 
             let mutable key = ""
             // code duplication is OK here, otherwise will need interface, etc... and still type matching
             let actor =
-                match definition with
-                | x when isSubclassOfRawGeneric(typedefof<Actor<'Task, 'TResult>>, x.GetType()) -> // :? Actor<'Task, 'TResult> as taskDefinition -> 
-                    let taskDefinition = x :?> Actor<'Task, 'TResult>
-                    key <-  taskDefinition.GetKey()
-                    if ActorImpl<_,_>.ActorsRepo.ContainsKey(key) then
-                            Debug.WriteLine("Took existing actor: " + key)
-                            ActorImpl<_,_>.ActorsRepo.[key] :?> ActorImpl<'Task, 'TResult>
-                    else
-                        let conn = 
-                            if String.IsNullOrWhiteSpace(taskDefinition.RedisConnectionString) then
-                                if String.IsNullOrWhiteSpace(ActorImpl<_,_>.DefaultRedisConnectionString) then
-                                    raise (new ArgumentException("Redis connection string is not set"))
-                                else
-                                    ActorImpl<_,_>.DefaultRedisConnectionString
-                            else taskDefinition.RedisConnectionString
-                        let comp (msg:Message<'Task> * string) : Async<Message<'TResult>> = taskDefinition.ExtendedComputation(msg)
-                        ActorImpl(conn, key, comp, taskDefinition.ResultTimeout, taskDefinition.LowPriority, taskDefinition.AutoStart, taskDefinition.Optimistic)
-                | x when isSubclassOfRawGeneric(typedefof<Ractor.FSharp.Actor<'Task, 'TResult>>, x.GetType()) -> //:? Ractor.FSharp.Actor<'Task, 'TResult> as asyncDefinition ->
-                    let asyncDefinition = x :?> Ractor.FSharp.Actor<'Task, 'TResult>
-                    key <-  asyncDefinition.GetKey()
-                    if ActorImpl<_,_>.ActorsRepo.ContainsKey(key) then 
-                            Debug.WriteLine("Took existing actor: " + key)
-                            ActorImpl<_,_>.ActorsRepo.[key] :?> ActorImpl<'Task, 'TResult>
-                    else
-                        let conn = 
-                            if String.IsNullOrWhiteSpace(asyncDefinition.RedisConnectionString) then
-                                if String.IsNullOrWhiteSpace(ActorImpl<_,_>.DefaultRedisConnectionString) then
-                                    raise (new ArgumentException("Redis connection string is not set"))
-                                else
-                                    ActorImpl<_,_>.DefaultRedisConnectionString
-                            else asyncDefinition.RedisConnectionString
-                        let comp (msg:Message<'Task> * string) : Async<Message<'TResult>> = asyncDefinition.ExtendedComputation(msg)
-                        ActorImpl(conn, key, comp, asyncDefinition.ResultTimeout, asyncDefinition.LowPriority, asyncDefinition.AutoStart, asyncDefinition.Optimistic)
-                | _ -> failwith "wrong definition type"
+                let taskDefinition = definition
+                key <-  taskDefinition.GetKey()
+                if ActorImpl<_,_>.ActorsRepo.ContainsKey(key) then
+                        Debug.WriteLine("Took existing actor: " + key)
+                        ActorImpl<_,_>.ActorsRepo.[key] :?> ActorImpl<'Task, 'TResult>
+                else
+                    let conn = 
+                        if String.IsNullOrWhiteSpace(taskDefinition.RedisConnectionString) then
+                            if String.IsNullOrWhiteSpace(ActorImpl<_,_>.DefaultRedisConnectionString) then
+                                raise (new ArgumentException("Redis connection string is not set"))
+                            else
+                                ActorImpl<_,_>.DefaultRedisConnectionString
+                        else taskDefinition.RedisConnectionString
+                    let comp (msg:Message<'Task> * string) : Async<Message<'TResult>> = taskDefinition.ExtendedComputation(msg)
+                    ActorImpl(conn, key, comp, taskDefinition.ResultTimeout, taskDefinition.LowPriority, taskDefinition.AutoStart, taskDefinition.Optimistic)
             ActorImpl<_,_>.ActorsRepo.[key] <- actor
             actor
     
