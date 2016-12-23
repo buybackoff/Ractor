@@ -133,7 +133,9 @@
     <Compile Include="TablePerHierarchyAttribute.cs">
       <DependentUpon>Attributes.cs</DependentUpon>
     </Compile>
-    <Compile Include="Utils.cs" />
+    <Compile Include="Utils\PriorityTaskRunners.cs" />
+    <Compile Include="Utils\QueuedTaskScheduler.cs" />
+    <Compile Include="Utils\Utils.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="app.config" />
