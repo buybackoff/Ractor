@@ -112,6 +112,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="GuidTests.cs" />
+    <Compile Include="RedisAsyncDictTests.cs" />
     <Compile Include="RedisQueueTests.cs" />
     <Compile Include="PocoPersistorTests.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />

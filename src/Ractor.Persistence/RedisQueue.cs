@@ -22,17 +22,18 @@ namespace Ractor {
         private readonly SemaphoreSlim _semaphore = new SemaphoreSlim(0, 1);
 
         /// <summary>
-        /// 
+        ///
         /// </summary>
         public RedisQueue(Redis redis, string id, int timeout = -1, string group = "") {
             _cts = new CancellationTokenSource();
             _redis = redis;
             _timeout = timeout;
             Id = id;
-            _prefix = (string.IsNullOrWhiteSpace(group) ? "" : "{" + group + "}:") + id; // aware of Redis cluster with {}
-            _inboxKey = _prefix + ":inbox";
-            _pipelineKey = _prefix + ":pipeline";
-            _lockKey = _prefix + ":lock";
+            Group = group;
+            _prefix = (string.IsNullOrWhiteSpace(group) ? "" : "{" + group + "}:") + id + ":"; // aware of Redis cluster with {}
+            _inboxKey = _prefix + "inbox";
+            _pipelineKey = _prefix + "pipeline";
+            _lockKey = _prefix + "lock";
             // NB using keyspace notifications, must be enabled in settings with minimum "Kl"
             // https://redis.io/topics/notifications
             _channelKey = $"__keyspace@{redis.Database}__:" + redis.KeyNameSpace + _inboxKey;
@@ -70,6 +71,7 @@ namespace Ractor {
                         expiry, When.NotExists, false);
                     //Console.WriteLine("checking if entered: " + entered.ToString())
                     if (entered && _started) {
+                        // ReSharper disable once UnusedVariable
                         var n = redis.Eval<int>(pipelineScript, new[] { redis.KeyNameSpace + _pipelineKey, _inboxKey });
                         //Console.WriteLine($"Returned from pipeline: {n}");
                     }
@@ -91,27 +93,32 @@ namespace Ractor {
         }
 
         /// <summary>
-        /// 
+        ///
         /// </summary>
         public string Id { get; }
 
         /// <summary>
-        /// 
+        ///
+        /// </summary>
+        public string Group { get; }
+
+        /// <summary>
+        ///
         /// </summary>
         public int Timeout => _timeout / 1000;
 
         /// <summary>
-        /// 
+        ///
         /// </summary>
         public string Prefix => _prefix;
 
         /// <summary>
-        /// 
+        ///
         /// </summary>
         public string KeyNameSpace => _redis.KeyNameSpace;
 
         /// <summary>
-        /// 
+        ///
         /// </summary>
         public async Task<QueueSendResult> TrySendMessage(T message) {
             var id = Guid.NewGuid().ToBase64String();
@@ -135,7 +142,6 @@ namespace Ractor {
         ///
         /// </summary>
         public async Task<QueueReceiveResult<T>> TryReceiveMessage() {
-            // TODO timeout
             const string lua = @"
                     local result = redis.call('RPOP', KEYS[1])
                     if result ~= nil then
@@ -145,6 +151,7 @@ namespace Ractor {
 
             var pipelineId = Guid.NewGuid().ToBase64String();
             var attemts = 0;
+            var cumulativeTimeout = 0;
             while (!_cts.IsCancellationRequested) {
                 var messageWithId = await _redis.EvalAsync<QueueMessageWithId<T>>
                     (lua, new[]
@@ -157,7 +164,13 @@ namespace Ractor {
                 if (messageWithId == null || EqualityComparer<T>.Default.Equals(messageWithId.Payload, default(T))) {
                     //timeout, if PubSub dropped notification, recheck the queue, but not very often
                     var timeout = (int)Math.Pow(2, Math.Min(attemts + 3, 13));
-                    await _semaphore.WaitAsync(timeout);
+                    var signal = await _semaphore.WaitAsync(timeout);
+                    if (!signal) {
+                        cumulativeTimeout += timeout;
+                        if (_timeout > 0 && cumulativeTimeout > _timeout) {
+                            throw new TimeoutException();
+                        }
+                    }
                     attemts++;
                     //Console.WriteLine($"Attempt: {attemts}");
                 } else {
@@ -169,7 +182,7 @@ namespace Ractor {
                     };
                 }
             }
-            throw new Exception("Should not reach this line");
+            throw new TaskCanceledException();
         }
 
         /// <summary>
@@ -191,19 +204,18 @@ namespace Ractor {
             _redis.Unsubscribe(_channelKey);
             _cts.Cancel();
         }
-
-
     }
 
     internal class QueueMessageWithId<T> {
+
         /// <summary>
-        /// 
+        ///
         /// </summary>
         [JsonProperty("i")]
         public string Id { get; set; }
 
         /// <summary>
-        /// 
+        ///
         /// </summary>
         [JsonProperty("p")]
         public T Payload { get; set; }

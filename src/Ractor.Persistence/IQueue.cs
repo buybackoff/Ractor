@@ -49,6 +49,5 @@ namespace Ractor {
         Task<bool> TryFill(string key, T value);
 
         Task<T> TryTake(string key);
-
     }
 }

@@ -45,12 +45,24 @@ namespace Ractor {
             });
         }
 
+        public void KeyspaceEventSubscribe(RedisChannel channel, Action<string, string> handler) {
+            var sub = ConnectionMultiplexer.GetSubscriber();
+            sub.Subscribe(channel, (ch, v) => {
+                handler(channel, v);
+            });
+        }
+
         public async Task SubscribeAsync<TMessage>(string channel, Action<string, TMessage> handler) {
             var sub = ConnectionMultiplexer.GetSubscriber();
-            await sub.SubscribeAsync( channel, (ch, v) => {
+            await sub.SubscribeAsync(channel, (ch, v) => {
                 var message = UnpackResultNullable<TMessage>(v);
                 handler(channel, message);
             });
+        }
+
+        public void Unsubscribe(RedisChannel channel) {
+            var sub = ConnectionMultiplexer.GetSubscriber();
+            sub.Unsubscribe(channel);
         }
 
         public void Unsubscribe(string channel) {

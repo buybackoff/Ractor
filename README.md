@@ -1,3 +1,21 @@
+Update
+=======================
+
+There are several really useful things here:
+* DynamicContext for EF6 that starts per-table automatic migrations, which is very convenient while
+prototyping RDMS structure and adding/changing schema. By default, only non-destructive updates are 
+allowed, but this is a config setting.
+* SE.Redis wrapper with automatic serialization of generic values, with JSON.NET by default.
+* Redis-based distributed MPMC RedisQueue and RedisAsyncDictionary, which together allow to build any 
+complex Actor topology manually without a separate Actor abstraction.
+
+The readme below is as of 2014. I will rewrite a simpler version of Actors using the 
+RedisQueue/RedisAsyncDictionary, just to keep the name of the project relevant.
+
+Current version of Actor implementation is incomprehensible, slow, spaghetti code, written
+mostly for educational purposes during my time at Hacker School (but it still works).
+
+
 Ractor
 =======================
 <img align="right" src="https://raw.githubusercontent.com/buybackoff/Ractor.CLR/master/docs/files/img/logo.png" />
@@ -69,7 +87,7 @@ Docs & test are work in progress...
 License
 ----------------------
 
-(c) Victor Baybekov 2015
+(c) Victor Baybekov 2016
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
