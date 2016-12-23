@@ -6,6 +6,14 @@ using System.Threading.Tasks;
 
 namespace Ractor {
 
+    // TODO key metrics monitoring, e.g. total count with static counter and INCRBY
+    // per instance counter, pipeline length, etc. This should be periodic and 
+    // not interfere with the main method, e.g. a separate async loop every second
+    // 
+    // Also need a count of active workers
+    // Expose all this as IObservable with metrics to avoid hard dependencies
+    // Then could use Spreads and/or any logging framework to store and monitor all metrics
+
     /// <summary>
     /// Persistent MPMC Redis queue
     /// </summary>
@@ -13,12 +21,12 @@ namespace Ractor {
         private readonly CancellationTokenSource _cts;
         private readonly Redis _redis;
         private readonly int _timeout;
-        private string _prefix;
+        private readonly string _prefix;
         private readonly string _inboxKey;
         private readonly string _lockKey;
         private readonly string _pipelineKey;
-        private string _channelKey;
-        private bool _started;
+        private readonly string _channelKey;
+        private readonly bool _started;
         private readonly SemaphoreSlim _semaphore = new SemaphoreSlim(0, 1);
 
         /// <summary>
@@ -39,6 +47,11 @@ namespace Ractor {
             _channelKey = $"__keyspace@{redis.Database}__:" + redis.KeyNameSpace + _inboxKey;
 
             Task.Run(async () => {
+                if (_timeout <= 0) {
+                    // TODO instead of artifitial defaults, without timeout start monitoring
+                    // the length of the pipeline
+                    return;
+                }
                 // NB We need some finite timeout to clean up
                 // However, the best practice is to set it
                 var staleTimeout = _timeout > 0 ? _timeout : 60 * 60 * 1000;
@@ -69,7 +82,7 @@ namespace Ractor {
                         return res
                         ";
 
-                    var expiry = TimeSpan.FromMilliseconds(_timeout);
+                    var expiry = TimeSpan.FromMilliseconds(staleTimeout);
                     var entered = redis.Set<string>(_lockKey, "collecting garbage",
                         expiry, When.NotExists, false);
                     //Console.WriteLine("checking if entered: " + entered.ToString())
@@ -79,7 +92,7 @@ namespace Ractor {
                         //Console.WriteLine($"Returned from pipeline: {n}");
                     }
 
-                    await Task.Delay(_timeout);
+                    await Task.Delay(staleTimeout);
                 }
             }, _cts.Token);
 

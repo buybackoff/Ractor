@@ -1,7 +1,6 @@
 ﻿using StackExchange.Redis;
 using System;
 using System.Collections.Concurrent;
-using System.Diagnostics;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -91,7 +90,7 @@ namespace Ractor {
             T result = null;
             while (!_cts.IsCancellationRequested) {
                 if (result == null) {
-                    var timeout = (int)Math.Pow(2, Math.Min(attemts + 6, 13));
+                    var timeout = (int)Math.Pow(2, Math.Min(attemts + 6, 20));
                     var tcs = _listeners.GetOrAdd(key, k => new TaskCompletionSource<bool>());
                     var delay = Task.Delay(timeout);
                     // we dont'care who was the first, we recheck the result either on a signal or on retry timeout, but need to check for timeout
