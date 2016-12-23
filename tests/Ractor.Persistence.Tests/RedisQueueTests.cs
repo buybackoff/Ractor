@@ -19,7 +19,8 @@ namespace Ractor.Persistence.Tests {
             sw.Start();
             var producer1 = Task.Run(async () => {
                 for (var i = 0; i < n; i++) {
-                    await queue.TrySendMessage(i.ToString());
+                    var sendResult = await queue.TrySendMessage(i.ToString());
+                    if (!sendResult.Ok) Assert.Fail("Cannot send a message");
                     //await Task.Delay(50);
                 }
             });
@@ -38,10 +39,10 @@ namespace Ractor.Persistence.Tests {
                     var message = await queue.TryReceiveMessage();
                     c++;
                     //if (message.OK) { Console.WriteLine(message.Value); }
-                    if (message.OK) {
+                    if (message.Ok) {
                        await queue.TryDeleteMessage(message.DeleteHandle);
                     }
-                    if (message.OK && c == n ) break; // n * 2
+                    if (message.Ok && c == n ) break; // n * 2
                 }
             });
 
@@ -72,7 +73,7 @@ namespace Ractor.Persistence.Tests {
                     c++;
                     if(c % 10000 == 0) Console.WriteLine(c);
                     //if (message.OK) { Console.WriteLine(message.Value); }
-                    if (message.OK) {
+                    if (message.Ok) {
                         await queue.TryDeleteMessage(message.DeleteHandle);
                     }
                     

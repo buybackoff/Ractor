@@ -20,7 +20,7 @@ namespace Ractor {
         /// <summary>
         /// Prefix to all keys created/read by an instance of Redis
         /// </summary>
-        public string KeyNameSpace { get; private set; }
+        public string KeyNameSpace => _nameSpace;
         private readonly string _nameSpace;
 
         /// <summary>
@@ -36,8 +36,7 @@ namespace Ractor {
         public Redis(string connectionString = "", string keyNameSpace = "") {
             if (string.IsNullOrWhiteSpace(connectionString)) connectionString = "localhost,resolveDns=true";
             ConnectionMultiplexer = ConnectionMultiplexer.Connect(connectionString);
-            KeyNameSpace = keyNameSpace ?? ""; // just if null is provided
-            _nameSpace = String.IsNullOrEmpty(KeyNameSpace) ? "" : KeyNameSpace + ":";
+            _nameSpace = String.IsNullOrEmpty(keyNameSpace) ? "" : keyNameSpace + ":";
             Serializer = new JsonSerializer();
         }
 
@@ -107,7 +106,7 @@ namespace Ractor {
             return ConnectionMultiplexer.GetDatabase();
         }
 
-        private T UnpackResultNullable<T>(RedisValue result) {
+        internal T UnpackResultNullable<T>(RedisValue result) {
             if (result.IsNull) return default(T);
             var bytes =
                 IsTypeCompressed<T>()
@@ -116,7 +115,7 @@ namespace Ractor {
             return Serializer.Deserialize<T>(bytes);
         }
 
-        private RedisValue PackValueNullable<T>(T item) {
+        internal RedisValue PackValueNullable<T>(T item) {
             if (!typeof(T).IsValueType && EqualityComparer<T>.Default.Equals(item, default(T))) {
                 return RedisValue.Null;
             }

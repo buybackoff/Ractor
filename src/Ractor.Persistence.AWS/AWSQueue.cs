@@ -58,18 +58,29 @@ namespace Ractor.Persistence.AWS {
 
         public int Timeout => 3600;
 
-        public async Task<bool> TrySendMessage(T message) {
+        public async Task<QueueSendResult> TrySendMessage(T message) {
+            var id = Guid.NewGuid().ToBase64String();
+            var messageWithId = new QueueMessageWithId<T> {
+                Id = id,
+                Payload = message
+            };
             try {
-                var txt = Encoding.UTF8.GetString(Serializer.Serialize(message));
+                var txt = Encoding.UTF8.GetString(Serializer.Serialize(messageWithId));
                 var sendMessageRequest = new SendMessageRequest {
                     QueueUrl = _queueUrl,
                     MessageBody = txt
                 };
                 //Console.WriteLine("Send");
                 var response = await _sqs.SendMessageAsync(sendMessageRequest);
-                return true;
+                return new QueueSendResult {
+                    Id = id,
+                    Ok = true
+                };
             } catch {
-                return false;
+                return new QueueSendResult {
+                    Id = null,
+                    Ok = false
+                };
             }
         }
 
@@ -86,14 +97,21 @@ namespace Ractor.Persistence.AWS {
                 var receiveMessageResponse = await _sqs.ReceiveMessageAsync(receiveMessageRequest);
                 //Console.WriteLine("Receive");
                 if (receiveMessageResponse.Messages.Count < 1)
-                    return new QueueReceiveResult<T> { OK = false };
+                    return new QueueReceiveResult<T> { Ok = false };
 
                 var message = receiveMessageResponse.Messages[0];
-                var res = Serializer.Deserialize<T>(Encoding.UTF8.GetBytes(message.Body));
+                var res = Serializer.Deserialize<QueueMessageWithId<T>>(Encoding.UTF8.GetBytes(message.Body));
                 var handle = message.ReceiptHandle;
-                return new QueueReceiveResult<T> { OK = true, Value = res, DeleteHandle = handle };
+                return new QueueReceiveResult<T> {
+                    Ok = true,
+                    Id = res.Id,
+                    Value = res.Payload,
+                    DeleteHandle = handle
+                };
             } catch {
-                return new QueueReceiveResult<T> { OK = false };
+                return new QueueReceiveResult<T> {
+                    Ok = false
+                };
             }
         }
 

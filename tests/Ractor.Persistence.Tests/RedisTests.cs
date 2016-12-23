@@ -73,11 +73,11 @@ if result ~= nil then
 end
 return result";
 
-            res = r.Eval<string>(lua, new[] { r.KeyNameSpace + ":" + "a", r.KeyNameSpace + ":" + "b", "field" });
+            res = r.Eval<string>(lua, new[] { r.KeyNameSpace + "a", r.KeyNameSpace + "b", "field" });
             Assert.AreEqual(res, null);
 
             r.LPush<string>("a", "value");
-            res = GetRedis().Eval<string>(lua, new[] { r.KeyNameSpace + ":" + "a", r.KeyNameSpace + ":" + "b", "field" });
+            res = GetRedis().Eval<string>(lua, new[] { r.KeyNameSpace + "a", r.KeyNameSpace + "b", "field" });
             var field = GetRedis().HGet<string>("b", "field");
             Assert.AreEqual(res, "value");
             Assert.AreEqual(field, "value");
@@ -97,7 +97,7 @@ return result";
             r.LPush<string>("greeter:Mailbox:inbox", "value");
 
 
-            var res = r.Eval<string>(lua, new[] { r.KeyNameSpace + ":" + "greeter:Mailbox:inbox", r.KeyNameSpace + ":" + "test:greeter:Mailbox:pipeline", "test" });
+            var res = r.Eval<string>(lua, new[] { r.KeyNameSpace + "greeter:Mailbox:inbox", r.KeyNameSpace + "test:greeter:Mailbox:pipeline", "test" });
 
             Assert.AreEqual("value", res);
 

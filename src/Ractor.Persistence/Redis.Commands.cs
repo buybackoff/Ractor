@@ -1,14 +1,13 @@
-﻿using System.Linq;
+﻿using StackExchange.Redis;
+using System.Linq;
 using System.Threading.Tasks;
-using StackExchange.Redis;
 
 namespace Ractor {
-
     // WIP
-    // For each write command we need 
+    // For each write command we need
     // - fully typed version with implicit key + Async version;
     // - typed version with custom explicit key + Async version;
-    // 
+    //
     // For each read command we need:
     // - typed version with root/owner object (for collections only) + Async version
     // - typed version with custom explicit key and optional bool to indicate prefixed explicit full key + Async version
@@ -40,7 +39,7 @@ namespace Ractor {
         }
 
         public long Del(string[] keys) {
-            var ks = keys.Select(k => (RedisKey) (_nameSpace + k)).ToArray();
+            var ks = keys.Select(k => (RedisKey)(_nameSpace + k)).ToArray();
             return GetDb().KeyDelete(ks);
         }
 
@@ -48,7 +47,6 @@ namespace Ractor {
             var ks = keys.Select(k => (RedisKey)(_nameSpace + k)).ToArray();
             return await GetDb().KeyDeleteAsync(ks);
         }
-
 
         /// <summary>
         /// Runs lua script and returns a deserialized result (int, long, double, bool, string are not deserialized).
@@ -58,8 +56,8 @@ namespace Ractor {
             var result = GetDb().ScriptEvaluate(script,
                 fullKeysWithPrefix == null ? null : fullKeysWithPrefix.Select(k => (RedisKey)(k)).ToArray(),
                 values == null ? null : values.Select(PackValueNullable).ToArray());
-            var type = typeof (TResult);
-            if (type == typeof (int)) {
+            var type = typeof(TResult);
+            if (type == typeof(int)) {
                 return (TResult)((object)(int)(RedisValue)result);
             }
             if (type == typeof(long)) {
@@ -111,5 +109,9 @@ namespace Ractor {
         }
 
 
+        /// <summary>
+        /// Numeric identifier of this database
+        /// </summary>
+        public int Database => GetDb().Database;
     }
 }

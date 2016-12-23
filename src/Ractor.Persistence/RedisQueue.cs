@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Newtonsoft.Json;
+using System;
 using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
@@ -6,7 +7,7 @@ using System.Threading.Tasks;
 namespace Ractor {
 
     /// <summary>
-    ///
+    /// Persistent MPMC Redis queue
     /// </summary>
     public class RedisQueue<T> : IQueue<T>, IDisposable where T : class {
         private readonly CancellationTokenSource _cts;
@@ -20,6 +21,9 @@ namespace Ractor {
         private bool _started;
         private readonly SemaphoreSlim _semaphore = new SemaphoreSlim(0, 1);
 
+        /// <summary>
+        /// 
+        /// </summary>
         public RedisQueue(Redis redis, string id, int timeout = -1, string group = "") {
             _cts = new CancellationTokenSource();
             _redis = redis;
@@ -29,7 +33,9 @@ namespace Ractor {
             _inboxKey = _prefix + ":inbox";
             _pipelineKey = _prefix + ":pipeline";
             _lockKey = _prefix + ":lock";
-            _channelKey = _prefix + ":channel";
+            // NB using keyspace notifications, must be enabled in settings with minimum "Kl"
+            // https://redis.io/topics/notifications
+            _channelKey = $"__keyspace@{redis.Database}__:" + redis.KeyNameSpace + _inboxKey;
 
             Task.Run(async () => {
                 while (!_cts.Token.IsCancellationRequested) {
@@ -64,35 +70,65 @@ namespace Ractor {
                         expiry, When.NotExists, false);
                     //Console.WriteLine("checking if entered: " + entered.ToString())
                     if (entered && _started) {
-                        var n = redis.Eval<int>(pipelineScript, new[] { redis.KeyNameSpace + ":" + _pipelineKey, _inboxKey });
-                        if (n > 0) await _redis.PublishAsync(_channelKey, "", false);
-                        Console.WriteLine($"Returned from pipeline: {n}");
+                        var n = redis.Eval<int>(pipelineScript, new[] { redis.KeyNameSpace + _pipelineKey, _inboxKey });
+                        //Console.WriteLine($"Returned from pipeline: {n}");
                     }
 
                     await Task.Delay(_timeout);
                 }
             }, _cts.Token);
 
-            redis.Subscribe(_channelKey,
-                new Action<string, string>((channel, messageNotification) => {
-                    if (messageNotification == "" && _semaphore.CurrentCount == 0) { _semaphore.Release(); }
-                }));
+            redis.KeyspaceEventSubscribe(_channelKey,
+                (channel, messageNotification) => {
+                    if ((messageNotification == "lpush" ||
+                         messageNotification == "rpush")
+                        && _semaphore.CurrentCount == 0) {
+                        _semaphore.Release();
+                        //Console.WriteLine("Released semaphore with events");
+                    }
+                });
             _started = true;
         }
 
+        /// <summary>
+        /// 
+        /// </summary>
         public string Id { get; }
 
+        /// <summary>
+        /// 
+        /// </summary>
         public int Timeout => _timeout / 1000;
 
         /// <summary>
-        ///
+        /// 
         /// </summary>
-        public async Task<bool> TrySendMessage(T message) {
-            // TODO combine push and publish inside a lua script
-            var result = await _redis.LPushAsync<T>(_inboxKey, message, When.Always, true);
-            if (result <= 0) return false;
-            await _redis.PublishAsync(_channelKey, "", false);
-            return true;
+        public string Prefix => _prefix;
+
+        /// <summary>
+        /// 
+        /// </summary>
+        public string KeyNameSpace => _redis.KeyNameSpace;
+
+        /// <summary>
+        /// 
+        /// </summary>
+        public async Task<QueueSendResult> TrySendMessage(T message) {
+            var id = Guid.NewGuid().ToBase64String();
+            var messageWithId = new QueueMessageWithId<T> {
+                Id = id,
+                Payload = message
+            };
+            // NB with FF, result is alway 0, keep it false, serves as ACK
+            var result = await _redis.LPushAsync(_inboxKey, messageWithId, When.Always, false);
+            if (result <= 0) return new QueueSendResult {
+                Id = null,
+                Ok = false
+            };
+            return new QueueSendResult {
+                Id = id,
+                Ok = true
+            };
         }
 
         /// <summary>
@@ -110,15 +146,15 @@ namespace Ractor {
             var pipelineId = Guid.NewGuid().ToBase64String();
             var attemts = 0;
             while (!_cts.IsCancellationRequested) {
-                var message = await _redis.EvalAsync<T>
+                var messageWithId = await _redis.EvalAsync<QueueMessageWithId<T>>
                     (lua, new[]
                     {
-                        _redis.KeyNameSpace + ":" + _inboxKey,
-                        _redis.KeyNameSpace + ":" + _pipelineKey,
+                        _redis.KeyNameSpace + _inboxKey,
+                        _redis.KeyNameSpace + _pipelineKey,
                         pipelineId
                     });
 
-                if (EqualityComparer<T>.Default.Equals(message, default(T))) {
+                if (messageWithId == null || EqualityComparer<T>.Default.Equals(messageWithId.Payload, default(T))) {
                     //timeout, if PubSub dropped notification, recheck the queue, but not very often
                     var timeout = (int)Math.Pow(2, Math.Min(attemts + 3, 13));
                     await _semaphore.WaitAsync(timeout);
@@ -126,19 +162,25 @@ namespace Ractor {
                     //Console.WriteLine($"Attempt: {attemts}");
                 } else {
                     return new QueueReceiveResult<T> {
-                        OK = true,
-                        Value = message,
+                        Ok = true,
+                        Id = messageWithId.Id,
+                        Value = messageWithId.Payload,
                         DeleteHandle = pipelineId
                     };
                 }
             }
-            throw new Exception("Should not erach this line");
+            throw new Exception("Should not reach this line");
         }
 
         /// <summary>
         ///
         /// </summary>
         public async Task<bool> TryDeleteMessage(string deleteHandle) {
+            // FF is true, therefore on disconnect we could get a false ACK
+            // and then a message will be returned to the inbox.
+            // That is, we have implicit "at least once" delivery, not "exactly once"
+            // That is simpler, and we actually do not use the result of this call
+            // now, just call it to clean up. Without FF, the simple first benchmark is 80% slower
             return await _redis.HDelAsync(_pipelineKey, deleteHandle, true);
         }
 
@@ -146,7 +188,24 @@ namespace Ractor {
         ///
         /// </summary>
         public void Dispose() {
+            _redis.Unsubscribe(_channelKey);
             _cts.Cancel();
         }
+
+
+    }
+
+    internal class QueueMessageWithId<T> {
+        /// <summary>
+        /// 
+        /// </summary>
+        [JsonProperty("i")]
+        public string Id { get; set; }
+
+        /// <summary>
+        /// 
+        /// </summary>
+        [JsonProperty("p")]
+        public T Payload { get; set; }
     }
 }

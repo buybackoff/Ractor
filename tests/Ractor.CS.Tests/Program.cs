@@ -29,22 +29,30 @@ namespace Ractor.CS.Tests {
 
         private static void Main() {
             //Start();
-            Queue();
+            for (int i = 0; i < 20; i++)
+            {
+                Queue();
+            }
+            
+            Console.WriteLine("Press any key to exit");
             Console.ReadKey();
         }
 
 
-        private static void Queue()
-        {
+        private static void Queue() {
             var redis = new Redis(keyNameSpace: "RedisQueueTests");
             var queue = new RedisQueue<string>(redis, "CouldSendAndReceiveMessages", timeout: 5000);
-            const int n = 100000;
+            const int n = 10000;
 
             var sw = new Stopwatch();
             sw.Start();
-            var producer1 = Task.Run(async () => {
+            var producer1 = Task.Run(async () =>
+            {
+                //await Task.Delay(1000);
                 for (var i = 0; i < n; i++) {
                     await queue.TrySendMessage(i.ToString());
+                    //await queue.TrySendMessage(new String('x', i*1));
+
                     //await Task.Delay(50);
                 }
             });
@@ -58,14 +66,22 @@ namespace Ractor.CS.Tests {
 
             var consumer = Task.Run(async () => {
                 var c = 0;
-                while (true) {
-                    var message = await queue.TryReceiveMessage();
+                while (true)
+                {
+                    //await Task.Delay(100);
+                    QueueReceiveResult<string> message = default(QueueReceiveResult<string>);
+                    try {
+                        message = await queue.TryReceiveMessage();
+                    } catch (Exception e) {
+                        Console.WriteLine(e);
+                    }
                     c++;
                     //if (message.OK) { Console.WriteLine(message.Value); }
-                    if (message.OK) {
+                    if (message.Ok) {
                         await queue.TryDeleteMessage(message.DeleteHandle);
                     }
-                    if (message.OK && c == n) break; // n * 2
+                    if (message.Ok && c == n) break; // n * 2
+
                 }
             });
 
@@ -74,6 +90,7 @@ namespace Ractor.CS.Tests {
             consumer.Wait();
             sw.Stop();
             Console.WriteLine($"Elapsed: {sw.ElapsedMilliseconds}");
+            queue.Dispose();
             //Thread.Sleep(2000);
         }
 

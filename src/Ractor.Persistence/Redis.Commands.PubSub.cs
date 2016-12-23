@@ -37,6 +37,14 @@ namespace Ractor {
             });
         }
 
+        // NB Keyspace events are not JSON and do not need deserialization, which fails on them
+        public void KeyspaceEventSubscribe(string channel, Action<string, string> handler) {
+            var sub = ConnectionMultiplexer.GetSubscriber();
+            sub.Subscribe(channel, (ch, v) => {
+                handler(channel, v);
+            });
+        }
+
         public async Task SubscribeAsync<TMessage>(string channel, Action<string, TMessage> handler) {
             var sub = ConnectionMultiplexer.GetSubscriber();
             await sub.SubscribeAsync( channel, (ch, v) => {
