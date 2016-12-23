@@ -39,6 +39,9 @@ namespace Ractor {
             _channelKey = $"__keyspace@{redis.Database}__:" + redis.KeyNameSpace + _inboxKey;
 
             Task.Run(async () => {
+                // NB We need some finite timeout to clean up
+                // However, the best practice is to set it
+                var staleTimeout = _timeout > 0 ? _timeout : 60 * 60 * 1000;
                 while (!_cts.Token.IsCancellationRequested) {
                     const string pipelineScript = @"
                         local previousKey = KEYS[1]..':previousKeys'
@@ -163,7 +166,7 @@ namespace Ractor {
 
                 if (messageWithId == null || EqualityComparer<T>.Default.Equals(messageWithId.Payload, default(T))) {
                     //timeout, if PubSub dropped notification, recheck the queue, but not very often
-                    var timeout = (int)Math.Pow(2, Math.Min(attemts + 3, 13));
+                    var timeout = (int)Math.Pow(2, Math.Min(attemts + 3, 20));
                     var signal = await _semaphore.WaitAsync(timeout);
                     if (!signal) {
                         cumulativeTimeout += timeout;

@@ -40,11 +40,9 @@ namespace Ractor {
             redis.KeyspaceEventSubscribe(_redisChannel,
                 (channel, key) => {
                     var resultId = key.Substring(key.LastIndexOf(':') + 1);
-                    TaskCompletionSource<bool> tcs;
-                    if (_listeners.TryGetValue(resultId, out tcs)) {
-                        // notify awaiter that its result is ready
-                        tcs.TrySetResult(true);
-                    }
+                    var tcs = _listeners.GetOrAdd(resultId, k => new TaskCompletionSource<bool>());
+                    // notify awaiter that its result is ready
+                    tcs.TrySetResult(true);
                 });
         }
 
@@ -90,16 +88,11 @@ namespace Ractor {
             var fullKey = _prefix + key;
             var attemts = 0;
             var cumulativeTimeout = 0;
+            T result = null;
             while (!_cts.IsCancellationRequested) {
-                var result = await _redis.EvalAsync<T>
-                    (lua, new[]
-                    {
-                        _redis.KeyNameSpace + fullKey
-                    }); //_redis.GetAsync<T>(fullKey);
                 if (result == null) {
-                    var timeout = (int)Math.Pow(2, Math.Min(attemts + 7, 13));
+                    var timeout = (int)Math.Pow(2, Math.Min(attemts + 6, 13));
                     var tcs = _listeners.GetOrAdd(key, k => new TaskCompletionSource<bool>());
-                    Trace.Assert(tcs.Task.Status != TaskStatus.RanToCompletion, "TCS is completed only by a key event which means the result should not be null");
                     var delay = Task.Delay(timeout);
                     // we dont'care who was the first, we recheck the result either on a signal or on retry timeout, but need to check for timeout
                     var t = await Task.WhenAny(tcs.Task, delay);
@@ -115,6 +108,11 @@ namespace Ractor {
                 } else {
                     return result;
                 }
+                result = await _redis.EvalAsync<T>
+                    (lua, new[]
+                    {
+                        _redis.KeyNameSpace + fullKey
+                    });
             }
             throw new TaskCanceledException();
         }
