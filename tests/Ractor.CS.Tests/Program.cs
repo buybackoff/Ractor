@@ -28,12 +28,12 @@ namespace Ractor.CS.Tests {
         }
 
         private static void Main() {
-            //Start();
-            for (int i = 0; i < 20; i++)
-            {
-                Queue();
-            }
-            
+            Start();
+            //for (int i = 0; i < 20; i++)
+            //{
+            //    Queue();
+            //}
+
             Console.WriteLine("Press any key to exit");
             Console.ReadKey();
         }
@@ -46,8 +46,7 @@ namespace Ractor.CS.Tests {
 
             var sw = new Stopwatch();
             sw.Start();
-            var producer1 = Task.Run(async () =>
-            {
+            var producer1 = Task.Run(async () => {
                 //await Task.Delay(1000);
                 for (var i = 0; i < n; i++) {
                     await queue.TrySendMessage(i.ToString());
@@ -66,8 +65,7 @@ namespace Ractor.CS.Tests {
 
             var consumer = Task.Run(async () => {
                 var c = 0;
-                while (true)
-                {
+                while (true) {
                     //await Task.Delay(100);
                     QueueReceiveResult<string> message = default(QueueReceiveResult<string>);
                     try {
@@ -142,7 +140,9 @@ namespace Ractor.CS.Tests {
 
             for (int i = 0; i < numberOfClients; i++) {
                 var destination = new Destination();
+                destination.Start();
                 var client = new Client(destination, repeatsPerClient);
+                client.Start();
                 clients.Add(client);
             }
 
@@ -173,8 +173,8 @@ namespace Ractor.CS.Tests {
             return true;
         }
 
-        public class Client : Actor<object, bool> {
-            private readonly TaskCompletionSource<bool> _latch = new TaskCompletionSource<bool>();
+        public class Client : Actor<object, string> {
+            private readonly TaskCompletionSource<string> _tcs = new TaskCompletionSource<string>();
             private readonly Actor<object, object> _actor;
             public long Received;
             public long Repeat;
@@ -185,20 +185,19 @@ namespace Ractor.CS.Tests {
                 Repeat = repeat;
             }
 
-            public override async Task<bool> Computation(object message) {
+            public override async Task<string> Computation(object message) {
                 for (int i = 0; i < Repeat; i++) {
                     Sent++;
-                    var res = _actor.PostAndGetResult(Msg);
+                    var res = _actor.PostAndGetResultAsync(Msg);
                     //if (res != Msg) throw new ApplicationException();
                     Received++;
                 }
-                _latch.TrySetResult(true);
-                return await _latch.Task;
+                _tcs.TrySetResult("OK");
+                return await _tcs.Task;
             }
         }
 
         public class Destination : Actor<object, object> {
-            public override bool Optimistic { get { return false; } }
 
             public override async Task<object> Computation(object input) {
                 //var i = 0;

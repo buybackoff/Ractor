@@ -6,24 +6,31 @@ open System.Threading
 open System.Threading.Tasks
 
 
-
 type Message<'T>(value:'T, hasError:bool, error:Exception) = 
     member val Value = value with get, set
     member val HasError = hasError with get, set
     member val Error = error with get, set
+    member internal this.AsTask() = 
+      if not this.HasError then Task.FromResult(this.Value)
+      else
+        let tcs = new TaskCompletionSource<'T>()
+        tcs.SetException(this.Error)
+        tcs.Task
+    static member FromTask(t:Task<'T>) =
+      if t.Status = TaskStatus.RanToCompletion then
+        new Message<'T>(t.Result, false, null)
+      elif t.Status = TaskStatus.Canceled then
+        new Message<'T>(Unchecked.defaultof<'T>, true, OperationCanceledException())
+      elif t.Status = TaskStatus.Faulted then
+        new Message<'T>(Unchecked.defaultof<'T>, true, t.Exception) // TODO inner exceptions
+      else raise (NotSupportedException("Task status not supported"))
     new() = Message<'T>(Unchecked.defaultof<'T>, false, null)
 
-type Envelope<'Task>(message:Message<'Task>, resultId:string, callerIds : String[]) = 
+type Envelope<'T>(message:Message<'T>, resultId:string, callerIds : String[]) = 
     member val Message = message with get, set
     member val ResultId = resultId  with get, set
     member val CallerIds : String[] = callerIds with get, set
-    new() = Envelope<'Task>(Unchecked.defaultof<Message<'Task>>, "", [||])
-
-
-type IRactorPerformanceMonitor =
-    abstract AllowHighPriorityActors : unit -> bool
-    abstract AllowLowPriorityActors : unit -> bool
-    abstract PeriodMilliseconds : int with get
+    new() = Envelope<'T>(Unchecked.defaultof<Message<'T>>, "", [||])
 
 
 
@@ -171,3 +178,143 @@ type TuplesExtension() =
     [<Extension>]
     static member Unnest(this : (((((('T1 * 'T2) * 'T3) * 'T4) * 'T5) * 'T6) * 'T7) ) = 
         unnest7 this
+
+
+
+
+
+[<AutoOpenAttribute>]
+module TaskModule =
+  // Reduced (compared to fsharpx) implementation from Spreads
+  let trueTask = Task.FromResult(true)
+  let falseTask = Task.FromResult(false)
+  let cancelledBoolTask = 
+    let tcs = new TaskCompletionSource<bool>()
+    tcs.SetCanceled()
+    tcs.Task
+
+  let inline bind  (f: 'T -> Task<'U>) (m: Task<'T>) =
+      if m.IsCompleted then f m.Result
+      else
+        let tcs = (Runtime.CompilerServices.AsyncTaskMethodBuilder<_>.Create()) // new TaskCompletionSource<_>() // NB do not allocate objects
+        let t = tcs.Task
+        let awaiter = m.GetAwaiter() // NB this is faster than ContinueWith
+        awaiter.OnCompleted(fun _ -> tcs.SetResult(f m.Result))
+        t.Unwrap()
+
+  let inline bindTimeout  (f: 'T -> Task<'U>) (m: Task<'T>) (timeout:int) =
+      if m.IsCompleted then f m.Result
+      else
+        let tcs = new TaskCompletionSource<Task<'U>>()
+        let t = tcs.Task
+        let ct = new CancellationTokenSource(timeout)
+        let mutable registration = Unchecked.defaultof<_>
+        registration <- ct.Token.Register(Action(fun _ -> tcs.TrySetException(TimeoutException()) |> ignore; registration.Dispose();ct.Dispose()))
+        let awaiter = m.GetAwaiter()
+        let u = f m.Result
+        awaiter.OnCompleted(fun _ -> tcs.TrySetResult(f m.Result) |> ignore)
+        t.Unwrap()
+
+  let inline doBind  (f: unit -> Task<'U>) (m: Task) =
+      if m.IsCompleted then f()
+      else
+        let tcs = (Runtime.CompilerServices.AsyncTaskMethodBuilder<_>.Create())
+        let t = tcs.Task
+        let awaiter = m.GetAwaiter()
+        awaiter.OnCompleted(fun _ -> tcs.SetResult(f()))
+        t.Unwrap()
+
+  let inline returnM a = Task.FromResult(a)
+  let inline returnMUnit () = trueTask :> Task
+
+  let inline bindBool  (f: bool -> Task<bool>) (m: Task<bool>) =
+      if m.IsCompleted then f m.Result
+      else
+        let tcs = (Runtime.CompilerServices.AsyncTaskMethodBuilder<_>.Create()) // new TaskCompletionSource<_>() // NB do not allocate objects
+        let t = tcs.Task
+        let awaiter = m.GetAwaiter() // NB this is faster than ContinueWith
+        awaiter.OnCompleted(fun _ -> tcs.SetResult(f m.Result))
+        t.Unwrap()
+
+  let inline returnMBool (a:bool) = if a then trueTask else falseTask
+    
+  type TaskBuilder(?continuationOptions, ?scheduler, ?cancellationToken) =
+      let contOptions = defaultArg continuationOptions TaskContinuationOptions.None
+      let scheduler = defaultArg scheduler TaskScheduler.Default
+      let cancellationToken = defaultArg cancellationToken CancellationToken.None
+
+      member this.Return x = returnM x
+      //member this.Return () = returnMUnit ()
+
+      member this.Zero() = returnM()
+
+      member this.ReturnFrom (a: Task<'T>) = a
+      //member this.ReturnFrom (a: Task) = a
+
+      member this.Bind(m:Task<'m>, f:'m->Task<'n>) = bind f m // bindWithOptions cancellationToken contOptions scheduler f m
+           
+      member this.Bind(m:Task, f:unit-> Task<'j>) = doBind f m
+
+      member this.Combine(comp1:Task<'m>, comp2:'m->Task<'n>) =
+          this.Bind(comp1, comp2)
+
+      member this.While(guard, m) =
+          let rec whileRec(guard, m) = 
+            if not(guard()) then this.Zero() else
+                this.Bind(m(), fun () -> whileRec(guard, m))
+          whileRec(guard, m)
+
+      member this.While(guardTask:unit->Task<bool>, body) =
+        let m = guardTask()
+        let onCompleted() =
+          this.Bind(body(), fun () -> this.While(guardTask, body))
+        if m.Status = TaskStatus.RanToCompletion then 
+          onCompleted()
+        else
+          let tcs =  new TaskCompletionSource<_>() // (Runtime.CompilerServices.AsyncTaskMethodBuilder<_>.Create())
+          let t = tcs.Task
+          let awaiter = m.GetAwaiter()
+          awaiter.OnCompleted(fun _ -> 
+            if m.IsFaulted then
+              tcs.SetException(m.Exception)
+            elif m.IsCanceled then
+              tcs.SetCanceled()
+            else
+              tcs.SetResult(onCompleted())
+            )
+          t.Unwrap()
+
+      member this.TryWith(body:unit -> Task<_>, catchFn:exn -> Task<_>) =  
+        try
+            body()
+              .ContinueWith(fun (t:Task<_>) ->
+                  match t.IsFaulted with
+                  | false -> returnM(t.Result)
+                  | true  -> catchFn(t.Exception.GetBaseException()))
+              .Unwrap()
+        with e -> catchFn(e)
+
+      member this.TryFinally(m, compensation) =
+          try this.ReturnFrom m
+          finally compensation()
+
+      member this.TryFinally(f, compensation) =
+          try this.ReturnFrom (f())
+          finally compensation()
+
+//      member this.TryFinally(m:Task, compensation) =
+//          try this.ReturnFrom m
+//          finally compensation()
+
+      member this.Using(res: #IDisposable, body: #IDisposable -> Task<_>) =
+          this.TryFinally(body res, fun () -> match res with null -> () | disp -> disp.Dispose())
+
+      member this.For(sequence: seq<_>, body) =
+          this.Using(sequence.GetEnumerator(),
+                                fun enum -> this.While(enum.MoveNext, fun () -> body enum.Current))
+
+      member this.Delay (f: unit -> Task<'T>) = f
+
+      member this.Run (f: unit -> Task<'T>) = f()
+
+  let task = TaskBuilder(scheduler = TaskScheduler.Current)
