@@ -66,9 +66,17 @@ namespace Ractor {
         public string Prefix => _prefix;
 
         /// <summary>
+        /// Store result in in-memory cache
+        /// </summary>
+        internal bool Cached { get; set; }
+
+        /// <summary>
         ///
         /// </summary>
         public async Task<bool> TryFill(string key, T value) {
+            if (Cached) {
+                Redis.Cache.Add(key, value, DateTimeOffset.Now + TimeSpan.FromMilliseconds(_timeout));
+            }
             var fullKey = _prefix + key;
             return await _redis.SetAsync<T>(fullKey, value, (_timeout > 0 ? TimeSpan.FromMilliseconds(_timeout) : (TimeSpan?)null), When.Always, false);
         }
@@ -77,6 +85,11 @@ namespace Ractor {
         ///
         /// </summary>
         public async Task<T> TryTake(string key) {
+            if (Cached) {
+                var cached = Redis.Cache.Remove(key);
+                if (cached != null) return (T)cached;
+            }
+
             const string lua = @"
                     local result = redis.call('GET', KEYS[1])
                     if result ~= nil then
