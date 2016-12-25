@@ -11,7 +11,7 @@ namespace Ractor {
         protected static readonly QueuedTaskScheduler TopScheduler = new QueuedTaskScheduler();
     }
 
-    public abstract class Actor<TReq, TResp> : BaseActor {
+    public abstract class Actor<TReq, TResp> : BaseActor, IDisposable {
         private CancellationTokenSource _cts;
         private SemaphoreSlim _semaphore;
         private readonly RedisQueue<Message<TReq>> _queue;
@@ -19,7 +19,7 @@ namespace Ractor {
         private readonly TaskScheduler _scheduler;
 
         /// <summary>
-        /// 
+        ///
         /// </summary>
         protected Actor(string connectionString = "localhost",
                         string id = null,
@@ -98,13 +98,11 @@ namespace Ractor {
                     }, message, _cts.Token, TaskCreationOptions.None, _scheduler);
                 }
             }, _cts.Token);
-
         }
 
         public void Stop() {
             _cts.Cancel();
         }
-
 
         public async Task<string> Post(TReq request) {
             var result = await _queue.TrySendMessage(new Message<TReq> { Value = request });
@@ -124,5 +122,15 @@ namespace Ractor {
             return await GetResult(resultId);
         }
 
+        public void Dispose() {
+            _cts.Cancel();
+            _queue.Dispose();
+            _results.Dispose();
+            _semaphore.Dispose();
+        }
+
+        ~Actor() {
+            Dispose();
+        }
     }
 }
