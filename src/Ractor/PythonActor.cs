@@ -33,7 +33,7 @@ namespace Ractor {
             };
         }
 
-        public override async Task<string> Computation(string request) {
+        public override Task<string> Computation(string request) {
             // Loop
             //var process = Process.Start(_start);
 

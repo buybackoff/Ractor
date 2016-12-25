@@ -1,4 +1,5 @@
-﻿using System;
+﻿#if NET451
+using System;
 using System.Collections.Generic;
 using System.Data;
 using System.Data.Entity;
@@ -452,3 +453,4 @@ namespace Ractor {
 
     }
 }
+#endif

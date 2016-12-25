@@ -10,7 +10,7 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
-
+//#if NET451
 namespace System.Threading.Tasks.Schedulers {
     /// <summary>
     /// Provides a TaskScheduler that provides control over priorities, fairness, and the underlying threads utilized.
@@ -124,7 +124,7 @@ namespace System.Threading.Tasks.Schedulers {
 
         /// <summary>Initializes the scheduler.</summary>
         /// <param name="threadCount">The number of threads to create and use for processing work items.</param>
-        public QueuedTaskScheduler(int threadCount) : this(threadCount, string.Empty, false, ThreadPriority.Normal, ApartmentState.MTA, 0, null, null) { }
+        //public QueuedTaskScheduler(int threadCount) : this(threadCount, string.Empty, false, ThreadPriority.Normal, ApartmentState.MTA, 0, null, null) { }
 
         /// <summary>Initializes the scheduler.</summary>
         /// <param name="threadCount">The number of threads to create and use for processing work items.</param>
@@ -135,88 +135,88 @@ namespace System.Threading.Tasks.Schedulers {
         /// <param name="threadMaxStackSize">The stack size to use for each thread.</param>
         /// <param name="threadInit">An initialization routine to run on each thread.</param>
         /// <param name="threadFinally">A finalization routine to run on each thread.</param>
-        public QueuedTaskScheduler(
-            int threadCount,
-            string threadName = "",
-            bool useForegroundThreads = false,
-            ThreadPriority threadPriority = ThreadPriority.Normal,
-            ApartmentState threadApartmentState = ApartmentState.MTA,
-            int threadMaxStackSize = 0,
-            Action threadInit = null,
-            Action threadFinally = null) {
-            // Validates arguments (some validation is left up to the Thread type itself).
-            // If the thread count is 0, default to the number of logical processors.
-            if (threadCount < 0) throw new ArgumentOutOfRangeException("concurrencyLevel");
-            else if (threadCount == 0) _concurrencyLevel = Environment.ProcessorCount;
-            else _concurrencyLevel = threadCount;
+        //public QueuedTaskScheduler(
+        //    int threadCount,
+        //    string threadName = "",
+        //    bool useForegroundThreads = false,
+        //    ThreadPriority threadPriority = ThreadPriority.Normal,
+        //    ApartmentState threadApartmentState = ApartmentState.MTA,
+        //    int threadMaxStackSize = 0,
+        //    Action threadInit = null,
+        //    Action threadFinally = null) {
+        //    // Validates arguments (some validation is left up to the Thread type itself).
+        //    // If the thread count is 0, default to the number of logical processors.
+        //    if (threadCount < 0) throw new ArgumentOutOfRangeException("concurrencyLevel");
+        //    else if (threadCount == 0) _concurrencyLevel = Environment.ProcessorCount;
+        //    else _concurrencyLevel = threadCount;
 
-            // Initialize the queue used for storing tasks
-            _blockingTaskQueue = new BlockingCollection<Task>();
+        //    // Initialize the queue used for storing tasks
+        //    _blockingTaskQueue = new BlockingCollection<Task>();
 
-            // Create all of the threads
-            _threads = new Thread[threadCount];
-            for (int i = 0; i < threadCount; i++) {
-                _threads[i] = new Thread(() => ThreadBasedDispatchLoop(threadInit, threadFinally), threadMaxStackSize) {
-                    Priority = threadPriority,
-                    IsBackground = !useForegroundThreads,
-                };
-                if (threadName != null) _threads[i].Name = threadName + " (" + i + ")";
-                _threads[i].SetApartmentState(threadApartmentState);
-            }
+        //    // Create all of the threads
+        //    _threads = new Thread[threadCount];
+        //    for (int i = 0; i < threadCount; i++) {
+        //        _threads[i] = new Thread(() => ThreadBasedDispatchLoop(threadInit, threadFinally), threadMaxStackSize) {
+        //            Priority = threadPriority,
+        //            IsBackground = !useForegroundThreads,
+        //        };
+        //        if (threadName != null) _threads[i].Name = threadName + " (" + i + ")";
+        //        _threads[i].SetApartmentState(threadApartmentState);
+        //    }
 
-            // Start all of the threads
-            foreach (var thread in _threads) thread.Start();
-        }
+        //    // Start all of the threads
+        //    foreach (var thread in _threads) thread.Start();
+        //}
 
         /// <summary>The dispatch loop run by all threads in this scheduler.</summary>
         /// <param name="threadInit">An initialization routine to run when the thread begins.</param>
         /// <param name="threadFinally">A finalization routine to run before the thread ends.</param>
-        private void ThreadBasedDispatchLoop(Action threadInit, Action threadFinally) {
-            _taskProcessingThread.Value = true;
-            if (threadInit != null) threadInit();
-            try {
-                // If the scheduler is disposed, the cancellation token will be set and
-                // we'll receive an OperationCanceledException.  That OCE should not crash the process.
-                try {
-                    // If a thread abort occurs, we'll try to reset it and continue running.
-                    while (true) {
-                        try {
-                            // For each task queued to the scheduler, try to execute it.
-                            foreach (var task in _blockingTaskQueue.GetConsumingEnumerable(_disposeCancellation.Token)) {
-                                // If the task is not null, that means it was queued to this scheduler directly.
-                                // Run it.
-                                if (task != null) {
-                                    TryExecuteTask(task);
-                                }
-                                // If the task is null, that means it's just a placeholder for a task
-                                // queued to one of the subschedulers.  Find the next task based on
-                                // priority and fairness and run it.
-                                else {
-                                    // Find the next task based on our ordering rules...
-                                    Task targetTask;
-                                    QueuedTaskSchedulerQueue queueForTargetTask;
-                                    lock (_queueGroups) FindNextTask_NeedsLock(out targetTask, out queueForTargetTask);
+        //private void ThreadBasedDispatchLoop(Action threadInit, Action threadFinally) {
+        //    _taskProcessingThread.Value = true;
+        //    if (threadInit != null) threadInit();
+        //    try {
+        //        // If the scheduler is disposed, the cancellation token will be set and
+        //        // we'll receive an OperationCanceledException.  That OCE should not crash the process.
+        //        try {
+        //            // If a thread abort occurs, we'll try to reset it and continue running.
+        //            while (true) {
+        //                try {
+        //                    // For each task queued to the scheduler, try to execute it.
+        //                    foreach (var task in _blockingTaskQueue.GetConsumingEnumerable(_disposeCancellation.Token)) {
+        //                        // If the task is not null, that means it was queued to this scheduler directly.
+        //                        // Run it.
+        //                        if (task != null) {
+        //                            TryExecuteTask(task);
+        //                        }
+        //                        // If the task is null, that means it's just a placeholder for a task
+        //                        // queued to one of the subschedulers.  Find the next task based on
+        //                        // priority and fairness and run it.
+        //                        else {
+        //                            // Find the next task based on our ordering rules...
+        //                            Task targetTask;
+        //                            QueuedTaskSchedulerQueue queueForTargetTask;
+        //                            lock (_queueGroups) FindNextTask_NeedsLock(out targetTask, out queueForTargetTask);
 
-                                    // ... and if we found one, run it
-                                    if (targetTask != null) queueForTargetTask.ExecuteTask(targetTask);
-                                }
-                            }
-                        } catch (ThreadAbortException) {
-                            // If we received a thread abort, and that thread abort was due to shutting down
-                            // or unloading, let it pass through.  Otherwise, reset the abort so we can
-                            // continue processing work items.
-                            if (!Environment.HasShutdownStarted && !AppDomain.CurrentDomain.IsFinalizingForUnload()) {
-                                Thread.ResetAbort();
-                            }
-                        }
-                    }
-                } catch (OperationCanceledException) { }
-            } finally {
-                // Run a cleanup routine if there was one
-                if (threadFinally != null) threadFinally();
-                _taskProcessingThread.Value = false;
-            }
-        }
+        //                            // ... and if we found one, run it
+        //                            if (targetTask != null) queueForTargetTask.ExecuteTask(targetTask);
+        //                        }
+        //                    }
+        //                } catch (ThreadAbortException) {
+        //                    // If we received a thread abort, and that thread abort was due to shutting down
+        //                    // or unloading, let it pass through.  Otherwise, reset the abort so we can
+        //                    // continue processing work items.
+        //                    if (!Environment.HasShutdownStarted && !AppDomain.CurrentDomain.IsFinalizingForUnload()) {
+        //                        Thread.ResetAbort();
+        //                    }
+        //                }
+        //            }
+        //        } catch (OperationCanceledException) { }
+        //    } finally {
+        //        // Run a cleanup routine if there was one
+        //        if (threadFinally != null) threadFinally();
+        //        _taskProcessingThread.Value = false;
+        //    }
+        //}
 
         /// <summary>Gets the number of queues currently activated.</summary>
         private int DebugQueueCount
@@ -544,3 +544,4 @@ namespace System.Threading.Tasks.Schedulers {
         }
     }
 }
+//#endif

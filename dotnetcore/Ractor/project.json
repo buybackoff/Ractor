@@ -1,9 +1,9 @@
 {
 
-	"version": "0.5.3",
+	"version": "0.5.4",
 	"description": "Ractor",
 	"dependencies": {
-		"Ractor.Persistence": "0.5.3",
+		"Ractor.Persistence": "0.5.4",
 	},
 	"buildOptions": {
 		"emitEntryPoint": false,
@@ -30,8 +30,12 @@
 				"System.Numerics": ""
 
 			}
+		},
+		"netstandard16": {
+			"dependencies": {
+				"System.Diagnostics.Process": "4.1.0"
+			}
 		}
-
 	},
 	"authors": [ "Victor Baybekov" ],
 	"copyright": "Copyright 2016",

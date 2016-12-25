@@ -9,7 +9,7 @@ using Amazon.SQS.Model;
 namespace Ractor.Persistence.AWS {
     public class AWSQueue<T> : IQueue<T> where T : class {
         public ISerializer Serializer { get; set; }
-        readonly IAmazonSQS _sqs = AWSClientFactory.CreateAmazonSQSClient(RegionEndpoint.EUWest1);
+        readonly IAmazonSQS _sqs = new AmazonSQSClient(RegionEndpoint.EUWest1);
         private readonly string _queueUrl;
 
         public AWSQueue(string queueName = null) {
@@ -28,12 +28,12 @@ namespace Ractor.Persistence.AWS {
             var listQueuesRequest = new ListQueuesRequest {
                 QueueNamePrefix = queueName
             };
-            var listQueuesResponse = _sqs.ListQueues(listQueuesRequest);
+            var listQueuesResponse = _sqs.ListQueuesAsync(listQueuesRequest).Result;
             if (listQueuesResponse.QueueUrls.Count == 1) {
                 return listQueuesResponse.QueueUrls[0];
             }
             if (listQueuesResponse.QueueUrls.Count > 1) {
-                throw new ApplicationException();
+                throw new Exception();
             }
 
             var attributes = new Dictionary<string, string>();
@@ -46,14 +46,14 @@ namespace Ractor.Persistence.AWS {
                 QueueName = queueName,
                 Attributes = attributes
             };
-            var createQueueResponse = _sqs.CreateQueue(sqsRequest);
+            var createQueueResponse = _sqs.CreateQueueAsync(sqsRequest).Result;
             return createQueueResponse.QueueUrl;
 
         }
 
         public void DeleteQueue() {
             var sqsDeleRequest = new DeleteQueueRequest { QueueUrl = _queueUrl };
-            _sqs.DeleteQueue(sqsDeleRequest);
+            _sqs.DeleteQueueAsync(sqsDeleRequest).Wait();
         }
 
         public int Timeout => 3600;

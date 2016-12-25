@@ -74,9 +74,11 @@ namespace Ractor {
         ///
         /// </summary>
         public async Task<bool> TryFill(string key, T value) {
+#if NET451
             if (Cached) {
                 Redis.Cache.Add(key, value, DateTimeOffset.Now + TimeSpan.FromMilliseconds(_timeout));
             }
+#endif
             var fullKey = _prefix + key;
             return await _redis.SetAsync<T>(fullKey, value, (_timeout > 0 ? TimeSpan.FromMilliseconds(_timeout) : (TimeSpan?)null), When.Always, false);
         }
@@ -85,10 +87,12 @@ namespace Ractor {
         ///
         /// </summary>
         public async Task<T> TryTake(string key) {
+#if NET451
             if (Cached) {
                 var cached = Redis.Cache.Remove(key);
                 if (cached != null) return (T)cached;
             }
+#endif
 
             const string lua = @"
                     local result = redis.call('GET', KEYS[1])

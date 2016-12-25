@@ -6,7 +6,7 @@ using System.Security.Cryptography;
 using System.Text;
 
 namespace Ractor {
-
+#if NET451
     public interface IEncryptedData {
 
         bool IsEncrypted { get; set; }
@@ -118,7 +118,7 @@ namespace Ractor {
         }
     }
 
-
+#endif
 
     public static class CryptoExtentions {
 
@@ -175,7 +175,7 @@ namespace Ractor {
                 throw new ArgumentException("Wrong length of encryption key or iv", "key");
 
 
-            using (var algorithm = new AesManaged()) {
+            using (var algorithm = Aes.Create()) {
                 algorithm.KeySize = _KEY_LENGTH;
                 algorithm.Mode = CipherMode.CBC;
                 algorithm.Padding = PaddingMode.PKCS7;
@@ -208,7 +208,7 @@ namespace Ractor {
         public static MemoryStream Decrypt(this Stream input, byte[] key, byte[] iv) {
 
             if (key.Length == _KEY_LENGTH / 8 && iv.Length == _KEY_LENGTH / 8) {
-                using (var algorithm = new AesManaged()) {
+                using (var algorithm = Aes.Create()) {
                     algorithm.KeySize = _KEY_LENGTH;
                     algorithm.Mode = CipherMode.CBC;
                     algorithm.Padding = PaddingMode.PKCS7;
@@ -239,9 +239,9 @@ namespace Ractor {
             return Encoding.Unicode.GetString(bytes);
         }
 
-        
+
         public static byte[] GenerateKey() {
-            using (var algorithm = new AesManaged()) {
+            using (var algorithm = Aes.Create()) {
                 algorithm.KeySize = _KEY_LENGTH;
                 algorithm.Mode = CipherMode.CBC;
                 algorithm.Padding = PaddingMode.PKCS7;
@@ -252,7 +252,7 @@ namespace Ractor {
 
 
         public static byte[] GenerateIV() {
-            using (var algorithm = new AesManaged()) {
+            using (var algorithm = Aes.Create()) {
                 algorithm.KeySize = _KEY_LENGTH;
                 algorithm.Mode = CipherMode.CBC;
                 algorithm.Padding = PaddingMode.PKCS7;

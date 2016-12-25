@@ -118,7 +118,7 @@ namespace Ractor.Persistence.AWS
                     }
                 }
 
-                using (IAmazonS3 client = AWSClientFactory.CreateAmazonS3Client(_endpoint)) {
+                using (IAmazonS3 client = new AmazonS3Client(_endpoint)) {
                     try {
                         var request = new PutObjectRequest {
                             BucketName = bucket,
@@ -126,7 +126,7 @@ namespace Ractor.Persistence.AWS
                             InputStream = stream
                         };
                         // ReSharper disable once UnusedVariable
-                        var response = client.PutObject(request);
+                        var response = client.PutObjectAsync(request).Result;
                         return true;
                     } catch {
                         return false;
@@ -151,7 +151,7 @@ namespace Ractor.Persistence.AWS
                     }
                 }
 
-                using (IAmazonS3 client = AWSClientFactory.CreateAmazonS3Client(_endpoint)) {
+                using (IAmazonS3 client = new AmazonS3Client(_endpoint)) {
                     try {
                         var request = new PutObjectRequest {
                             BucketName = bucket,
@@ -171,13 +171,13 @@ namespace Ractor.Persistence.AWS
 
             public static bool TryGet(string bucket, string key, out Stream stream) {
                 stream = null;
-                using (IAmazonS3 client = AWSClientFactory.CreateAmazonS3Client(_endpoint)) {
+                using (IAmazonS3 client = new AmazonS3Client(_endpoint)) {
                     try {
                         var request = new GetObjectRequest {
                             BucketName = bucket,
                             Key = key
                         };
-                        var response = client.GetObject(request);
+                        var response = client.GetObjectAsync(bucket, key).Result;
                         stream = response.ResponseStream;
                         return true;
                     } catch (AmazonS3Exception ex) {
@@ -192,7 +192,7 @@ namespace Ractor.Persistence.AWS
 
             public static async Task<Tuple<bool, Stream>> TryGetAsync(string bucket, string key) {
                 Stream stream = null;
-                using (IAmazonS3 client = AWSClientFactory.CreateAmazonS3Client(_endpoint)) {
+                using (IAmazonS3 client = new AmazonS3Client(_endpoint)) {
                     try {
                         var request = new GetObjectRequest {
                             BucketName = bucket,
@@ -212,13 +212,13 @@ namespace Ractor.Persistence.AWS
 
 
             public static bool Exists(string bucket, string key) {
-                using (var client = AWSClientFactory.CreateAmazonS3Client(_endpoint)) {
+                using (var client = new AmazonS3Client(_endpoint)) {
                     try {
                         // ReSharper disable once UnusedVariable
-                        var response = client.GetObjectMetadata(new GetObjectMetadataRequest {
+                        var response = client.GetObjectMetadataAsync(new GetObjectMetadataRequest {
                             BucketName = bucket,
                             Key = key
-                        });
+                        }).Result;
 
                         return true;
                     } catch (AmazonS3Exception ex) {

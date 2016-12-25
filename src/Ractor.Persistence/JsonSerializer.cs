@@ -1,8 +1,5 @@
-﻿using System.Collections.Generic;
-using System.Text;
+﻿using System.Text;
 using Newtonsoft.Json;
-using System.IO;
-using System.Runtime.Serialization.Formatters.Binary;
 
 namespace Ractor {
     // TODO how to correctly deal with null? throw here or pass downstream?
@@ -15,10 +12,6 @@ namespace Ractor {
         /// 
         /// </summary>
         public byte[] Serialize<T>(T value) {
-            // TODO test if JSON.NET does exactly the same thing with nulls
-            if (!typeof(T).IsValueType && EqualityComparer<T>.Default.Equals(value, default(T))) {
-                return null;
-            }
             var json = JsonConvert.SerializeObject(value);
             return Encoding.UTF8.GetBytes(json);
         }
@@ -61,8 +54,7 @@ namespace Ractor {
         /// <summary>
         /// 
         /// </summary>
-        public static T DeepClone<T>(this T value)
-        {
+        public static T DeepClone<T>(this T value) {
             //using (var ms = new MemoryStream()) {
             //    var formatter = new BinaryFormatter();
             //    formatter.Serialize(ms, value);

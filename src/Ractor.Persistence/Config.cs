@@ -1,9 +1,10 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Configuration;
-using System.Data.Entity.Migrations;
 using System.Linq;
+#if NET451
+using System.Configuration;
 using System.Net;
+
 
 namespace Ractor {
     public static class Config {
@@ -48,7 +49,7 @@ namespace Ractor {
                     return cs.Name;
                 }
             }
-            throw new ApplicationException("No main Ractor connection string in app config.");
+            throw new Exception("No main Ractor connection string in app config.");
         }
 
         /// <summary>
@@ -63,23 +64,14 @@ namespace Ractor {
                 if (byte.TryParse(cs.Name.Split('.')[1], out n)) {
                     yield return new KeyValuePair<byte, string>(n, cs.Name);
                 } else {
-                    throw new ApplicationException("Wrong format of connection string: " + cs.Name);
+                    throw new Exception("Wrong format of connection string: " + cs.Name);
                 }
             }
         }
 
     }
 
-    //public class DataConfiguration : DbMigrationsConfiguration<DataContext> {
-    //    public DataConfiguration() {
-    //        AutomaticMigrationsEnabled = true;
-    //    }
-    //}
 
-    //public class DistributedDataConfiguration : DbMigrationsConfiguration<DistributedDataContext> {
-    //    public DistributedDataConfiguration() {
-    //        AutomaticMigrationsEnabled = true;
-    //    }
-    //}
 
 }
+#endif

@@ -5,18 +5,20 @@ using System.ComponentModel.DataAnnotations;
 using System.Diagnostics;
 using System.Linq;
 using System.Reflection;
+#if NET451
 using System.Runtime.Caching;
+#endif
 using StackExchange.Redis;
 
 namespace Ractor {
 
     public partial class Redis : IRedis {
-
+#if NET451
         /// <summary>
         /// MemoryCache instance for all Redis-related needs with "Redis" config name.
         /// </summary>
         public static MemoryCache Cache = new MemoryCache("Redis");
-
+#endif
         /// <summary>
         /// Prefix to all keys created/read by an instance of Redis
         /// </summary>
@@ -34,7 +36,10 @@ namespace Ractor {
         /// <param name="connectionString"></param>
         /// <param name="keyNameSpace">Prefix to all keys created/read by an instance of Redis</param>
         public Redis(string connectionString = "", string keyNameSpace = "") {
-            if (string.IsNullOrWhiteSpace(connectionString)) connectionString = "localhost,resolveDns=true";
+            if (string.IsNullOrWhiteSpace(connectionString))
+            {
+                connectionString = "localhost,resolveDns=true";
+            }
             ConnectionMultiplexer = ConnectionMultiplexer.Connect(connectionString);
             _nameSpace = String.IsNullOrEmpty(keyNameSpace) ? "" : keyNameSpace + ":";
             Serializer = new JsonSerializer();
@@ -99,7 +104,7 @@ namespace Ractor {
                 case When.NotExists:
                     return StackExchange.Redis.When.NotExists;
             }
-            throw new ApplicationException("wrong When enum");
+            throw new Exception("wrong When enum");
         }
 
         private IDatabase GetDb() {
@@ -116,7 +121,7 @@ namespace Ractor {
         }
 
         internal RedisValue PackValueNullable<T>(T item) {
-            if (!typeof(T).IsValueType && EqualityComparer<T>.Default.Equals(item, default(T))) {
+            if (!typeof(T).GetTypeInfo().IsValueType && EqualityComparer<T>.Default.Equals(item, default(T))) {
                 return RedisValue.Null;
             }
             var bytes = Serializer.Serialize(item);
@@ -149,8 +154,8 @@ namespace Ractor {
             private PropertyInfo PrimaryKeyProperty { get; set; }
             public CacheInfo(Type type) {
 
-                CacheContract = 
-                    type.GetCustomAttributes<RedisAttribute>().FirstOrDefault()
+                CacheContract =
+                    type.GetTypeInfo().GetCustomAttributes<RedisAttribute>().FirstOrDefault()
                     ?? new RedisAttribute {
                         Compressed = false,
                         Expiry = null,
@@ -165,7 +170,7 @@ namespace Ractor {
 
                 // TODO what is not Id and not Key attribute?
                 PrimaryKeyProperty = (type).GetProperties(BindingFlags.Public | BindingFlags.Instance)
-                    .SingleOrDefault(p => p.Name.Equals("Id", StringComparison.OrdinalIgnoreCase) || 
+                    .SingleOrDefault(p => p.Name.Equals("Id", StringComparison.OrdinalIgnoreCase) ||
                         p.GetCustomAttributes(typeof(KeyAttribute), false).Count() == 1);
             }
 
@@ -185,7 +190,7 @@ namespace Ractor {
                 if (iddo != null) {
                     return iddo.Id.ToBase64String();
                 }
-                if (PrimaryKeyProperty == null) throw new ApplicationException("Cannot determine cache key. Add CacheKey or PrimaryKey attribute to a key property");
+                if (PrimaryKeyProperty == null) throw new Exception("Cannot determine cache key. Add CacheKey or PrimaryKey attribute to a key property");
                 return PrimaryKeyProperty.GetValue(obj, null).ToString();
             }
 

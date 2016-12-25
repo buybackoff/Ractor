@@ -5,6 +5,7 @@ namespace Ractor {
     public class EchoActor : Actor<string, string> {
 
         public override async Task<string> Computation(string request) {
+            await Task.Delay(0);
             return request;
         }
     }

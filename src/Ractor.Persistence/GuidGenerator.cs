@@ -29,24 +29,21 @@ namespace Ractor {
     ///     0 bucket - main DB
     /// </summary>
     internal static class GuidGenerator {
-        private static readonly RandomNumberGenerator Rng = new RNGCryptoServiceProvider();
+        private static readonly Random Rng = new Random();
 
         public static Guid NewGuid(SequentialGuidType guidType = SequentialGuidType.SequentialAsString, DateTime? utcDateTime = null) {
             return new Guid(GuidSequentialArray(0, guidType, utcDateTime));
         }
 
         public static Guid NewRandomBucketGuid(SequentialGuidType guidType = SequentialGuidType.SequentialAsString, DateTime? utcDateTime = null) {
-            var bs = new byte[1];
-            bs[0] = 0;
-            while (bs[0] == 0) { Rng.GetBytes(bs); } // 1-255
-            return new Guid(GuidSequentialArray(bs[0], guidType, utcDateTime));
+            return new Guid(GuidSequentialArray((byte)Rng.Next(1, 256), guidType, utcDateTime));
         }
 
         /// <summary>
         ///     Generate new Guid for a bucket
         /// </summary>
         public static Guid NewBucketGuid(byte bucket, SequentialGuidType guidType = SequentialGuidType.SequentialAsString, DateTime? utcDateTime = null) {
-            return new Guid(GuidSequentialArray(bucket, guidType,utcDateTime));
+            return new Guid(GuidSequentialArray(bucket, guidType, utcDateTime));
         }
 
         /// <summary>
@@ -70,14 +67,13 @@ namespace Ractor {
                          (ref _previousTicks, newval, orig) != orig);
             return newval;
         }
-        
+
         internal static byte[] GuidSequentialArray(byte bucket, SequentialGuidType guidType, DateTime? utcDateTime = null) {
             //if (bucket > 63) throw new ArgumentOutOfRangeException("bucket", "Bucket is too large! 64 buckets ought to be enough for anybody!");
-            
-            var bytes = new byte[16];
-            Rng.GetBytes(bytes);
 
-            long ticks = utcDateTime.HasValue? utcDateTime.Value.Ticks : GetTicks();
+            var bytes = Guid.NewGuid().ToByteArray();
+            
+            long ticks = utcDateTime.HasValue ? utcDateTime.Value.Ticks : GetTicks();
 
             // Convert to a byte array 
             byte[] ticksArray = BitConverter.GetBytes(ticks);
@@ -107,9 +103,9 @@ namespace Ractor {
             }
 
 
-            var guidTypeByte = (byte) guidType;
+            var guidTypeByte = (byte)guidType;
             // first two bits for sequence type, other 6 bits for bucket
-            bytes[8] = (byte)(( (guidTypeByte & 3) << 6 ) | (bucket & 63) );
+            bytes[8] = (byte)(((guidTypeByte & 3) << 6) | (bucket & 63));
             return bytes;
         }
 
@@ -161,11 +157,11 @@ namespace Ractor {
             var tickBytes = new byte[8];
             var gbs = guid.ToByteArray();
             var guidType = guid.SequentialType();
-            
+
             switch (guidType) {
                 case SequentialGuidType.SequentialAsString:
                 case SequentialGuidType.SequentialAsBinary:
-                    
+
                     if (guidType == SequentialGuidType.SequentialAsString && BitConverter.IsLittleEndian) {
                         Array.Reverse(gbs, 0, 4);
                         Array.Reverse(gbs, 4, 2);
