@@ -45,12 +45,18 @@
     <Compile Include="EchoActor.cs" />
     <Compile Include="Message.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="PythonActor.cs" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\Ractor.Persistence\Ractor.Persistence.csproj">
       <Project>{6780d11c-42ad-46dc-b49d-95912164bb23}</Project>
       <Name>Ractor.Persistence</Name>
     </ProjectReference>
+  </ItemGroup>
+  <ItemGroup>
+    <Content Include="PythonEcho.py">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
