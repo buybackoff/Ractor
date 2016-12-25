@@ -32,10 +32,10 @@
           "lib/netstandard1.3/Dapper.dll": {}
         }
       },
-      "Libuv/1.9.0": {
+      "Libuv/1.9.1": {
         "type": "package",
         "dependencies": {
-          "Microsoft.NETCore.Platforms": "1.0.1-rc3-24210-10"
+          "Microsoft.NETCore.Platforms": "1.0.1"
         },
         "runtimeTargets": {
           "runtimes/osx/native/_._": {
@@ -232,10 +232,10 @@
           "lib/netstandard1.0/Microsoft.Extensions.Primitives.dll": {}
         }
       },
-      "Microsoft.NETCore.App/1.0.1": {
+      "Microsoft.NETCore.App/1.1.0": {
         "type": "package",
         "dependencies": {
-          "Libuv": "1.9.0",
+          "Libuv": "1.9.1",
           "Microsoft.CSharp": "4.0.1",
           "Microsoft.CodeAnalysis.CSharp": "1.3.0",
           "Microsoft.CodeAnalysis.VisualBasic": "1.3.0",
@@ -474,6 +474,36 @@
         },
         "runtime": {
           "lib/netstandard1.0/Newtonsoft.Json.dll": {}
+        }
+      },
+      "Ractor/0.5.5": {
+        "type": "package",
+        "dependencies": {
+          "Ractor.Persistence": "0.5.5",
+          "System.Diagnostics.Process": "4.1.0"
+        },
+        "compile": {
+          "lib/netstandard1.6/Ractor.dll": {}
+        },
+        "runtime": {
+          "lib/netstandard1.6/Ractor.dll": {}
+        }
+      },
+      "Ractor.Persistence/0.5.5": {
+        "type": "package",
+        "dependencies": {
+          "Dapper": "1.50.2",
+          "Microsoft.Extensions.Caching.Memory": "1.0.0",
+          "Newtonsoft.Json": "9.0.1",
+          "StackExchange.Redis": "1.1.608",
+          "System.ComponentModel.Annotations": "4.1.0",
+          "System.Threading.Thread": "4.0.0"
+        },
+        "compile": {
+          "lib/netstandard1.6/Ractor.Persistence.dll": {}
+        },
+        "runtime": {
+          "lib/netstandard1.6/Ractor.Persistence.dll": {}
         }
       },
       "runtime.native.System/4.0.0": {
@@ -2399,38 +2429,6 @@
         "runtime": {
           "lib/netstandard1.3/_._": {}
         }
-      },
-      "Ractor/0.5.5": {
-        "type": "project",
-        "framework": ".NETStandard,Version=v1.6",
-        "dependencies": {
-          "Ractor.Persistence": "0.5.5",
-          "System.Diagnostics.Process": "4.1.0"
-        },
-        "compile": {
-          "netstandard1.6/Ractor.dll": {}
-        },
-        "runtime": {
-          "netstandard1.6/Ractor.dll": {}
-        }
-      },
-      "Ractor.Persistence/0.5.5": {
-        "type": "project",
-        "framework": ".NETStandard,Version=v1.6",
-        "dependencies": {
-          "Dapper": "1.50.2",
-          "Microsoft.Extensions.Caching.Memory": "1.0.0",
-          "Newtonsoft.Json": "9.0.1",
-          "StackExchange.Redis": "1.1.608",
-          "System.ComponentModel.Annotations": "4.1.0",
-          "System.Threading.Thread": "4.0.0"
-        },
-        "compile": {
-          "netstandard1.6/Ractor.Persistence.dll": {}
-        },
-        "runtime": {
-          "netstandard1.6/Ractor.Persistence.dll": {}
-        }
       }
     }
   },
@@ -2452,12 +2450,12 @@
         "lib/netstandard1.3/Dapper.xml"
       ]
     },
-    "Libuv/1.9.0": {
-      "sha512": "l+PamTHYi1RTrIvCwjqinfmmU2fq0Lc+1wnw0ut2sk4hJ5izzd+2egbMDjspUJ4i+UW9753IChlSF9rR/GklRQ==",
+    "Libuv/1.9.1": {
+      "sha512": "uqX2Frwf9PW8MaY7PRNY6HM5BpW1D8oj1EdqzrmbEFD5nH63Yat3aEjN/tws6Tw6Fk7LwmLBvtUh32tTeTaHiA==",
       "type": "package",
-      "path": "Libuv/1.9.0",
+      "path": "Libuv/1.9.1",
       "files": [
-        "Libuv.1.9.0.nupkg.sha512",
+        "Libuv.1.9.1.nupkg.sha512",
         "Libuv.nuspec",
         "License.txt",
         "runtimes/debian-x64/native/libuv.so",
@@ -2648,12 +2646,12 @@
         "lib/netstandard1.0/Microsoft.Extensions.Primitives.xml"
       ]
     },
-    "Microsoft.NETCore.App/1.0.1": {
-      "sha512": "1ZiTaAAc3Msi4siXtdVmallNCrFA5ZUzoGkIh4litHjBJBZcRgWvwRXT60woB5FpWPC9qDiTFc6L1Gr8EbOPog==",
+    "Microsoft.NETCore.App/1.1.0": {
+      "sha512": "y/ZrJ9yffxXql9vkoDdlzPXqJ4igx6jF+2HQ+uzP55JgC++H7+AOP1Eqga1lnC5+M8Zj/B7gjdSp557Tl37XMg==",
       "type": "package",
-      "path": "Microsoft.NETCore.App/1.0.1",
+      "path": "Microsoft.NETCore.App/1.1.0",
       "files": [
-        "Microsoft.NETCore.App.1.0.1.nupkg.sha512",
+        "Microsoft.NETCore.App.1.1.0.nupkg.sha512",
         "Microsoft.NETCore.App.nuspec",
         "ThirdPartyNotices.txt",
         "dotnet_library_license.txt",
@@ -2898,6 +2896,30 @@
         "lib/portable-net45+wp80+win8+wpa81/Newtonsoft.Json.dll",
         "lib/portable-net45+wp80+win8+wpa81/Newtonsoft.Json.xml",
         "tools/install.ps1"
+      ]
+    },
+    "Ractor/0.5.5": {
+      "sha512": "CskHMS+2atWjJ8NysUjpr4Nu7i8uxwWXU2ZJaScg+e58yKjiqNsLebiUW1TmMumOnFSn7IV6NXGThUpFEPIVsg==",
+      "type": "package",
+      "path": "Ractor/0.5.5",
+      "files": [
+        "Ractor.0.5.5.nupkg.sha512",
+        "Ractor.nuspec",
+        "lib/net451/Ractor.dll",
+        "lib/netstandard1.6/Ractor.dll"
+      ]
+    },
+    "Ractor.Persistence/0.5.5": {
+      "sha512": "dOzQtzAa4wp3sCl2+W7gQTOgp3JdApJ/ezXxqNCS7yAo1SUOF+8nFwr3Wv8Ii5KhTKnk31gs4Fgz1cvooIGlCA==",
+      "type": "package",
+      "path": "Ractor.Persistence/0.5.5",
+      "files": [
+        "Ractor.Persistence.0.5.5.nupkg.sha512",
+        "Ractor.Persistence.nuspec",
+        "lib/net451/Ractor.Persistence.dll",
+        "lib/net451/Ractor.Persistence.xml",
+        "lib/netstandard1.6/Ractor.Persistence.dll",
+        "lib/netstandard1.6/Ractor.Persistence.xml"
       ]
     },
     "runtime.native.System/4.0.0": {
@@ -7413,21 +7435,11 @@
         "ref/xamarintvos10/_._",
         "ref/xamarinwatchos10/_._"
       ]
-    },
-    "Ractor/0.5.5": {
-      "type": "project",
-      "path": "../../dotnetcore/Ractor/project.json",
-      "msbuildProject": "../../dotnetcore/Ractor/Ractor.xproj"
-    },
-    "Ractor.Persistence/0.5.5": {
-      "type": "project",
-      "path": "../../dotnetcore/Ractor.Persistence/project.json",
-      "msbuildProject": "../../dotnetcore/Ractor.Persistence/Ractor.Persistence.xproj"
     }
   },
   "projectFileDependencyGroups": {
     "": [
-      "Microsoft.NETCore.App >= 1.0.1",
+      "Microsoft.NETCore.App >= 1.1.0",
       "Ractor >= 0.5.5"
     ],
     ".NETCoreApp,Version=v1.0": []
