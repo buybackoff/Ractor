@@ -1,0 +1,21 @@
+﻿{
+	"version": "1.0.0-*",
+	"buildOptions": {
+					"emitEntryPoint": true,
+					"copyToOutput": [ "PythonWorker.py" ]
+	},
+
+	"dependencies": {
+		"Microsoft.NETCore.App": {
+			"type": "platform",
+			"version": "1.0.1"
+		},
+		"Ractor": "0.5.5"
+	},
+
+	"frameworks": {
+		"netcoreapp1.0": {
+			"imports": "dnxcore50"
+		}
+	}
+}

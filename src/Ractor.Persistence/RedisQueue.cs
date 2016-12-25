@@ -217,8 +217,11 @@ namespace Ractor {
         ///
         /// </summary>
         public void Dispose() {
-            _redis.Unsubscribe(_channelKey);
+            try {
+                _redis.Unsubscribe(_channelKey);
+            } catch { }
             _cts.Cancel();
+            if (_redis.Database < 0) throw new Exception();
         }
     }
 

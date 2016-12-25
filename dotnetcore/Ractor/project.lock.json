@@ -52,7 +52,7 @@
           "lib/net45/StackExchange.Redis.dll": {}
         }
       },
-      "Ractor.Persistence/0.5.4": {
+      "Ractor.Persistence/0.5.5": {
         "type": "project",
         "framework": ".NETFramework,Version=v4.5.1",
         "dependencies": {
@@ -1736,7 +1736,7 @@
           "lib/netstandard1.3/System.Xml.XmlDocument.dll": {}
         }
       },
-      "Ractor.Persistence/0.5.4": {
+      "Ractor.Persistence/0.5.5": {
         "type": "project",
         "framework": ".NETStandard,Version=v1.6",
         "dependencies": {
@@ -5619,7 +5619,7 @@
         "ref/xamarinwatchos10/_._"
       ]
     },
-    "Ractor.Persistence/0.5.4": {
+    "Ractor.Persistence/0.5.5": {
       "type": "project",
       "path": "../Ractor.Persistence/project.json",
       "msbuildProject": "../Ractor.Persistence/Ractor.Persistence.xproj"
@@ -5627,7 +5627,7 @@
   },
   "projectFileDependencyGroups": {
     "": [
-      "Ractor.Persistence >= 0.5.4"
+      "Ractor.Persistence >= 0.5.5"
     ],
     ".NETFramework,Version=v4.5.1": [
       "System",

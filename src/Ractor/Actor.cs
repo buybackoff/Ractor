@@ -58,8 +58,7 @@ namespace Ractor {
 
         public abstract Task<TResp> Computation(TReq request);
 
-        internal virtual void Loop(CancellationTokenSource cts)
-        {
+        internal virtual void Loop(CancellationTokenSource cts) {
             var maximumConcurrency = Math.Max(1, Environment.ProcessorCount * MaxConcurrencyPerCpu);
             _semaphore = new SemaphoreSlim(maximumConcurrency, maximumConcurrency);
 
@@ -130,9 +129,13 @@ namespace Ractor {
 
         public void Dispose() {
             _cts.Cancel();
-            _queue.Dispose();
-            _results.Dispose();
-            _semaphore.Dispose();
+            _queue?.Dispose();
+            _results?.Dispose();
+            _semaphore?.Dispose();
+            foreach (var redis in SharedConnections )
+            {
+                if (redis.Value.Database < 0) throw new Exception();
+            }
         }
 
         ~Actor() {
