@@ -11,7 +11,7 @@ namespace Ractor.Tests {
         }
 
         public static async Task Run() {
-            using (var actor = new PythonEchoActor()) {
+            using (var actor = new PythonActor("PythonWorker.py", id: "PythonEcho", connectionString: "127.0.0.1")) {
                 actor.Start();
                 var sw = new Stopwatch();
                 var message = "Hello, Python"; //new String('x', 10000); // "Hello, Python";
