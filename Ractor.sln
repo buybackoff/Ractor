@@ -33,6 +33,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Ractor.Persistence.Tests.Po
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Ractor", "src\Ractor\Ractor.csproj", "{E42E939A-25AC-4D26-8858-07451EB6723C}"
 EndProject
+Project("{888888A0-9F3D-457C-B088-3A5042F75D52}") = "Ractor.Py", "src\Ractor.Py\Ractor.Py.pyproj", "{5A7EC87D-5899-4F3B-AC6B-B47862222055}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -82,6 +84,9 @@ Global
 		{E42E939A-25AC-4D26-8858-07451EB6723C}.Release|Any CPU.Build.0 = Release|Any CPU
 		{E42E939A-25AC-4D26-8858-07451EB6723C}.Signed|Any CPU.ActiveCfg = Release|Any CPU
 		{E42E939A-25AC-4D26-8858-07451EB6723C}.Signed|Any CPU.Build.0 = Release|Any CPU
+		{5A7EC87D-5899-4F3B-AC6B-B47862222055}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{5A7EC87D-5899-4F3B-AC6B-B47862222055}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{5A7EC87D-5899-4F3B-AC6B-B47862222055}.Signed|Any CPU.ActiveCfg = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

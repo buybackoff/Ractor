@@ -1,6 +1,7 @@
 ﻿using NUnit.Framework;
 using Ractor;
 using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.Threading.Tasks;
 
@@ -55,18 +56,22 @@ namespace Fredis.CS.Tests {
         [Test]
         public async void CouldReceiveEchoFromPython() {
             var actor = new PythonEchoActor();
-            Assert.AreEqual("PythonEchoActor", actor.Id);
+            Assert.AreEqual("PythonEcho", actor.Id);
             actor.Start();
             var sw = new Stopwatch();
+            var message = "Hello, Python"; //new String('x', 10000); // "Hello, Python";
             sw.Start();
-            for (int i = 0; i < 1; i++)
-            {
-                var message = new String('a', 10000);
-                var result = await actor.PostAndGetResult(message);
-                Assert.AreEqual(message, result);
+            List<Task<string>> tasks = new List<Task<string>>();
+            for (int i = 0; i < 20000; i++) {
+                tasks.Add(actor.PostAndGetResult(i.ToString()));
             }
+            await Task.WhenAll(tasks);
             sw.Stop();
+            for (int i = 0; i < 20000; i++) {
+                Assert.AreEqual((i * 2).ToString(), tasks[i].Result);
+            }
             Console.WriteLine($"Elapsed: {sw.ElapsedMilliseconds}");
         }
+
     }
 }

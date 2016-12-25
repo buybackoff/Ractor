@@ -58,14 +58,14 @@ namespace Ractor {
 
         public abstract Task<TResp> Computation(TReq request);
 
-        public void Start() {
-            _cts = new CancellationTokenSource();
+        internal virtual void Loop(CancellationTokenSource cts)
+        {
             var maximumConcurrency = Math.Max(1, Environment.ProcessorCount * MaxConcurrencyPerCpu);
             _semaphore = new SemaphoreSlim(maximumConcurrency, maximumConcurrency);
 
             Task.Run(async () => {
-                while (!_cts.IsCancellationRequested) {
-                    await _semaphore.WaitAsync(_cts.Token);
+                while (!cts.IsCancellationRequested) {
+                    await _semaphore.WaitAsync(cts.Token);
                     var message = await _queue.TryReceiveMessage();
                     // ReSharper disable once UnusedVariable
                     var task = Task.Factory.StartNew(async state => {
@@ -94,10 +94,16 @@ namespace Ractor {
                             };
                         }
                         await _results.TryFill(queueReceiveResult.Id, response);
+                        await _queue.TryDeleteMessage(message.Id);
                         _semaphore.Release();
-                    }, message, _cts.Token, TaskCreationOptions.None, _scheduler);
+                    }, message, cts.Token, TaskCreationOptions.None, _scheduler);
                 }
-            }, _cts.Token);
+            }, cts.Token);
+        }
+
+        public void Start() {
+            _cts = new CancellationTokenSource();
+            Loop(_cts);
         }
 
         public void Stop() {
