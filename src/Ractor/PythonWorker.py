@@ -60,8 +60,8 @@ listener_thread = p.run_in_thread(sleep_time=0.001)
 receive = r.register_script(lua)
 
 def process():
-    pipelineId = str(uuid.uuid4())
     while True:
+        pipelineId = str(uuid.uuid4())
         message = receive(keys = [inbox, pipeline, pipelineId])
         if message:
             #print(message)

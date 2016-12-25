@@ -29,7 +29,7 @@ namespace Ractor {
                 RedirectStandardOutput = false,
                 RedirectStandardInput = false,
                 RedirectStandardError = false,
-                CreateNoWindow = true
+                CreateNoWindow = false
             };
         }
 

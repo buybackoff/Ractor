@@ -1,9 +1,6 @@
 ﻿import sys
 import redis
 import uuid
-import gevent
-from gevent import getcurrent
-from gevent.lock import BoundedSemaphore
 import time
 import json
 
@@ -32,17 +29,6 @@ lua = """
             redis.call('HSET', KEYS[2], KEYS[3], result)
         end
         return result"""
-concurrency_semaphore = BoundedSemaphore(max_concurrency)
-notification_semaphore = BoundedSemaphore(1)
-
-def release():
-    #print("received notification")
-    try:
-        if concurrency_semaphore.counter == 0:
-            concurrency_semaphore.release()
-            #print("released semaphore")
-    except:
-        pass
 
 def notify(m = None):
     try:
@@ -53,15 +39,11 @@ def notify(m = None):
         pass
 
 r = redis.StrictRedis(connection)
-p = r.pubsub()
-p.subscribe(**{channelKey: notify })
-listener_thread = p.run_in_thread(sleep_time=0.001)
-#retry_thread = threading.Timer(1.0, release).start()
 receive = r.register_script(lua)
 
 def process():
-    pipelineId = str(uuid.uuid4())
     while True:
+        pipelineId = str(uuid.uuid4())
         message = receive(keys = [inbox, pipeline, pipelineId])
         if message:
             #print(message)
@@ -76,21 +58,11 @@ def process():
             r.set(resultKey + decoded['i'], encoded)
             r.hdel(pipeline, pipelineId)
             #print(encoded)
-            release()
-            gevent.sleep(0)
-            break #finish loop
         else:
             #print("No messages " + str(getcurrent()))
-            notification_semaphore.acquire(timeout = 0.1)
-            gevent.sleep(0)
+            time.sleep(1)
     
-while True:
-    if(not concurrency_semaphore.acquire(timeout = 0.1)):
-         #print("cannot acquire semaphore")
-        pass
-    else:
-        #print("acquired concurrency semaphore")
-        gevent.Greenlet.spawn(process)
+process()
         
 
         
