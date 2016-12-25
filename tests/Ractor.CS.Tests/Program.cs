@@ -114,6 +114,7 @@ namespace Ractor.CS.Tests {
 
         public static IEnumerable<int> GetThroughputSettings() {
             yield return 1;
+            yield return 2;
             yield return 5;
             yield return 10;
             yield return 15;
@@ -129,10 +130,9 @@ namespace Ractor.CS.Tests {
 
         private static async Task<bool> Benchmark(int numberOfClients) {
             //const int repeatFactor = 500;
-            long repeat = 1000L; //* repeatFactor;
-            long totalMessagesReceived = repeat * 2;
+            long repeat = 10000L; //* repeatFactor;
+            long totalMessagesReceived = repeat;
             //times 2 since the client and the destination both send messages
-
 
             long repeatsPerClient = repeat / numberOfClients;
 
@@ -147,12 +147,13 @@ namespace Ractor.CS.Tests {
             }
 
             var sw = Stopwatch.StartNew();
-            var tks = clients.AsParallel()
-                .WithDegreeOfParallelism(numberOfClients)
-                .Select(c => c.PostAndGetResultAsync(Run));
+            List<Task<string>> tasks = new List<Task<string>>();
+            for (int i = 0; i < numberOfClients; i++)
+            {
+                tasks.Add(clients[i].PostAndGetResult(Run));
+            }
 
-            await Task.WhenAll(tks);
-            //await Task.WhenAll(tasks.ToArray());
+            await Task.WhenAll(tasks);
             sw.Stop();
 
             long throughput = totalMessagesReceived * 1000 / sw.ElapsedMilliseconds;
@@ -188,7 +189,7 @@ namespace Ractor.CS.Tests {
             public override async Task<string> Computation(object message) {
                 for (int i = 0; i < Repeat; i++) {
                     Sent++;
-                    var res = _actor.PostAndGetResultAsync(Msg);
+                    var res = _actor.PostAndGetResult(Msg);
                     //if (res != Msg) throw new ApplicationException();
                     Received++;
                 }

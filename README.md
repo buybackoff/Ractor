@@ -8,7 +8,7 @@ allowed, but this is a config setting.
 * SE.Redis wrapper with automatic serialization of generic values, with JSON.NET by default.
 * Redis-based distributed MPMC RedisQueue and RedisAsyncDictionary, which together allow to build any 
 complex Actor topology manually without a separate Actor abstraction.
-* WIP: Distributed actors with reliability guarantees, concurrency limits and priority scheduling.
+* Distributed actors with reliability guarantees, concurrency limits and priority scheduling.
 
 
 Install & Usage

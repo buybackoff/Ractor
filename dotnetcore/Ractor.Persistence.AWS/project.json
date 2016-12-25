@@ -1,8 +1,8 @@
 {
-	"version": "0.5.2",
+	"version": "0.5.3",
 	"description": "Ractor.Persistence",
 	"dependencies": {
-		"Ractor.Persistence": "0.5.1",
+		"Ractor.Persistence": "0.5.3",
 		"AWSSDK": "2.3.55.2"
 	},
 	"frameworks": {

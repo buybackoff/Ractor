@@ -98,6 +98,7 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="ActorTests.cs" />
     <Compile Include="PingPong.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
@@ -111,8 +112,8 @@
       <Project>{6780d11c-42ad-46dc-b49d-95912164bb23}</Project>
       <Name>Ractor.Persistence</Name>
     </ProjectReference>
-    <ProjectReference Include="..\..\src\Ractor\Ractor.fsproj">
-      <Project>{b9be31bf-f410-4c05-8f1f-b61716c59652}</Project>
+    <ProjectReference Include="..\..\src\Ractor\Ractor.csproj">
+      <Project>{e42e939a-25ac-4d26-8858-07451eb6723c}</Project>
       <Name>Ractor</Name>
     </ProjectReference>
   </ItemGroup>
@@ -132,6 +133,9 @@
       <ProductName>.NET Framework 3.5 SP1</ProductName>
       <Install>false</Install>
     </BootstrapperPackage>
+  </ItemGroup>
+  <ItemGroup>
+    <Service Include="{82A7F48D-3B50-4B1E-B82E-3ADA8210C358}" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <Import Project="$(SolutionDir)\.nuget\NuGet.targets" Condition="Exists('$(SolutionDir)\.nuget\NuGet.targets')" />

@@ -13,15 +13,11 @@ EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "project", "project", "{BF60BC93-E09B-4E5F-9D85-95A519479D54}"
 	ProjectSection(SolutionItems) = preProject
 		README.md = README.md
-		README_old.md = README_old.md
+		README_obsolete.md = README_obsolete.md
 		RELEASE_NOTES.md = RELEASE_NOTES.md
 	EndProjectSection
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "tests", "tests", "{ED8079DD-2B06-4030-9F0F-DC548F98E1C4}"
-EndProject
-Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "Ractor", "src\Ractor\Ractor.fsproj", "{B9BE31BF-F410-4C05-8F1F-B61716C59652}"
-EndProject
-Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "Ractor.Tests", "tests\Ractor.Tests\Ractor.Tests.fsproj", "{E789C72A-5CFD-436B-8EF1-61AA2852A89F}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Ractor.Persistence", "src\Ractor.Persistence\Ractor.Persistence.csproj", "{6780D11C-42AD-46DC-B49D-95912164BB23}"
 EndProject
@@ -35,6 +31,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Ractor.Persistence.AWS", "s
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Ractor.Persistence.Tests.Postgres", "tests\Ractor.Persistence.Tests.Postgres\Ractor.Persistence.Tests.Postgres.csproj", "{D1FBF36D-D25C-4048-978A-46AC802C5145}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Ractor", "src\Ractor\Ractor.csproj", "{E42E939A-25AC-4D26-8858-07451EB6723C}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -42,18 +40,6 @@ Global
 		Signed|Any CPU = Signed|Any CPU
 	EndGlobalSection
 	GlobalSection(ProjectConfigurationPlatforms) = postSolution
-		{B9BE31BF-F410-4C05-8F1F-B61716C59652}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{B9BE31BF-F410-4C05-8F1F-B61716C59652}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{B9BE31BF-F410-4C05-8F1F-B61716C59652}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{B9BE31BF-F410-4C05-8F1F-B61716C59652}.Release|Any CPU.Build.0 = Release|Any CPU
-		{B9BE31BF-F410-4C05-8F1F-B61716C59652}.Signed|Any CPU.ActiveCfg = Release|Any CPU
-		{B9BE31BF-F410-4C05-8F1F-B61716C59652}.Signed|Any CPU.Build.0 = Release|Any CPU
-		{E789C72A-5CFD-436B-8EF1-61AA2852A89F}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{E789C72A-5CFD-436B-8EF1-61AA2852A89F}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{E789C72A-5CFD-436B-8EF1-61AA2852A89F}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{E789C72A-5CFD-436B-8EF1-61AA2852A89F}.Release|Any CPU.Build.0 = Release|Any CPU
-		{E789C72A-5CFD-436B-8EF1-61AA2852A89F}.Signed|Any CPU.ActiveCfg = Release|Any CPU
-		{E789C72A-5CFD-436B-8EF1-61AA2852A89F}.Signed|Any CPU.Build.0 = Release|Any CPU
 		{6780D11C-42AD-46DC-B49D-95912164BB23}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{6780D11C-42AD-46DC-B49D-95912164BB23}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{6780D11C-42AD-46DC-B49D-95912164BB23}.Release|Any CPU.ActiveCfg = Release|Any CPU
@@ -90,12 +76,17 @@ Global
 		{D1FBF36D-D25C-4048-978A-46AC802C5145}.Release|Any CPU.Build.0 = Release|Any CPU
 		{D1FBF36D-D25C-4048-978A-46AC802C5145}.Signed|Any CPU.ActiveCfg = Release|Any CPU
 		{D1FBF36D-D25C-4048-978A-46AC802C5145}.Signed|Any CPU.Build.0 = Release|Any CPU
+		{E42E939A-25AC-4D26-8858-07451EB6723C}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{E42E939A-25AC-4D26-8858-07451EB6723C}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{E42E939A-25AC-4D26-8858-07451EB6723C}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{E42E939A-25AC-4D26-8858-07451EB6723C}.Release|Any CPU.Build.0 = Release|Any CPU
+		{E42E939A-25AC-4D26-8858-07451EB6723C}.Signed|Any CPU.ActiveCfg = Release|Any CPU
+		{E42E939A-25AC-4D26-8858-07451EB6723C}.Signed|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
 	EndGlobalSection
 	GlobalSection(NestedProjects) = preSolution
-		{E789C72A-5CFD-436B-8EF1-61AA2852A89F} = {ED8079DD-2B06-4030-9F0F-DC548F98E1C4}
 		{3842EBE5-E76E-40DE-A375-905970DD0F30} = {ED8079DD-2B06-4030-9F0F-DC548F98E1C4}
 		{1DE3B85A-3932-4D95-B87A-E6EDF7367D62} = {ED8079DD-2B06-4030-9F0F-DC548F98E1C4}
 		{83AEA85D-E3FC-4E94-94AD-8D1A51EAAEF4} = {ED8079DD-2B06-4030-9F0F-DC548F98E1C4}

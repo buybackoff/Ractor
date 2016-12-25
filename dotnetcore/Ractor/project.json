@@ -1,27 +1,14 @@
 {
 
-	"version": "0.5.2",
+	"version": "0.5.3",
 	"description": "Ractor",
 	"dependencies": {
-		"Ractor.Persistence": "0.5.1",
-		"FSharp.Core": "3.1.2.5"
+		"Ractor.Persistence": "0.5.3",
 	},
 	"buildOptions": {
-
 		"emitEntryPoint": false,
-		"compilerName": "fsc",
 		"define": [],
-		"compile": {
-			"includeFiles": [
-				"../../src/Ractor/AssemblyInfo.fs",
-				"../../src/Ractor/Common.fs",
-				"../../src/Ractor/Logging.fs",
-				"../../src/Ractor/Connections.fs",
-				"../../src/Ractor/Actor.fs",
-				"../../src/Ractor/Collections.fs",
-				"../../src/Ractor/ActorExtensions.fs"
-			]
-		}
+		"compile": [ "../../src/Ractor/**/*.cs" ]
 	},
 
 	"tools": {

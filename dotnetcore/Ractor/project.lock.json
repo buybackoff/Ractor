@@ -31,15 +31,6 @@
           "lib/net45/EntityFramework.dll": {}
         }
       },
-      "FSharp.Core/3.1.2.5": {
-        "type": "package",
-        "compile": {
-          "lib/net40/FSharp.Core.dll": {}
-        },
-        "runtime": {
-          "lib/net40/FSharp.Core.dll": {}
-        }
-      },
       "Newtonsoft.Json/9.0.1": {
         "type": "package",
         "compile": {
@@ -61,7 +52,7 @@
           "lib/net45/StackExchange.Redis.dll": {}
         }
       },
-      "Ractor.Persistence/0.5.2": {
+      "Ractor.Persistence/0.5.3": {
         "type": "project",
         "framework": ".NETFramework,Version=v4.5.1",
         "dependencies": {
@@ -128,43 +119,6 @@
         "tools/migrate.exe"
       ]
     },
-    "FSharp.Core/3.1.2.5": {
-      "sha512": "1V9wPWZuLgewzk01tc5wRyGrmdOI+Lc9/MsAeMXFffjjGA1Ydv5KU2mnWLz+O6TcHeACwK0M3yHbb/we233vvg==",
-      "type": "package",
-      "path": "FSharp.Core/3.1.2.5",
-      "files": [
-        "FSharp.Core.3.1.2.5.nupkg.sha512",
-        "FSharp.Core.nuspec",
-        "lib/net20/FSharp.Core.dll",
-        "lib/net20/FSharp.Core.optdata",
-        "lib/net20/FSharp.Core.sigdata",
-        "lib/net20/FSharp.Core.xml",
-        "lib/net40/FSharp.Core.dll",
-        "lib/net40/FSharp.Core.optdata",
-        "lib/net40/FSharp.Core.sigdata",
-        "lib/net40/FSharp.Core.xml",
-        "lib/portable-net45+monoandroid10+monotouch10+xamarinios10/FSharp.Core.dll",
-        "lib/portable-net45+monoandroid10+monotouch10+xamarinios10/FSharp.Core.optdata",
-        "lib/portable-net45+monoandroid10+monotouch10+xamarinios10/FSharp.Core.sigdata",
-        "lib/portable-net45+monoandroid10+monotouch10+xamarinios10/FSharp.Core.xml",
-        "lib/portable-net45+netcore45+wp8/FSharp.Core.dll",
-        "lib/portable-net45+netcore45+wp8/FSharp.Core.optdata",
-        "lib/portable-net45+netcore45+wp8/FSharp.Core.sigdata",
-        "lib/portable-net45+netcore45+wp8/FSharp.Core.xml",
-        "lib/portable-net45+netcore45+wpa81+wp8/FSharp.Core.dll",
-        "lib/portable-net45+netcore45+wpa81+wp8/FSharp.Core.optdata",
-        "lib/portable-net45+netcore45+wpa81+wp8/FSharp.Core.sigdata",
-        "lib/portable-net45+netcore45+wpa81+wp8/FSharp.Core.xml",
-        "lib/portable-net45+netcore45/FSharp.Core.dll",
-        "lib/portable-net45+netcore45/FSharp.Core.optdata",
-        "lib/portable-net45+netcore45/FSharp.Core.sigdata",
-        "lib/portable-net45+netcore45/FSharp.Core.xml",
-        "lib/portable-net45+sl5+netcore45/FSharp.Core.dll",
-        "lib/portable-net45+sl5+netcore45/FSharp.Core.optdata",
-        "lib/portable-net45+sl5+netcore45/FSharp.Core.sigdata",
-        "lib/portable-net45+sl5+netcore45/FSharp.Core.xml"
-      ]
-    },
     "Newtonsoft.Json/9.0.1": {
       "sha512": "U82mHQSKaIk+lpSVCbWYKNavmNH1i5xrExDEquU1i6I5pV6UMOqRnJRSlKO3cMPfcpp0RgDY+8jUXHdQ4IfXvw==",
       "type": "package",
@@ -206,7 +160,7 @@
         "lib/netstandard1.5/StackExchange.Redis.xml"
       ]
     },
-    "Ractor.Persistence/0.5.2": {
+    "Ractor.Persistence/0.5.3": {
       "type": "project",
       "path": "../Ractor.Persistence/project.json",
       "msbuildProject": "../Ractor.Persistence/Ractor.Persistence.xproj"
@@ -214,8 +168,7 @@
   },
   "projectFileDependencyGroups": {
     "": [
-      "FSharp.Core >= 3.1.2.5",
-      "Ractor.Persistence >= 0.5.1"
+      "Ractor.Persistence >= 0.5.3"
     ],
     ".NETFramework,Version=v4.5.1": [
       "System",

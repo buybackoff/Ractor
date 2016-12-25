@@ -84,11 +84,6 @@
       <Project>{6780d11c-42ad-46dc-b49d-95912164bb23}</Project>
       <Private>True</Private>
     </ProjectReference>
-    <ProjectReference Include="..\..\src\Ractor\Ractor.fsproj">
-      <Name>Ractor</Name>
-      <Project>{b9be31bf-f410-4c05-8f1f-b61716c59652}</Project>
-      <Private>True</Private>
-    </ProjectReference>
   </ItemGroup>
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
        Other similar extension points exist, see Microsoft.Common.targets.

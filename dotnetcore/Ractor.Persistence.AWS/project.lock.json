@@ -61,7 +61,7 @@
           "lib/net45/StackExchange.Redis.dll": {}
         }
       },
-      "Ractor.Persistence/0.5.2": {
+      "Ractor.Persistence/0.5.3": {
         "type": "project",
         "framework": ".NETFramework,Version=v4.5.1",
         "dependencies": {
@@ -188,7 +188,7 @@
         "lib/netstandard1.5/StackExchange.Redis.xml"
       ]
     },
-    "Ractor.Persistence/0.5.2": {
+    "Ractor.Persistence/0.5.3": {
       "type": "project",
       "path": "../Ractor.Persistence/project.json",
       "msbuildProject": "../Ractor.Persistence/Ractor.Persistence.xproj"
@@ -197,7 +197,7 @@
   "projectFileDependencyGroups": {
     "": [
       "AWSSDK >= 2.3.55.2",
-      "Ractor.Persistence >= 0.5.1"
+      "Ractor.Persistence >= 0.5.3"
     ],
     ".NETFramework,Version=v4.5.1": []
   },
