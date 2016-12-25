@@ -137,7 +137,10 @@ namespace Ractor {
         ///
         /// </summary>
         public void Dispose() {
-            _redis.Unsubscribe(_redisChannel);
+            try {
+                _redis.Unsubscribe(_redisChannel);
+            } catch {
+            }
             _cts.Cancel();
         }
     }
