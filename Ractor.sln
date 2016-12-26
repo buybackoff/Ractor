@@ -1,7 +1,7 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-# Visual Studio 14
-VisualStudioVersion = 14.0.25420.1
+# Visual Studio 15
+VisualStudioVersion = 15.0.26014.0
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = ".nuget", ".nuget", "{1F1B4F0F-2998-4D74-865B-9122611C2B14}"
 	ProjectSection(SolutionItems) = preProject
@@ -35,7 +35,7 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Ractor", "src\Ractor\Ractor
 EndProject
 Project("{888888A0-9F3D-457C-B088-3A5042F75D52}") = "Ractor.Py", "src\Ractor.Py\Ractor.Py.pyproj", "{5A7EC87D-5899-4F3B-AC6B-B47862222055}"
 EndProject
-Project("{8BB2217D-0F2D-49D1-97BC-3654ED321F3B}") = "Ractor.Tests", "src\Ractor.Tests\Ractor.Tests.xproj", "{9DE97D8B-A7A5-4762-A6AB-3728C7445D3A}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Ractor.Tests", "src\Ractor.Tests\Ractor.Tests.xproj", "{9DE97D8B-A7A5-4762-A6AB-3728C7445D3A}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

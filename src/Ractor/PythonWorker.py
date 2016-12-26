@@ -70,7 +70,12 @@ def process():
                 #print("has error")
                 pass
             else:
-                decoded['p']['v'] = Computation(decoded['p']['v'])
+                try:
+                    decoded['p']['v'] = Computation(decoded['p']['v'])
+                except Exception as e:
+                    decoded['p']['v'] = Nil
+                    decoded['p']['h'] = True
+                    decoded['p']['e'] = str(e) #''.join(traceback.format_exception( *sys.exc_info())[-2:]).strip().replace('\n',': ')
             encoded = json.dumps(decoded['p'])
             #print(resultKey)
             r.set(resultKey + decoded['i'], encoded)
