@@ -1,4 +1,5 @@
-﻿using System.Threading.Tasks;
+﻿using System.Collections.Generic;
+using System.Threading.Tasks;
 
 namespace Ractor {
 
@@ -49,5 +50,21 @@ namespace Ractor {
         Task<bool> TryFill(string key, T value);
 
         Task<T> TryTake(string key);
+    }
+
+
+    /// <summary>
+    /// A sequence of values with increasing number
+    /// </summary>
+    /// <typeparam name="T"></typeparam>
+    public interface ISequence<T> {
+        int Timeout { get; }
+        /// <summary>
+        /// Get the next value after the current sequence number. 
+        /// </summary>
+        /// <param name="current">When zero, return the first element, when long.MaxValue - last element</param>
+        /// <returns></returns>
+        Task<KeyValuePair<long, T>> TryNext(long current = long.MaxValue);
+        long Add(T value);
     }
 }

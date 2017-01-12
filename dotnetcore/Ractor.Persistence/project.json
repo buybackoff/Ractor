@@ -1,10 +1,10 @@
 ﻿{
-	"version": "0.5.5",
+	"version": "0.7.0-*",
 	"description": "Ractor.Persistence",
 	"dependencies": {
 		"Newtonsoft.Json": "9.0.1",
 		"Dapper": "1.50.2",
-		"StackExchange.Redis": "1.1.608"
+		"StackExchange.Redis": "1.2.0"
 	},
 	"frameworks": {
 		"net451": {

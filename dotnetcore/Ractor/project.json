@@ -1,9 +1,9 @@
 {
 
-	"version": "0.5.5",
+	"version": "0.7.0-*",
 	"description": "Ractor",
 	"dependencies": {
-		"Ractor.Persistence": "0.5.5",
+		"Ractor.Persistence": "0.*",
 	},
 	"buildOptions": {
 		"emitEntryPoint": false,

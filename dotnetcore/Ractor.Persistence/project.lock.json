@@ -40,7 +40,7 @@
           "lib/net45/Newtonsoft.Json.dll": {}
         }
       },
-      "StackExchange.Redis/1.1.608": {
+      "StackExchange.Redis/1.2.0": {
         "type": "package",
         "frameworkAssemblies": [
           "System.IO.Compression"
@@ -346,7 +346,7 @@
           }
         }
       },
-      "StackExchange.Redis/1.1.608": {
+      "StackExchange.Redis/1.2.0": {
         "type": "package",
         "dependencies": {
           "System.Collections": "4.0.11",
@@ -1989,12 +1989,12 @@
         "runtimes/win7-x86/native/sni.dll"
       ]
     },
-    "StackExchange.Redis/1.1.608": {
-      "sha512": "SXorfrt0kXU1ueYRvdZcZ87da7o75j0LTrOtRD7xbD1b/AhnL9nTohmHfz4Ob7ENwf7ecxl1L3vmSET3nemz7w==",
+    "StackExchange.Redis/1.2.0": {
+      "sha512": "RXi3cs12LsEVZoPW2RnHEkiKoRw8aCivJUi4JFbW6ym6OaANkoJq/BRrorb3XBHsCMfoyOm3PGMuAGibll6FbA==",
       "type": "package",
-      "path": "StackExchange.Redis/1.1.608",
+      "path": "StackExchange.Redis/1.2.0",
       "files": [
-        "StackExchange.Redis.1.1.608.nupkg.sha512",
+        "StackExchange.Redis.1.2.0.nupkg.sha512",
         "StackExchange.Redis.nuspec",
         "lib/net40/StackExchange.Redis.dll",
         "lib/net40/StackExchange.Redis.xml",
@@ -5434,7 +5434,7 @@
     "": [
       "Dapper >= 1.50.2",
       "Newtonsoft.Json >= 9.0.1",
-      "StackExchange.Redis >= 1.1.608"
+      "StackExchange.Redis >= 1.2.0"
     ],
     ".NETFramework,Version=v4.5.1": [
       "EntityFramework >= 6.1.3",

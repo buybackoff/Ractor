@@ -7440,7 +7440,7 @@
   "projectFileDependencyGroups": {
     "": [
       "Microsoft.NETCore.App >= 1.0.1",
-      "Ractor >= 0.5.5"
+      "Ractor >= 0.*"
     ],
     ".NETCoreApp,Version=v1.0": []
   },
