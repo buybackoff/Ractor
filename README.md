@@ -1,6 +1,6 @@
 Ractor
 =======================
-
+<img align="right" src="https://raw.githubusercontent.com/buybackoff/Ractor/master/docs/files/img/logo.png" />
 There are several really useful things here:
 * DynamicContext for EF6 that starts per-table automatic migrations, which is very convenient while
 prototyping RDMS structure and adding/changing schema. By default, only non-destructive updates are 
@@ -9,7 +9,7 @@ allowed, but this is a config setting.
 * Redis-based distributed MPMC RedisQueue and RedisAsyncDictionary, which together allow to build any 
 complex Actor topology manually without a separate Actor abstraction.
 * Distributed actors with reliability guarantees, concurrency limits and priority scheduling.
-
+* [Calling custom Python code from .NET](https://github.com/buybackoff/Ractor/wiki/Calling-custom-Python-code-from-.NET).
 
 Install & Usage
 ----------------------
@@ -19,13 +19,11 @@ Install & Usage
 	PM> Install-Package Ractor.Persistence.AWS
 
 
-Docs & test are work in progress...
-
 
 License
 ----------------------
 
-(c) Victor Baybekov 2016
+(c) Victor Baybekov 2017
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
