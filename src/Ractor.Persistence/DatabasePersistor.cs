@@ -3,6 +3,7 @@ using System;
 using System.Collections.Generic;
 using System.Data;
 using System.Data.Entity;
+using System.Data.Entity.Infrastructure;
 using System.Data.Entity.Migrations;
 using System.Diagnostics;
 using System.Linq;
@@ -12,9 +13,9 @@ namespace Ractor {
     /// <summary>
     /// Base implementation of IPocoPersistor using Entity Framework 6
     /// </summary>
-    public class DatabasePersistor : IPocoPersistor
-    {
+    public class DatabasePersistor : IPocoPersistor {
         public string ConnectionName { get; private set; }
+
         private readonly DbMigrationsConfiguration _migrationConfig; //<DataContext>
         private readonly DbMigrationsConfiguration _distributedMigrationConfig; //<DistributedDataContext>
         private readonly SequentialGuidType _guidType;
@@ -39,8 +40,7 @@ namespace Ractor {
             // Validate name presence
             ConnectionName = Config.DataConnectionName(connectionName);
             // TODO delete this line when migrations are tested
-            if (updateMigrations)
-            {
+            if (updateMigrations) {
                 DataContext.UpdateAutoMigrations(ConnectionName, migrationConfig);
             }
 
@@ -82,6 +82,11 @@ namespace Ractor {
             return ctx;
         }
 
+        public IDbConnection GetConnection(string nameOrConnection = null) {
+            var ctx = new DbContext(nameOrConnection ?? ConnectionName);
+            return ctx.Database.Connection;
+        }
+
         /// <summary>
         /// Get new DistributedDataContext instance for specified shard id
         /// </summary>
@@ -112,8 +117,7 @@ namespace Ractor {
                 i++;
             }
             foreach (var key in sortedShards.Select(keyValuePair => keyValuePair.Key)) {
-                if (updateMigrations)
-                {
+                if (updateMigrations) {
                     DistributedDataContext.UpdateAutoMigrations(_shards[key], config);
                 }
                 //using (var ctx = GetContext(key)) {
@@ -140,10 +144,8 @@ namespace Ractor {
             if (length == 0) return;
 
             var isDataObject = typeof(IDataObject).IsAssignableFrom(typeof(T));
-            if (isDataObject)
-            {
-                foreach (var item in items)
-                {
+            if (isDataObject) {
+                foreach (var item in items) {
                     var itemAsDo = item as IDataObject;
                     CheckOrGenerateGuid(ref itemAsDo, true);
                 }
@@ -258,8 +260,7 @@ namespace Ractor {
                     }
                     db.SaveChanges();
                     dbTransaction.Commit();
-                } catch (Exception e)
-                {
+                } catch (Exception e) {
                     Trace.WriteLine(e.Message);
                     dbTransaction.Rollback();
                 }
@@ -376,8 +377,7 @@ namespace Ractor {
                     }).ToList();
                 return aggregation(result);
             }
-            if (isDataObject)
-            {
+            if (isDataObject) {
                 using (var db = GetContext()) {
                     var result = query(((IQueryable<IDataObject>)db.Set<T>()).Where(x => !x.IsDeleted).Select(o => (T)o)).ItemAsList();
                     return aggregation(result);
@@ -415,7 +415,7 @@ namespace Ractor {
         //}
 
         internal void CheckOrGenerateGuid<T>(ref T item, bool onlyWritable, DateTime? utcDateTime = null, bool replace = false) where T : IDataObject {
-            
+
             var distributed = item as IDistributedDataObject;
             if (item.Id != default(Guid) && !replace) {
                 var bucket = item.Id.Bucket();
@@ -424,7 +424,7 @@ namespace Ractor {
                 return;
             }
             if (distributed != null) {
-                
+
                 if (distributed.GetRootGuid() == default(Guid)
                     || distributed.GetRootGuid().Bucket() == 0) {
                     // this will generate guids only for writable buckets

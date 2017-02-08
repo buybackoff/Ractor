@@ -1,0 +1,19 @@
+﻿{
+	"version": "1.0.0-*",
+	"buildOptions": {
+		"emitEntryPoint": true
+	},
+
+	"dependencies": {},
+
+	"frameworks": {
+		"NET451": {
+			"dependencies": {
+				"Ractor.Persistence": "0.7.0-*",
+				"MySql.Data.Entity": "6.9.9",
+				"Dapper.Contrib": "1.50.0"
+			}
+
+		}
+	}
+}

@@ -1,0 +1,266 @@
+{
+  "locked": false,
+  "version": 2,
+  "targets": {
+    ".NETFramework,Version=v4.5.1": {
+      "Dapper/1.50.2": {
+        "type": "package",
+        "frameworkAssemblies": [
+          "System.Data",
+          "System.Xml",
+          "System.Xml.Linq"
+        ],
+        "compile": {
+          "lib/net451/Dapper.dll": {}
+        },
+        "runtime": {
+          "lib/net451/Dapper.dll": {}
+        }
+      },
+      "Dapper.Contrib/1.50.0": {
+        "type": "package",
+        "dependencies": {
+          "Dapper": "1.50.0"
+        },
+        "frameworkAssemblies": [
+          "System.Data",
+          "System.Data.Linq"
+        ],
+        "compile": {
+          "lib/net45/Dapper.Contrib.dll": {}
+        },
+        "runtime": {
+          "lib/net45/Dapper.Contrib.dll": {}
+        }
+      },
+      "EntityFramework/6.1.3": {
+        "type": "package",
+        "frameworkAssemblies": [
+          "System.ComponentModel.DataAnnotations"
+        ],
+        "compile": {
+          "lib/net45/EntityFramework.SqlServer.dll": {},
+          "lib/net45/EntityFramework.dll": {}
+        },
+        "runtime": {
+          "lib/net45/EntityFramework.SqlServer.dll": {},
+          "lib/net45/EntityFramework.dll": {}
+        }
+      },
+      "MySql.Data/6.9.9": {
+        "type": "package",
+        "compile": {
+          "lib/net45/MySql.Data.dll": {}
+        },
+        "runtime": {
+          "lib/net45/MySql.Data.dll": {}
+        }
+      },
+      "MySql.Data.Entity/6.9.9": {
+        "type": "package",
+        "dependencies": {
+          "EntityFramework": "6.0.0",
+          "MySql.Data": "6.9.9"
+        },
+        "compile": {
+          "lib/net45/MySql.Data.Entity.EF6.dll": {}
+        },
+        "runtime": {
+          "lib/net45/MySql.Data.Entity.EF6.dll": {}
+        }
+      },
+      "Newtonsoft.Json/9.0.1": {
+        "type": "package",
+        "compile": {
+          "lib/net45/Newtonsoft.Json.dll": {}
+        },
+        "runtime": {
+          "lib/net45/Newtonsoft.Json.dll": {}
+        }
+      },
+      "Ractor.Persistence/0.7.0-build1702080833": {
+        "type": "package",
+        "dependencies": {
+          "Dapper": "1.50.2",
+          "EntityFramework": "6.1.3",
+          "Newtonsoft.Json": "9.0.1",
+          "StackExchange.Redis": "1.2.0"
+        },
+        "frameworkAssemblies": [
+          "System.Configuration",
+          "System.Runtime.Caching"
+        ],
+        "compile": {
+          "lib/net451/Ractor.Persistence.dll": {}
+        },
+        "runtime": {
+          "lib/net451/Ractor.Persistence.dll": {}
+        }
+      },
+      "StackExchange.Redis/1.2.0": {
+        "type": "package",
+        "frameworkAssemblies": [
+          "System.IO.Compression"
+        ],
+        "compile": {
+          "lib/net45/StackExchange.Redis.dll": {}
+        },
+        "runtime": {
+          "lib/net45/StackExchange.Redis.dll": {}
+        }
+      }
+    }
+  },
+  "libraries": {
+    "Dapper/1.50.2": {
+      "sha512": "PhxIV8TI/5aYdLT4epuIZB+Evf0sv9gcQDpFGa04fSKDfNQIChRq0sKUgQbfpFWbuDW/UDDuiL3Grkhp/cvYrA==",
+      "type": "package",
+      "path": "Dapper/1.50.2",
+      "files": [
+        "Dapper.1.50.2.nupkg.sha512",
+        "Dapper.nuspec",
+        "lib/net40/Dapper.dll",
+        "lib/net40/Dapper.xml",
+        "lib/net45/Dapper.dll",
+        "lib/net45/Dapper.xml",
+        "lib/net451/Dapper.dll",
+        "lib/net451/Dapper.xml",
+        "lib/netstandard1.3/Dapper.dll",
+        "lib/netstandard1.3/Dapper.xml"
+      ]
+    },
+    "Dapper.Contrib/1.50.0": {
+      "sha512": "VrdyoYkDtzJhjDhY0XnMT5BwE2xnSfozBI0x8uw2r0sH8dO4b7HM/fcbUZPlYpZZghCf52Ug7LpB8D32bHE39A==",
+      "type": "package",
+      "path": "Dapper.Contrib/1.50.0",
+      "files": [
+        "Dapper.Contrib.1.50.0.nupkg.sha512",
+        "Dapper.Contrib.nuspec",
+        "lib/net40/Dapper.Contrib.dll",
+        "lib/net45/Dapper.Contrib.dll",
+        "lib/netstandard1.3/Dapper.Contrib.dll"
+      ]
+    },
+    "EntityFramework/6.1.3": {
+      "sha512": "2xzFHAF3VVdmTR3//MygtQpwfbDjeaq+nQwCcokLzen7MKHOojPaxNPQPa4diHY1QtcR7zlHAJHNRqPB7W2Syw==",
+      "type": "package",
+      "path": "EntityFramework/6.1.3",
+      "files": [
+        "EntityFramework.6.1.3.nupkg.sha512",
+        "EntityFramework.nuspec",
+        "content/App.config.transform",
+        "content/Web.config.transform",
+        "lib/net40/EntityFramework.SqlServer.dll",
+        "lib/net40/EntityFramework.SqlServer.xml",
+        "lib/net40/EntityFramework.dll",
+        "lib/net40/EntityFramework.xml",
+        "lib/net45/EntityFramework.SqlServer.dll",
+        "lib/net45/EntityFramework.SqlServer.xml",
+        "lib/net45/EntityFramework.dll",
+        "lib/net45/EntityFramework.xml",
+        "tools/EntityFramework.PowerShell.Utility.dll",
+        "tools/EntityFramework.PowerShell.dll",
+        "tools/EntityFramework.psd1",
+        "tools/EntityFramework.psm1",
+        "tools/about_EntityFramework.help.txt",
+        "tools/init.ps1",
+        "tools/install.ps1",
+        "tools/migrate.exe"
+      ]
+    },
+    "MySql.Data/6.9.9": {
+      "sha512": "rhpv2iJBqvvHU9gkhn/OZfhanQT/jZpfovyO9TEbJl5jLKMvABgxSkIPQbubrvR04M2/ZtdTeI9fC9WSkBe2wA==",
+      "type": "package",
+      "path": "MySql.Data/6.9.9",
+      "files": [
+        "CHANGES",
+        "MySql.Data.6.9.9.nupkg.sha512",
+        "MySql.Data.nuspec",
+        "Readme.txt",
+        "content/app.config.transform",
+        "content/web.config.transform",
+        "lib/net40/MySql.Data.dll",
+        "lib/net45/MySql.Data.dll"
+      ]
+    },
+    "MySql.Data.Entity/6.9.9": {
+      "sha512": "U2WX/TzaLGYk5tN4zYOVLBpRgYIx7iJmjJamPcy4eDlaYrBBEymc9WI4R6hKSFdnSfhEOAPtUlsFn8l1ZB67Dg==",
+      "type": "package",
+      "path": "MySql.Data.Entity/6.9.9",
+      "files": [
+        "CHANGES",
+        "MySql.Data.Entity.6.9.9.nupkg.sha512",
+        "MySql.Data.Entity.nuspec",
+        "Readme.txt",
+        "content/app.config.transform",
+        "content/web.config.transform",
+        "lib/net40/MySql.Data.Entity.EF6.dll",
+        "lib/net45/MySql.Data.Entity.EF6.dll"
+      ]
+    },
+    "Newtonsoft.Json/9.0.1": {
+      "sha512": "U82mHQSKaIk+lpSVCbWYKNavmNH1i5xrExDEquU1i6I5pV6UMOqRnJRSlKO3cMPfcpp0RgDY+8jUXHdQ4IfXvw==",
+      "type": "package",
+      "path": "Newtonsoft.Json/9.0.1",
+      "files": [
+        "Newtonsoft.Json.9.0.1.nupkg.sha512",
+        "Newtonsoft.Json.nuspec",
+        "lib/net20/Newtonsoft.Json.dll",
+        "lib/net20/Newtonsoft.Json.xml",
+        "lib/net35/Newtonsoft.Json.dll",
+        "lib/net35/Newtonsoft.Json.xml",
+        "lib/net40/Newtonsoft.Json.dll",
+        "lib/net40/Newtonsoft.Json.xml",
+        "lib/net45/Newtonsoft.Json.dll",
+        "lib/net45/Newtonsoft.Json.xml",
+        "lib/netstandard1.0/Newtonsoft.Json.dll",
+        "lib/netstandard1.0/Newtonsoft.Json.xml",
+        "lib/portable-net40+sl5+wp80+win8+wpa81/Newtonsoft.Json.dll",
+        "lib/portable-net40+sl5+wp80+win8+wpa81/Newtonsoft.Json.xml",
+        "lib/portable-net45+wp80+win8+wpa81/Newtonsoft.Json.dll",
+        "lib/portable-net45+wp80+win8+wpa81/Newtonsoft.Json.xml",
+        "tools/install.ps1"
+      ]
+    },
+    "Ractor.Persistence/0.7.0-build1702080833": {
+      "sha512": "KtVoTj9ICK69wnaRwVoOimySk0xTFJEXT3eld9Z8FvrfdzhJyfHrmWdmJ9hTQCUwacylMby5WwVV50mxrYnWSw==",
+      "type": "package",
+      "path": "Ractor.Persistence/0.7.0-build1702080833",
+      "files": [
+        "Ractor.Persistence.0.7.0-build1702080833.nupkg.sha512",
+        "Ractor.Persistence.nuspec",
+        "lib/net451/Ractor.Persistence.dll",
+        "lib/net451/Ractor.Persistence.xml",
+        "lib/netstandard1.6/Ractor.Persistence.dll",
+        "lib/netstandard1.6/Ractor.Persistence.xml"
+      ]
+    },
+    "StackExchange.Redis/1.2.0": {
+      "sha512": "RXi3cs12LsEVZoPW2RnHEkiKoRw8aCivJUi4JFbW6ym6OaANkoJq/BRrorb3XBHsCMfoyOm3PGMuAGibll6FbA==",
+      "type": "package",
+      "path": "StackExchange.Redis/1.2.0",
+      "files": [
+        "StackExchange.Redis.1.2.0.nupkg.sha512",
+        "StackExchange.Redis.nuspec",
+        "lib/net40/StackExchange.Redis.dll",
+        "lib/net40/StackExchange.Redis.xml",
+        "lib/net45/StackExchange.Redis.dll",
+        "lib/net45/StackExchange.Redis.xml",
+        "lib/net46/StackExchange.Redis.dll",
+        "lib/net46/StackExchange.Redis.xml",
+        "lib/netstandard1.5/StackExchange.Redis.dll",
+        "lib/netstandard1.5/StackExchange.Redis.xml"
+      ]
+    }
+  },
+  "projectFileDependencyGroups": {
+    "": [],
+    ".NETFramework,Version=v4.5.1": [
+      "Dapper.Contrib >= 1.50.0",
+      "MySql.Data.Entity >= 6.9.9",
+      "Ractor.Persistence >= 0.7.0-*"
+    ]
+  },
+  "tools": {},
+  "projectFileToolGroups": {}
+}
