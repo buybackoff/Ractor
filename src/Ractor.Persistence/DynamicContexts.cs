@@ -28,11 +28,18 @@ namespace Ractor {
         /// <summary>
         /// 
         /// </summary>
-        internal DataContext(string name)
+        public DataContext(string name)
             : base(name) {
             _name = name;
         }
 
+        public DataContext(string name, bool updateMigrations, DbMigrationsConfiguration migrationConfig = null)
+                    : base(name) {
+            _name = name;
+            if (updateMigrations) {
+                DataContext.UpdateAutoMigrations(name, migrationConfig);
+            }
+        }
 
         protected override void OnModelCreating(DbModelBuilder modelBuilder) {
 

@@ -48,7 +48,9 @@
 		"projectUrl": "https://github.com/buybackoff/Ractor",
 		"tags": [
 			"Redis",
-			"Actors"
+			"Actors",
+			"Python",
+			"Cloud"
 		]
 	}
 }
