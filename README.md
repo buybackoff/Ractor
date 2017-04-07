@@ -1,6 +1,8 @@
 Ractor
 =======================
+
 <img align="right" src="https://raw.githubusercontent.com/buybackoff/Ractor/master/docs/files/img/logo.png" />
+
 There are several really useful things here:
 * DynamicContext for EF6 that starts per-table automatic migrations, which is very convenient while
 prototyping RDMS structure and adding/changing schema. By default, only non-destructive updates are 
