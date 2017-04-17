@@ -130,6 +130,18 @@ namespace Ractor {
                 : (RedisValue)bytes;
         }
 
+        private SortedSetEntry PackValueScoreNullable<T>(KeyValuePair<T, double> item)
+        {
+            if (!typeof(T).IsValueType && EqualityComparer<T>.Default.Equals(item.Key, default(T)))
+            {
+                return new SortedSetEntry(RedisValue.Null, item.Value);
+            }
+            var bytes = Serializer.Serialize(item.Key);
+            return IsTypeCompressed<T>()
+                ? new SortedSetEntry((RedisValue)bytes.GZip(), item.Value)
+                : new SortedSetEntry((RedisValue)bytes, item.Value);
+        }
+
         /// <summary>
         /// Stores reflected cash info for each type
         /// </summary>
